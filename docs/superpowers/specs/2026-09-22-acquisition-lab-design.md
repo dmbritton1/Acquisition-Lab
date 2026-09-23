@@ -22,19 +22,21 @@ Engine: pure Python, no LLM, the only source of financial outputs. **Annual peri
 
 Visible teaser: LTM revenue, reported adjusted EBITDA, growth history, capex % and NWC % of revenue, asking price, lender term sheet (max leverage × EBITDA, rate, amortization, cash sweep, covenants with step-downs), fees, sponsor policy (20% IRR base hurdle, fixed downside case e.g. −10% revenue / −200bp margin, 5-year hold, exit multiple, minimum equity contribution e.g. 40%).
 
-Hidden facts (trap types): EBITDA add-back validity; debt-like items (earnout, pension, deferred revenue); customer concentration; NWC peg; capex underinvestment; litigation/contingencies. Each fact: true value, prior range, revealing documents, retrieval cost.
+Hidden facts (trap types): EBITDA add-back validity; debt-like items (earnout, pension, deferred revenue); customer concentration; NWC peg; capex underinvestment; litigation/contingencies. Each fact: true value, prior range, revealing documents, retrieval cost. Parameter bounds: debt-like items and NWC adjustment ≥ 0; revenue haircut in [0, 1); EBITDA and capex adjustments may be either sign.
 
-**Debt sizing (sponsor choice):** debt = min(lender capacity = max leverage × lender-accepted EBITDA; the largest debt that passes the downside covenant test in every year; (1 − min equity %) × price). Covenant and leverage limits therefore constrain debt, never make the deal "undefined."
+**Debt sizing (sponsor choice):** debt = min(lender capacity = max leverage × lender-accepted EBITDA; the largest debt that passes the downside covenant test in every year; (1 − min equity %) × total uses (price + fees + debt-like items + NWC adjustment)). Covenant and leverage limits therefore constrain debt, never make the deal "undefined."
 
 **Walk-away price:** the maximum price at which base-case IRR ≥ hurdle, with debt sized as above. IRR is monotone decreasing in price, so bisection is well defined. If even the minimum price bound fails the hurdle, walk-away = that lower bound and the decision is no-go.
 
 Key mechanism: lenders size on lender-accepted EBITDA, so a small fake add-back cuts debt capacity by the leverage multiple and shrinks covenant headroom — small valuation moves can flip the decision.
 
-API: `evaluate(state)` → IRR, MOIC, debt sized, leverage path, covenant headroom, equity bridge; `walk_away(state)` → max price; `evaluate_under(beliefs)` → distribution of walk-away prices; `flip_threshold(state, param)` → value of one parameter at which go/no-go flips, holding others at current beliefs.
+Cash shortfalls are funded by a revolver charged the term-loan rate on the opening drawn balance; surplus cash earns nothing.
+
+API: `evaluate(state)` → IRR, MOIC, debt sized and which cap set it (lender / covenant / min equity), leverage path, covenant headroom, equity bridge (entry equity + EBITDA growth + multiple change + debt paydown − closing costs = exit equity); `walk_away(state)` → max price; `evaluate_under(beliefs)` → distribution of walk-away prices; `flip_threshold(state, param)` → value of one parameter at which go/no-go flips, holding others at current beliefs.
 
 Testing: hand-built spreadsheet LBO for 3 deals must match engine to the dollar; property tests (worse EBITDA never raises walk-away; more debt-like items always lower it; walk-away is monotone in the hurdle).
 
-Prepared judge answers: annual covenant testing is a known simplification (quarterly is a later addition); exit multiple dominates walk-away and is fixed by sponsor policy — backup slide shows exit-multiple sensitivity.
+Prepared judge answers: annual covenant testing is a known simplification (quarterly is a later addition); exit multiple dominates walk-away and is fixed by sponsor policy — backup slide shows exit-multiple sensitivity; year-0 revenue is unshocked LTM, so the downside shock and revenue haircut release working capital in year 1 (a real effect of revenue decline), slightly softening the year-1 downside covenant test. In thin, capex- or NWC-heavy businesses this release can let a larger revenue haircut *raise* walk-away (more covenant-safe debt); the generator must sample margins well above capex % so revenue haircuts stay monotone.
 
 ## Section 2 — Generator & data room
 

@@ -1,0 +1,19 @@
+[project]
+name = "acqlab"
+version = "0.1.0"
+description = "Acquisition Lab: decision-directed diligence for leveraged buyouts"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.7", "numpy>=2.0"]
+
+[dependency-groups]
+dev = ["pytest>=8", "hypothesis>=6.100"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["acqlab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
