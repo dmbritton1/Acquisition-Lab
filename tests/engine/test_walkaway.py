@@ -51,3 +51,9 @@ def test_is_go_is_exact_not_bisection_tolerant(simple):
     assert not is_go(just_above, Params())
     just_below = simple.model_copy(update={"asking_price": true_walk_away - 1e-6})
     assert is_go(just_below, Params())
+
+
+def test_flip_threshold_accepts_bounds_in_either_order(simple):
+    deal = simple.model_copy(update={"asking_price": 120})
+    assert flip_threshold(deal, Params(), "ebitda_adjustment", 0, -20) == pytest.approx(
+        flip_threshold(deal, Params(), "ebitda_adjustment", -20, 0))

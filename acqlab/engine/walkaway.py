@@ -34,6 +34,7 @@ def flip_threshold(deal: Deal, params: Params, name: str, lo: float, hi: float,
     def go_at(v: float) -> bool:
         return is_go(deal, Params.model_validate({**params.model_dump(), name: v}))
 
+    lo, hi = min(lo, hi), max(lo, hi)  # bounds may come in either order (e.g. a negative EBITDA range)
     go_lo, go_hi = go_at(lo), go_at(hi)
     if go_lo == go_hi:
         return None

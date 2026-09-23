@@ -40,6 +40,8 @@ Prepared judge answers: annual covenant testing is a known simplification (quart
 
 ## Section 2 — Generator & data room
 
+Detailed design (trap library, roles, placement, sampling ranges with sources): `2026-09-23-plan-2-generator-design.md`.
+
 Generation:
 1. Sample company/financing from cited mid-market LBO ranges.
 2. Sample 2–5 hidden facts controlled by case type: decision-flipping, decoy, interaction, unresolvable, clean.
