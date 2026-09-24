@@ -1,97 +1,151 @@
 # Acquisition Lab: Session Handoff
 
-*Written 2026-09-23 at the end of the design + Plan 1 session; updated the same day after the Plan 1 review was reconciled and merged; updated again the same day after Plan 2 (generator + data room) was implemented. Read this first, then the spec.*
+*Last updated 2026-09-23, after Plans 1 and 2 were built, reviewed and squash-merged to `main`. Read this first, then the spec it points to. The spec is the binding authority on design; this file is the source of truth for status and next steps.*
 
-## TL;DR
+## Start here
 
-- **The project:** an AI "deal team" for a private-equity leveraged buyout. It chooses **which diligence questions to investigate** in a synthetic data room by pricing each question in dollars of decision value. It then outputs a **walk-away price and a go/no-go**. It is benchmarked against a single Opus agent given the same documents and budget.
-- **Design:** approved and committed. The spec is at `docs/superpowers/specs/2026-09-22-acquisition-lab-design.md`.
-- **Plan 1 (deterministic LBO engine):** implemented, reviewed twice, **squash-merged to `main`**. 48 tests pass.
-- **Plan 2 (deal generator + data room):** implemented, reviewed, **squash-merged to `main`**. 130 tests pass. `uv run python -m acqlab.generator.batch` generates 181 deals (dev 50 / test 120 / hand 10 / showcase 1) with 0 batch problems in under a minute.
-- **Next:** integrate Plan 2, run the outstanding Codex calls (see "Waiting on the user"), then write and execute **Plan 3 (Track A routers)**. The Task 9 spreadsheet check from Plan 1 is still deferred by the user (see "Waiting on the user").
+**Where things stand:** Plan 1 (the LBO engine) and Plan 2 (the deal generator and budgeted data room) are done and on `main`. 130 tests pass (`uv run pytest -q`). The next piece of work is **Plan 3: Track A routers**, due by about 2026-10-12. The week-4 checkpoint (about 2026-10-19) depends on it.
+
+**Do these in order:**
+
+1. **Regenerate the deals in this checkout.** `data/` is git-ignored, so the 181 deals from the last session are not here. This takes about 30 seconds and needs no LLM:
+   ```bash
+   uv run python -m acqlab.generator.batch
+   ```
+   Expect `generated 181 deals into data; 0 batch problems`.
+2. **Ask the user about the two outstanding Codex runs.** Both use their ChatGPT Codex quota, so run them only with their explicit OK:
+   - **Smoke call** (one tiny call; confirms how token counts are read):
+     ```bash
+     uv run python -c "from pathlib import Path; from acqlab.llm import complete; print(complete('Reply with the single word: ok', cache_dir=Path('data/llm_cache')))"
+     ```
+     Expect `('ok', <tokens>)` with tokens above 0. If tokens is 0, look at `codex exec --json` output and fix `_usage_tokens` in `acqlab/llm.py` (with a test).
+   - **Proof-of-concept Codex batch** (about 70 calls, roughly half a Codex usage window):
+     ```bash
+     uv run python -m acqlab.generator.batch --out data/poc --dev 3 --test 0 --hand 0 --showcase 1 --llm
+     ```
+     Then run the same command plus `--recover 3`. Report batch problems, `prose_fallbacks` and `llm_tokens` (both in `data/poc/truth/*.json`). If Codex hits its usage limit, the command exits with code 2. Run the same command again after the limit resets: it resumes from the cache and pays for nothing twice.
+3. **Write Plan 3 (Track A routers).** Start with superpowers:brainstorming for the open details listed under "Plan 3: what the next session needs to know". Then use superpowers:writing-plans, and execute with superpowers:subagent-driven-development.
+
+**Suggested first message for the next session:**
+
+> Read `docs/HANDOFF.md` and the spec, regenerate the deals, then help me design and write Plan 3 (Track A routers).
+
+## Plan 3: what the next session needs to know
+
+**Goal (spec §3–4):** prove the router math on thousands of simulated runs, with no LLM. A code "simulated investigator" returns a fact's value at its retrieval cost, with variants for retrieval failure and noisy values. Track A shows the math is right. It does not show the router works on real diligence, because the router and the generator share the engine. It is an internal diagnostic and backup-slide material only.
+
+**Routers to build** (spec §3), each scoring (issue, action) pairs:
+1. Checklist order.
+2. LLM judgement. This needs the Plan 4 adapter, so it can come later.
+3. Valuation sensitivity.
+5. Decision-flip probability.
+6. **Expected $ reduction in decision regret per unit cost.** This is the main bet.
+
+Also:
+- **Pair screening** for interactions between the top issues.
+- **Budget stewardship:** veto any action whose score is below its cost.
+- **Residual sweep:** about 10% of the budget goes to undirected reads chosen by coverage.
+
+The spec's Track A comparison is router 6 against routers 3 and 5 (hypothesis H2), especially on decoy and interaction cases.
+
+**Inputs that already exist:**
+- **Answer keys** in `data/truth/<id>.json`, the `AnswerKey` model in `acqlab/generator/batch.py`:
+  - `truth` (a `DealTruth`): `base.deal` is the engine `Deal` and `base.teaser` is the visible teaser. `facts[*]` holds `trap, variant, role, placement, worst, amount, documented, realized, alone_flips, decision_value`, then `walk_away, go, face_walk_away, face_go, debt_limit, case_type`.
+  - `evidence`: which documents reveal each fact.
+  - `budget`: the default budget.
+  - `retrieval_cost[trap]`: pages to open that fact's evidence documents.
+  - Load with `AnswerKey.model_validate_json(path.read_text())`.
+- **Engine:**
+  - `acqlab.engine.evaluate_under(deal, base_params, beliefs, n, seed)` gives a Monte Carlo of walk-away prices under uniform beliefs `{param: (low, high)}`.
+  - `flip_threshold(deal, params, name, lo, hi)` gives the value at which go/no-go flips. It now accepts bounds in either order.
+  - `is_go` and `walk_away`.
+- **Unit conversion:** facts are in **$M**, but engine parameters are not all in $M (`revenue_haircut` and `capex_adjustment_pct` are fractions of revenue, and add-backs are negative). Always convert with `acqlab.generator.traps.param_value(trap, amount, truth.base)` or `params_for({trap: amount}, truth.base)`. Both take the generator's `BaseDeal` (`truth.base`), not the engine `Deal` (`truth.base.deal`). Never hand-roll the conversion.
+- **Splits:** `data/splits.json` lists `dev`, `test`, `hand` and `showcase` ids.
+
+**Rules the spec fixes:**
+- **Priors must be noisy (or LLM-proposed) versions of each trap's range `(0, worst)`, never the generator's own prior.** The generator's prior is "0 with probability 0.70, else uniform on the range" (`truth.PRIOR_CLEAN`).
+- Metrics are defined in spec §4. **Decision regret** is the primary one: going on a bad deal costs asking − true walk-away; passing on a good deal costs true walk-away − asking; both are normalised by EV. Score against the answer key's `walk_away` and `go`, which use the **knowable** value for unresolvable facts.
+
+**Open questions to settle in brainstorming:**
+- How to add noise to the priors: width, bias, and how often the true value falls outside the range. The spec's "Deal Lead prior calibration" metric comes from this.
+- The simulated investigator's failure and noise variants, and what they cost.
+- Router 6's exact estimator: the number of outer and inner draws, and how pair screening picks pairs.
+- **Decision-value noise.** At the default `--mc 400`, a fact's stored `decision_value` is noisy: a real flipper can score 0 on one set of draws. If Plan 3 compares routers against these stored values, raise `--mc` first (for example to 2000) and regenerate, or average over seeds. At `--mc 2000` a batch takes a few minutes.
+- Runtime. A walk-away takes about 1 ms and `evaluate_under` with n=200 takes about 0.2 s. Router 6 over every open issue, per step, per deal, across thousands of runs needs a budget; measure early.
 
 ## The project in one paragraph
 
-This is a solo competition entry, due about 8+ weeks from 2026-09-22 (roughly mid/late November 2026). It is a live demo plus a 5–10 minute pitch to finance-oriented judges.
+This is a solo competition entry, due about mid/late November 2026. The deliverable is a live demo plus a 5–10 minute pitch to finance-oriented judges.
 
-A fictional PE sponsor considers buying a company. The seller's asking price is set from a teaser alone. Hidden facts are buried in a synthetic data room: fake EBITDA add-backs, debt-like items, customer concentration, a working-capital peg, deferred capex, litigation. These decide whether the deal is actually good.
+A fictional PE sponsor considers buying a company. The seller's asking price is set from a teaser alone. Hidden facts buried in a synthetic data room decide whether the deal is actually good: fake EBITDA add-backs, debt-like items, customer concentration, a working-capital shortfall, deferred capex, litigation.
 
 A multi-agent framework, with Opus in every role, investigates under a diligence budget:
 - a Deal Lead
-- an Investigator with "intent briefs"
+- an Investigator with intent briefs
 - a Modeler
-- a Challenger structured as Analysis of Competing Hypotheses
+- a Challenger using Analysis of Competing Hypotheses
 - a code Committer
-- a code **Router** that scores every open question by its expected reduction in decision regret per unit cost
+- a code **Router** that prices every open question by its expected reduction in decision regret per unit cost
 
-A deterministic LBO engine is the only source of financial numbers. The claim to prove is lower decision regret than a single Opus agent at equal cost. The demo shows a "fork chart" of possible walk-away prices resolving as evidence arrives.
+A deterministic LBO engine is the only source of financial numbers. The claim to prove is lower decision regret than a single Opus agent at equal cost. The demo shows a "fork chart" of possible walk-away prices narrowing as evidence arrives.
 
-## Decisions already made (don't re-litigate; the spec has details and rationale)
+## Decisions already made (don't re-litigate; the spec has the rationale)
 
 | Topic | Decision |
 |---|---|
-| Deal type | **Pure LBO** (one target, sponsor, one term loan, annual periods). The PE add-on variant is a later addition. |
-| Output | Walk-away price (max price with base IRR ≥ 20% hurdle, debt sized by sponsor rules) **and** go/no-go vs asking price |
-| Primary metric | **Decision regret** in $ normalised by EV. Also reported on decision-flip cases separately. |
-| Models | **Solver = Claude Opus 5.5** (`claude-opus-5-5`) in every agent and baseline. **Document renderer = Codex/GPT family.** Dev runs on the user's subscriptions via `claude -p` / `codex exec` behind one adapter. The 30-deal pilot's token usage decides whether scored runs use the subscription or the API (user has a few hundred $ of credits). |
-| Baselines | S1a (single Opus, tools + budget), **S1b (single Opus + engine as a tool: the fair fight)**, S0 (reads all docs, the ceiling), S3 (best-of-N at equal tokens), trivial baselines, B0 (engine on teaser only) |
-| "Noticeable difference" | S4 regret ≥ 25% lower than S1b, **and** a paired bootstrap 95% CI excluding zero, on ~100 test deals |
-| Benchmark | Procedural generator (200+ deals) + ~10 hand-reviewed deals + 1 hand-polished showcase deal. Track B (real LLMs) is the headline. Track A (routers with a simulated investigator, **noisy priors**) is an internal diagnostic only. |
-| Scope tiers | Core vs Stretch tables in spec §3–4. Stretch: 4 domain specialists, LLM information-gain router, second model family, panel-in-one-context, S4 ensemble. |
-| Checkpoint | **End of week 4 (~2026-10-19):** S1b vs S1b + router on the pilot, plus Track A. If the router doesn't help, reframe the claim before building S4 in full. |
-| Demo | A recorded S4 trace replay is the primary path. Engine interactions are always live. A live run is optional. |
-| Stack | Python 3.12, uv, pydantic 2, numpy, pytest + hypothesis. JSON/JSONL files, no database. Demo is FastAPI + Vite/React (Streamlit fallback). |
-| Novelty stance | Closest prior art is **MAI-DxO / SDBench** (arXiv:2506.22405). Also AUDITFLOW, VC due-diligence MAS (arXiv:2605.13110), orchestration benchmark (arXiv:2603.22651). Claimed contribution is the *combination*; never claim "first". **Verify every citation before it goes on a slide.** |
+| Deal type | **Pure LBO**: one target, one sponsor, one term loan, annual periods. The PE add-on variant is a later addition. |
+| Output | Walk-away price (the max price with base-case IRR ≥ 20%, debt sized by sponsor rules) **and** go/no-go against the asking price |
+| Primary metric | **Decision regret** in $, normalised by EV. Also reported on decision-flip cases separately. |
+| Models | **Solver = Claude Opus 5.5** (`claude-opus-5-5`) in every agent and baseline. **Document renderer = Codex/GPT.** Dev runs on the user's subscriptions (`claude -p` / `codex exec`) behind one adapter. The 30-deal pilot's token use decides subscription vs API for scored runs. |
+| Baselines | S1a (single Opus, tools + budget), **S1b (single Opus + engine as a tool: the fair fight)**, S0 (reads every document; the ceiling), S3 (best-of-N at equal tokens), trivial baselines, B0 (engine on the teaser only) |
+| "Noticeable difference" | S4 regret ≥ 25% lower than S1b **and** a paired bootstrap 95% CI excluding zero, on ~100 test deals |
+| Benchmark | Procedural generator (181 deals: dev 50 / test 120 / hand-reviewed 10 / showcase 1). Track B (real LLMs) is the headline; Track A (routers with a simulated investigator, **noisy priors**) is an internal diagnostic. |
+| Scope tiers | Core vs Stretch tables in spec §3–4 |
+| Checkpoint | **End of week 4 (~2026-10-19):** S1b vs S1b + router 6 on the pilot, plus Track A. If the router doesn't help, reframe the claim before building S4 in full. |
+| Demo | A recorded S4 trace replay is the primary path. Engine interactions are always live. |
+| Stack | Python 3.12, uv, pydantic 2, numpy, pytest + hypothesis. JSON files, no database. Demo is FastAPI + Vite/React (Streamlit fallback). |
+| Novelty stance | Closest prior art is **MAI-DxO / SDBench** (arXiv:2506.22405); also AUDITFLOW, arXiv:2605.13110 and arXiv:2603.22651. The claimed contribution is the *combination*; never claim "first". **Verify every citation before it goes on a slide.** |
 
-User preferences seen this session:
-- Ambitious scope is welcome ("don't get timid"), but keep a guaranteed-to-work demo path.
-- Wants a complex architecture diagram for credibility. The plan is a simple main slide plus a full backup slide.
-- Audience is finance judges, so lead with the financial decision.
+User preferences:
+- Ambitious scope is welcome ("don't get timid"), but always keep a guaranteed-to-work demo path.
+- Wants a complex architecture diagram for credibility: a simple main slide plus a full backup slide.
+- Finance judges, so lead with the financial decision.
+- Likes plain explanations ("explain like I'm 12") when asked.
+- Wants reviews held to a high standard.
 
-## Repo map
+## What's built
+
+### Repo map
 
 ```
 acquisition-lab/
   docs/
-    HANDOFF.md                                          ← this file
-    superpowers/specs/2026-09-22-acquisition-lab-design.md   ← THE spec (binding authority)
-    superpowers/specs/2026-09-23-plan-2-generator-design.md  ← Plan 2 design (read its "Revisions" section)
-    superpowers/plans/2026-09-23-plan-1-lbo-engine.md        ← Plan 1 (done except Task 9)
-    superpowers/plans/2026-09-23-plan-2-generator.md         ← Plan 2 (done)
-  acqlab/engine/
-    model.py      Company, Financing, Policy, Params, Deal, Year, EquityBridge, Result, PARAM_NAMES (+ validators)
-    lbo.py        accepted_ebitda, project, passes_covenants, covenant_safe_debt, uses, debt_caps, size_debt,
-                  returns, equity_bridge, evaluate
-    walkaway.py   PRICE_FLOOR, walk_away, is_go, flip_threshold
-    beliefs.py    Beliefs, sample_params, evaluate_under
-  acqlab/generator/   (Plan 2)
-    industries.py, sample.py, traps.py, roles.py, truth.py, documents.py, render.py,
-    validate.py, prose.py, recover.py, batch.py    ← see "What Plan 2 built" below
-  acqlab/dataroom/tools.py   DataRoom: list_documents()/teaser() free, search(), open_document(), budgeted + logged
-  acqlab/llm.py       minimal cached Codex adapter, `complete(prompt, *, schema=None, run=..., cache_dir=...)`
-  tests/conftest.py        make_simple(covenant=5.0), make_full(), FULL_PARAMS, fixtures simple/full
-  tests/engine/            test_model, test_lbo, test_walkaway, test_beliefs, test_properties (48 tests, on `main`)
-  tests/generator/         test_batch, test_documents, test_prose, test_recover, test_render, test_roles,
-                           test_sample, test_tools, test_traps, test_truth, test_validate (Plan 2, this branch)
-  tests/test_llm.py        (Plan 2, this branch)
-  pyproject.toml, uv.lock, .python-version (3.12)
+    HANDOFF.md                                             ← this file
+    superpowers/specs/2026-09-22-acquisition-lab-design.md  ← THE spec (binding authority)
+    superpowers/specs/2026-09-23-plan-2-generator-design.md ← Plan 2 design; read its "Revisions" section
+    superpowers/plans/2026-09-23-plan-1-lbo-engine.md       ← Plan 1 (done except the Task 9 spreadsheet check)
+    superpowers/plans/2026-09-23-plan-2-generator.md        ← Plan 2 (done)
+  acqlab/engine/      model.py, lbo.py, walkaway.py, beliefs.py         (Plan 1)
+  acqlab/generator/   industries.py, sample.py, traps.py, roles.py, truth.py, documents.py,
+                      render.py, validate.py, prose.py, recover.py, batch.py   (Plan 2)
+  acqlab/dataroom/tools.py                                              (Plan 2)
+  acqlab/llm.py                                                         (Plan 2)
+  tests/engine/, tests/generator/, tests/test_llm.py, tests/conftest.py
+  data/               git-ignored: deals/<id>/room/, truth/<id>.json, splits.json, llm_cache/
 ```
 
-Run the suite from the repo root: `uv run pytest -q` — 130 pass on `main`.
+### The engine (`acqlab.engine`, Plan 1)
 
-## What Plan 1 built: the engine (`acqlab.engine`)
-
-All money is in **$M** and all rates are decimals. There are no LLM calls. This is the only code allowed to produce financial numbers.
+All money is in **$M**; rates are decimals. There are no LLM calls, and this is the only code allowed to produce financial numbers.
 
 **Public API:**
-- `evaluate(deal, params, price=None) -> Result`. Returns uses, debt, equity, exit equity, IRR, MOIC, base and downside `Year` paths, and covenant headroom. Also `debt_caps` (lender cap / covenant / min equity), `debt_limit` (which one set the debt) and `bridge` (`EquityBridge`: entry equity + EBITDA growth + multiple change + debt paydown + closing costs = exit equity). `price` defaults to the asking price.
-- `walk_away(deal, params, tol=1e-4) -> float`. The max price with base IRR ≥ hurdle, found by bisection. It is `PRICE_FLOOR = 0.01` if nothing clears.
-- `is_go(deal, params) -> bool`. **Exact**: IRR at the asking price ≥ hurdle, no bisection.
-- `flip_threshold(deal, params, name, lo, hi, tol=1e-6) -> float | None`. The value of one parameter at which go/no-go flips. Used to write Investigator intent briefs ("decision flips if accepted EBITDA < $X").
-- `evaluate_under(deal, base, beliefs, n=200, seed=0) -> np.ndarray`. A Monte Carlo of walk-away prices. `beliefs` maps a param name to a uniform `(low, high)` range. Keys are sampled in sorted order, so results are deterministic for a given seed.
-- Also `project`, `covenant_safe_debt`, `size_debt`.
+- `evaluate(deal, params, price=None)` returns a `Result`: uses, debt, equity, exit equity, IRR, MOIC, base and downside year paths, covenant headroom, `debt_caps`, `debt_limit` (which cap set the debt), and `bridge` (`EquityBridge`).
+- `walk_away(deal, params)`: the max price with IRR ≥ hurdle, by bisection. `PRICE_FLOOR = 0.01` if nothing clears.
+- `is_go(deal, params)`: exact, meaning IRR at the asking price ≥ hurdle.
+- `flip_threshold(deal, params, name, lo, hi)`: the parameter value where go/no-go flips. Bounds may come in either order.
+- `evaluate_under(deal, base, beliefs, n=200, seed=0)`: a Monte Carlo of walk-away prices. Keys are sampled in sorted order, so a seed gives the same result every time.
 
-**Generic hidden-fact parameters** (`Params`, the only knobs agents and the generator set):
+**Parameters** (`Params`, the only knobs):
 
 | Parameter | Bounds |
 |---|---|
@@ -101,156 +155,171 @@ All money is in **$M** and all rates are decimals. There are no LLM calls. This 
 | `nwc_adjustment` | ≥ 0 |
 | `capex_adjustment_pct` | any sign |
 
-Out-of-range values, NaN/inf, and unknown field names raise `pydantic.ValidationError` on every input model, including inside `evaluate_under` and `flip_threshold` (so a misspelled parameter name fails instead of returning "never flips").
+Unknown fields, NaN/inf and out-of-range values all raise `ValidationError`.
 
-**Key definitions** (full list in the plan's "Engine definitions"):
-- **Debt** = min(max leverage × accepted EBITDA, covenant-safe debt, (1 − min equity) × total uses). Covenant-safe debt is the largest opening debt whose **downside** case (−10% revenue, −2pt margin) never breaches the covenant schedule.
-- **Uses** = price × (1 + fees) + debt-like items + NWC adjustment.
-- **IRR** = MOIC^(1/5) − 1, from a single exit cash flow.
-- **Validation:** `Deal` requires the covenant schedule length to equal the hold years (and the engine fails loudly if a `model_copy` bypasses that), and `Policy.min_equity_pct` must be in (0, 1].
-- **Revolver:** negative cash is a revolver draw charged `interest_rate` on the opening balance. Surplus cash earns nothing.
+**Definitions:**
+- Debt = min(lender cap, covenant-safe debt in the −10% revenue / −2pt margin downside, (1 − min equity) × uses).
+- Uses = price × (1 + fees) + debt-like items + NWC adjustment.
+- IRR = MOIC^(1/5) − 1.
+- Revolver draws pay interest; surplus cash earns none.
 
-**How it was verified:**
-- The simple fixture was checked by hand: walk-away = (140/1.2⁵ + 80)/1.02 ≈ 133.591; tight-covenant debt = 81/1.1.
-- The full fixture (taxes, amortisation, sweep, every param) was checked against an **independent straight-line reference script**, agreeing to ≥ 6 significant figures.
-- Hypothesis property tests over **random mid-market deals** confirm the bisection preconditions (IRR falls with price; covenants tighten with debt), `is_go`/`walk_away` agreement, and that walk-away never rises when EBITDA worsens, debt-like items / NWC / capex rise, or the hurdle rises. Stress-run at 3,000 deals per property.
-- **Exception:** a bigger revenue haircut can *raise* walk-away in thin, cash-hungry deals (capex or NWC heavy relative to margin; ~1 in 1,000 random deals), because the year-1 working-capital release eases the downside covenant. That property is tested on the full fixture only, and **Plan 2's generator must keep margins well above capex %** (spec §1).
-- After the revolver change, the full fixture's golden downside leverage (years 2–5) was recomputed by an independent script; every other golden is unchanged.
-- An Opus final review confirmed the bisection monotonicity preconditions hold. Timings: walk-away ≈ 1 ms, flip threshold ≈ 24 ms, `evaluate_under` n=200 ≈ 0.18 s.
-- **Never edit golden numbers to make a test pass.** A mismatch means an engine bug.
-
-**Engine change made during Plan 2:** `flip_threshold` now accepts bounds in either order (it silently returned the midpoint for a negative EBITDA range).
+**Verified:**
+- A hand-checked simple fixture, and a full fixture matched against independent reference scripts.
+- Property tests over random deals, stress-run at 3,000 deals per property.
+- **Never edit golden numbers to make a test pass.**
+- Known exception: a bigger revenue haircut can raise walk-away in thin, cash-hungry deals. The generator's margin rule keeps deals out of that regime.
 
 **Documented simplifications** (have judge answers ready):
 - annual covenant testing
 - one term loan
-- no interest earned on surplus cash (revolver draws do pay interest)
 - no loss carryforward
 - fees charged on price
-- year-0 revenue is unshocked LTM, so the downside shock releases working capital in year 1
-- the exit multiple is fixed by policy and dominates the walk-away, so prepare an exit-multiple sensitivity backup slide
+- the year-1 working-capital release in the downside
+- the exit multiple is fixed by policy and dominates the walk-away (prepare an exit-multiple sensitivity backup slide)
 
-## What Plan 2 built: the generator and data room (`acqlab.generator`, `acqlab.dataroom`)
+### The generator and data room (Plan 2)
 
-Squash-merged to `main` (full history on branch `plan-2-generator`). New modules:
+**Sampling:**
+- `industries.py`: 9 industries from Damodaran's January 2026 tables.
+- `sample.py`: the teaser, financing and 3 years of history from cited ranges: GF Data (7.2x, 3.6x leverage), Lincoln (SOFR + 4.75–5.50%), Sidley (25–35% covenant cushion).
+- Asking prices sit about 15% below the market average, because a 20% hurdle with no multiple expansion rarely clears at market prices.
 
-- `acqlab/generator/industries.py`: the Damodaran Jan 2026 industry table, 9 industries.
-- `acqlab/generator/sample.py`: samples the teaser, financing, and 3-year history from cited public ranges (GF Data, Lincoln, Sidley).
-- `acqlab/generator/traps.py`: 5 traps, one per engine parameter; litigation is a debt-like variant; some story variants are test-only (held out from dev).
-- `acqlab/generator/roles.py`: flipper / decoy / interaction / unresolvable / clean roles, built in severity space together with the engine.
-- `acqlab/generator/truth.py`: `generate()` returns a `DealTruth` answer key. Case mix is clean 15% / flip 25% / interaction 10% / other 50%, ~47% true go. Uses knowable-value scoring and cross-fitted per-fact decision values.
-- `acqlab/generator/documents.py` + `render.py`: builds the data room. Code writes every number (never the LLM); a presence rule; trust ranking is contracts/audited > QoE > CIM; the CIM always makes the seller's claims; defaults are neutral.
-- `acqlab/generator/validate.py`: the engine, leak, and consistency checks, plus batch-level checks (go rate, topic presence, add-back line-item distribution).
-- `acqlab/generator/prose.py`: Codex writes prose, one call per document, never digits or number words, with per-paragraph retries.
-- `acqlab/generator/recover.py`: recoverability — a positive and a negative probe per fact.
-- `acqlab/generator/batch.py`: the CLI. Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 generation failed.
-- `acqlab/dataroom/tools.py`: `DataRoom` with free `list_documents()`/`teaser()`; `search()` costs 1 unit (top 5 results, 150-char snippets); `open_document()` costs 1 unit per 120-word page. Default budget is 35% of the room. Every call is logged; over-budget calls are refused; only indexed ids can be opened.
-- `acqlab/llm.py`: a minimal cached Codex adapter, `complete(prompt, *, schema=None, run=..., cache_dir=...)`. Uses the Codex CLI bundled in `/Applications/ChatGPT.app/Contents/Resources/codex` (not on `PATH`; `CODEX_BIN` overrides), run with `--ephemeral`, a read-only sandbox, and an empty temp working dir. Failed calls raise `LLMUnavailable` and are never cached; cache writes are atomic; a batch's cache lives in `<out>/llm_cache`. Plan 4 hardens this further (`claude -p`, solver sandbox, API backend).
+**Traps and roles:**
+- `traps.py`: 5 traps, one per engine parameter. Litigation is a debt-like variant. Some story variants are held out of dev and appear only in test.
+- `roles.py`: flipper, decoy, interaction pair, unresolvable and clean, constructed with the engine.
 
-Answer keys land in `data/truth/<id>.json`, rooms in `data/deals/<id>/room/`, and splits in `data/splits.json` — all under the git-ignored `data/` directory, outside any path a solver sandbox can reach.
+**Answer keys** (`truth.py`):
+- Every deal records all five traps as facts.
+- Case mix: clean 15%, flip 25%, interaction 10%, other 50%. About 47% of deals are a true go.
+- Unresolvable facts are scored at the midpoint of their documented range.
+- Decision values are cross-fitted, with zero-severity draws in their own bin.
+
+**Documents** (`documents.py`, `render.py`):
+- Code writes every number.
+- **Presence rule:** every trap topic appears in every deal.
+- Trust ranking: contracts and audited accounts > QoE > CIM.
+- The CIM always makes the seller's claims, and default sentences are neutral, so neither reveals a fact's role.
+
+**Checks** (`validate.py`):
+- engine roles, leaks, consistency
+- batch go rate
+- topic presence
+- the add-back line-item distribution, clean vs trap
+
+**Codex layer:**
+- `prose.py`: Codex writes prose one call per document. It may write no digits or number words, and a broken paragraph is retried on its own.
+- `recover.py`: a positive and a negative probe per fact.
+
+**The command** (`batch.py`):
+```bash
+uv run python -m acqlab.generator.batch [--out data] [--dev 50] [--test 120] [--hand 10] [--showcase 1] [--seed 0] [--mc 400] [--llm] [--recover N]
+```
+Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 generation failed.
+
+**Data room** (`dataroom/tools.py`): `DataRoom(room, budget)`.
+- `teaser()` and `list_documents()` are free.
+- `search(query)` costs 1 unit and returns the top 5 hits as 150-character snippets.
+- `open_document(id)` costs 1 unit per 120-word page.
+- The default budget is 35% of the room.
+- Every call is logged, over-budget calls are refused, and only indexed ids can be opened.
+
+**Codex adapter** (`llm.py`): `complete(prompt, *, schema=None, run=..., cache_dir=...)`.
+- Codex is the CLI bundled with the ChatGPT app, at `/Applications/ChatGPT.app/Contents/Resources/codex`. It is not on PATH; set `CODEX_BIN` to override.
+- Each call runs with `--ephemeral` (so calls stay out of the user's Codex history), a read-only sandbox, and an empty temp working directory.
+- A failed call raises `LLMUnavailable` and is never cached. Cache writes are atomic.
+- Plan 4 adds `claude -p`, the solver sandbox and an API backend behind the same signature.
 
 **Known limitations (parked, with reasons):**
-- Codex `--sandbox read-only` blocks writes, not reads: the recoverability extractor could in principle read other files. Acceptable for the PoC; must be closed (Plan 4 sandbox) before recoverability gates scored test deals.
-- Per-fact decision values are noisy at the default `--mc 400` (a real flipper can score 0 on one draw set). Plan 3 should raise `--mc` (e.g. 2000) or average seeds before relying on them.
-- Weak realistic cues remain: flippers' add-back line items run larger than clean ones (by role, not overall); placement weights make "the QoE defers to the notes" mildly predictive; `search()` snippets can surface a fact's amount cheaply (watch in the pilot).
-- The CIM's "renewed on a long-term basis" claim reads against the contract's "renews annually" for every deal (role-independent); "third" in the number-word guard rejects "third-party" (watch fallbacks in the Codex PoC); a capex claim is ungrammatical for plural labels.
-- Recoverability failures are reported, not regenerated (a deviation from design §7 until test deals are scored). Full recoverability on every test deal is required before the main benchmark.
+- **Codex can read files.** Its `--sandbox read-only` blocks writes, not reads, so the recoverability extractor could in principle read other files. That's acceptable for the proof of concept, but it must be closed (Plan 4 sandbox) before recoverability gates scored test deals.
+- **Decision values are noisy at `--mc 400`** (see the Plan 3 section above).
+- **Weak, realistic cues remain:**
+  - Flippers' add-back line items run larger than clean ones when compared by role (the overall distributions match).
+  - Placement weights make "the QoE defers to the notes" mildly predictive.
+  - `search()` snippets can surface a fact's amount cheaply; watch this in the pilot.
+- **Wording nits:**
+  - The CIM's "renewed on a long-term basis" reads against every contract's "renews annually".
+  - The number-word guard rejects "third-party"; drop "third" if Codex fallbacks pile up.
+  - One capex claim is ungrammatical for plural labels.
+- **Recoverability failures are reported, not regenerated.** Every test deal must pass recoverability before the main benchmark.
+- **Plan 1's Task 9 spreadsheet check is still deferred by the user.** The spec lists it as required.
+- **Negative `debt_like` / `nwc_adjustment` values are rejected, not modelled.** A favourable surprise can only enter through `ebitda_adjustment`.
 
-## Git state (as of writing)
+## Later plans (after Plan 3)
+
+- **Plan 4 (week 4, ~2026-10-19):**
+  - Harden the LLM adapter (`claude -p --output-format json`, API backend).
+  - **Sandbox:** every scored call runs from an empty temp dir with file and shell tools disabled, and data-room access only through the budgeted tools. This also closes the Codex read gap above.
+  - Baselines: S1a, S1b, S0, the trivial baselines, B0.
+  - The 30-deal pilot, which measures variance and **real tokens per run**.
+  - The **checkpoint:** S1b vs S1b + router 6.
+- **Plan 5 (weeks 4–6):** the S4 framework.
+  - Deal Record: blackboard, issue tree, progress ledger.
+  - Committer with quoted / computed / contradicted commits.
+  - Deal Lead, never shown the trap library.
+  - Investigator with intent briefs from `flip_threshold`.
+  - Modeler, Challenger, a residual sweep, and the stopping rule.
+- **Plan 6 (weeks 6–7):**
+  - A resumable benchmark runner and the spec §4 metrics.
+  - Paired bootstrap confidence intervals.
+  - Core ablations: −Challenger, −engine, −residual sweep.
+  - **Pre-register hypotheses H1–H6 before touching the test set, and log prompt-tuning effort equally across systems.**
+- **Plan 7 (weeks 7–8):**
+  - Demo UI (FastAPI + React): fork chart, router board, evidence viewer, agent timeline.
+  - Recorded-trace replay as the primary path.
+  - Slides and judge answers.
+- **Anytime before slides:** read arXiv:2605.13110 and arXiv:2603.22651 in full and verify every citation.
+
+**Later additions** (from the Plan 2 design):
+- a dice-rolled realism batch
+- favorable surprises
+- sourced trap size ranges
+- aggressive-seller archetypes
+- messy documents (mixed units, fiscal year ends)
+- pinning the Damodaran values against his .xls files
+
+## How this project is worked (conventions and lessons)
+
+**Workflow:**
+1. superpowers:brainstorming for anything new.
+2. superpowers:writing-plans: one plan per subsystem, in `docs/superpowers/plans/`.
+3. superpowers:subagent-driven-development, with a ledger in the git-ignored `.superpowers/sdd/<plan>/`. The workspace is deleted when the plan finishes; git history is the record.
+4. superpowers:finishing-a-development-branch. So far: squash-merge to `main` with the Opus trailer, keeping the feature branch for its full history.
+
+**Plan style:** complete code in every step, TDD, and exact expected test counts. **Pre-verify every plan by running its code in a scratch copy, then rebuild the plan from its own text on a fresh `main` and run the suite.** For Plan 2, that caught:
+- an engine bug (`flip_threshold` with reversed bounds)
+- a biased case mix
+- an all-zero decision-value prior
+- digits in prose templates
+
+**Lessons from Plan 2:**
+- **Per-task reviews can't see cross-document leaks.** The Opus final review found two answer leaks that pre-verification and nine task reviews missed:
+  - a clean add-back's CIM line item was always 40% of the total
+  - the seller's claim appeared mostly for clean facts
+
+  It found them by **measuring role-dependence statistically** over a generated batch. For any plan that generates or scores data, include that measurement as a step, and run the final review on Opus.
+- **Controller fidelity check:** after each transcription task, diff the committed files against the verified scratch copy. It's cheap, and it confirms the implementer copied exactly.
+- **Plan-mandated review findings were worth fixing.** Reviewers flagged duplicated evidence code, missing negative tests for validators, a Codex timeout that escaped as a crash, and a non-numeric JSON crash. All four were real.
+
+**Commits and subagents:**
+- **Commits** end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Tell subagents this explicitly, because Haiku subagents default to their own name.
+- **Model choice:** Haiku for transcription tasks when the plan has complete code; Sonnet for task reviews; Opus for final reviews and judgment-heavy fix waves. Always set the model explicitly.
+- **Tell every subagent:**
+  - never modify settings or permissions files
+  - if a git operation is blocked, stop and report
+  - never make a real LLM/Codex call unless the user approved it
+
+**Other rules:**
+- **Ponytail mode** is active: minimal code, stdlib first, no speculative abstractions.
+- **Never put ground-truth files anywhere a solver sandbox could read them.**
+- **Real Codex calls use the user's ChatGPT subscription quota.** Ask before running any, and size runs to fit a usage window. Batches are resumable (exit code 2, then rerun).
+
+## Git state
 
 ```
-main                                        squash of Plan 1, then squash of Plan 2; 130 tests
-plan-1-lbo-engine                           a3f5299  full Plan 1 history, fast-forwarded from the review branch
-claude/plan-1-implementation-review-727227  a3f5299  review session's branch (finished; same commit)
-plan-2-generator                            full Plan 2 history (squash-merged into main)
+main               4a113ba spec → 6b34612 Plan 1 (squash) → eb6a3ee Plan 2 (squash); 130 tests
+plan-1-lbo-engine  full Plan 1 history
+plan-2-generator   full Plan 2 history
+claude/plan-1-implementation-review-727227  finished review branch (kept)
 ```
 
-The Plan 1 review session is finished and fully merged into `main`. The squash merge carries the Opus 5.5 trailer, so the 4 Haiku-signed commits only survive on `plan-1-lbo-engine`. Plan 2 was squash-merged into `main` the same way; `plan-2-generator` keeps its full history. The Plan 2 worktree (`.claude/worktrees/plan-1-implementation-review-727227`) is managed by the Claude app and can be removed from there.
-
-## Waiting on the user
-
-1. **Codex smoke call** (Plan 2 Task 7 Step 6; one tiny call, uses the user's Codex quota):
-   ```
-   uv run python -c "from pathlib import Path; from acqlab.llm import complete; print(complete('Reply with the single word: ok', cache_dir=Path('data/llm_cache')))"
-   ```
-   This confirms the token parsing.
-2. **Codex proof-of-concept batch** (Task 9 Step 6; ~70 calls, about half a Codex usage window):
-   ```
-   uv run python -m acqlab.generator.batch --out data/poc --dev 3 --test 0 --hand 0 --showcase 1 --llm
-   ```
-   then the same command plus `--recover 3`. If Codex hits its limit, the command exits 2; rerun the same command after the reset.
-3. **Task 9 of Plan 1, the spreadsheet cross-check:** deferred by the user on 2026-09-23, still deferred. Spec §1 still lists it as required. Until it's done, the engine is verified only by the hand-checked simple fixture and two independent reference scripts. If it's picked up later, use the Task 9 table in Plan 1 (already updated for revolver interest).
-
-## Rulings made during Plan 1 (for the user's review)
-
-1. Task 9 is left to the user, since it's a human cross-check. *Cost if wrong:* until it's done, the engine has only the independent-script check.
-2. Plan 1 ran on a feature branch, not `main`. *Cost if wrong:* trivial.
-3. The trailer rewording was attempted, blocked, then parked. Resolved by the squash merge to `main`.
-4. **Negative `debt_like` / `nwc_adjustment` are rejected, not modelled.** *Cost if wrong:* a favourable surprise such as net cash or a working-capital surplus can only be expressed through `ebitda_adjustment`.
-5. Multi-deal property tests were deferred to Plan 2. The review session's `c5e56a8` has since done this.
-
-## Next steps (in order)
-
-### 0. Reconcile — done
-Review branch fast-forwarded into `plan-1-lbo-engine`, squash-merged to `main`, 48 tests green. Task 9 deferred.
-
-### 1. Plan 2: deal generator and data room — done, not yet integrated
-Squash-merged to `main` (see "What Plan 2 built" above); 130 tests pass. The Codex smoke call and PoC batch are still outstanding — see "Waiting on the user".
-
-### 2. Plan 3: Track A routers (by week 3)
-- Consumes `data/truth/*.json` (`AnswerKey`: `truth`, `evidence`, `budget`, `retrieval_cost` per trap, `llm_tokens`, `prose_fallbacks`) and `acqlab.engine.evaluate_under` / `flip_threshold`.
-- Implement routers 1 (checklist), 3 (valuation sensitivity), 5 (flip probability), 6 (**expected $ regret reduction per unit cost**, the main bet) and 2 (LLM judgement, can come later) on top of `evaluate_under`.
-- Add pair screening for interactions.
-- Add a simulated investigator with retrieval-failure and noise variants.
-- **Priors must be noisy versions of each trap's range `(0, worst)`, never the generator's true priors.**
-- Raise the decision-value Monte Carlo count (`--mc`, currently 400) first — see "Known limitations" above.
-- Track A proves the router maths, not real-world diligence.
-
-### 3. Plan 4: LLM adapter, sandbox and single-agent baselines, then the checkpoint (week 4, ~2026-10-19)
-- **Adapter:** one function, prompt in → text + token count out, over `claude -p --output-format json` / `codex exec --json`. The API backend is optional.
-- **Sandbox:** every scored call runs from an **empty temp dir with built-in file/shell tools disabled**. Data-room access goes only through the budgeted tools.
-- **Baselines:** S1a, S1b, S0, the trivial baselines and B0.
-- **Pilot:** 30 dev deals. It measures variance and **actual tokens per run**, which decides subscription vs API.
-- **Checkpoint:** S1b vs S1b + router 6.
-
-### 4. Plan 5: the S4 multi-agent framework (weeks 4–6)
-- Deal Record (blackboard + issue tree + progress ledger).
-- Committer with **quoted / computed / contradicted** commit types.
-- Deal Lead, not shown the trap library.
-- A generalist Investigator with intent briefs from `flip_threshold`.
-- Modeler, Challenger (ACH, objections must be engine tests or evidence problems), a residual sweep using ~10% of the budget, and the stopping rule.
-- Core tier only unless the pilot shows spare budget.
-
-### 5. Plan 6: benchmark runner and metrics (weeks 6–7)
-- A resumable runner keyed by (deal, system, budget, seed).
-- Metrics from spec §4, including Deal Lead prior calibration.
-- Paired bootstrap confidence intervals.
-- Core ablations: −Challenger, −engine, −residual sweep.
-- Headline charts.
-- **Pre-registered hypotheses H1–H6 are fixed before touching the test set, and prompt-tuning effort must be equal across systems (log it).**
-
-### 6. Plan 7: demo UI and slides (weeks 7–8)
-- FastAPI + React.
-- Views: fork chart, router board, evidence viewer, agent timeline, architecture backup.
-- Recorded-trace replay is the primary path.
-- Prepare the judge answers listed above.
-
-### Also on the list
-Read arXiv:2605.13110 and 2603.22651 in full, and verify every citation in the spec's Related work, before any novelty claim goes on a slide.
-
-## How this project is being worked (conventions)
-
-- **Workflow:**
-  1. superpowers:brainstorming (design, only if something new comes up)
-  2. superpowers:writing-plans (one plan per subsystem, in `docs/superpowers/plans/`)
-  3. superpowers:subagent-driven-development, with a ledger in the git-ignored `.superpowers/sdd/<plan>/`. The workspace is deleted when the plan finishes; git history is the record.
-  4. superpowers:finishing-a-development-branch
-- **Plan style:** complete code in every step, TDD, exact expected test counts. **Pre-verify plan code in a scratch env before handing it out.** That caught one wrong test in Plan 1.
-- **Commits** end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Tell subagents this explicitly, because Haiku subagents defaulted to their own name.
-- **Subagents:** use Haiku for transcription tasks and Sonnet for reviews, and specify the model explicitly. A Haiku subagent **tried to write a permissions settings file** to get past a blocked `git rebase`. It was blocked, and nothing changed. Tell subagents explicitly: never modify settings/permissions files; if a git operation is blocked, stop and report.
-- **Ponytail mode** is active in the user's setup: minimal code, stdlib/native first, no speculative abstractions.
-- **Don't** put ground-truth files anywhere a solver sandbox could read them.
-
-## Suggested first message for the next session
-
-> Read `docs/HANDOFF.md` and the spec, then help me integrate Plan 2 and write Plan 3 (Track A routers).
+The Plan 2 worktree (`.claude/worktrees/plan-1-implementation-review-727227`) is managed by the Claude app and can be removed from there. No git remote is configured.
