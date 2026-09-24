@@ -66,7 +66,17 @@ The spec's Track A comparison is router 6 against routers 3 and 5 (hypothesis H2
 - **Priors must be noisy (or LLM-proposed) versions of each trap's range `(0, worst)`, never the generator's own prior.** The generator's prior is "0 with probability 0.70, else uniform on the range" (`truth.PRIOR_CLEAN`).
 - Metrics are defined in spec §4. **Decision regret** is the primary one: going on a bad deal costs asking − true walk-away; passing on a good deal costs true walk-away − asking; both are normalised by EV. Score against the answer key's `walk_away` and `go`, which use the **knowable** value for unresolvable facts.
 
+**Findings from the handoff review (2026-09-23, measured on an 800-deal batch, `--seed 7`):**
+- **The default budget barely binds, and costs are flat.** Every document is 1–2 pages. The non-filler room is about 11 pages, the default budget is about 7 units, and the budget covers every evidence document in 86% of deals. Per-fact `retrieval_cost` is 1–2 pages, and the sum over all five facts is about 1.14× the budget (median). At the default budget, a simulated investigator can check about 4 of the 5 facts, so the routers will look the same. **User decision:** leave the generator alone; Track A sweeps tighter budgets (for example, enough for 1, 2 or 3 facts) to separate the routers, and the pilot re-checks room size for Track B.
+- **Decision-flip cases are `go != face_go`, not `case_type == "flip"`.** 51% of deals flip versus face value, and 30% of those have `case_type == "unresolvable"`: 44% of unresolvable facts flip the decision alone at their knowable midpoint (they are only 10% of the range from the threshold, not 20%). In 12 of 800 deals, the realized value gives a different decision from the knowable one. Use `go != face_go` for every "decision-flip cases" metric (spec §4), and use per-fact roles for decoy and interaction metrics.
+- **For unresolvable facts, the simulated investigator should return `documented` (the range), not a point value.**
+- **The oracle router** (spec §4's routing ceiling: knows every true value and picks the best reads) belongs in Track A.
+- **Generate Track A deals separately.** Use seeds that don't overlap the benchmark's, and never touch the test split before H1–H6 are pre-registered. For example: `uv run python -m acqlab.generator.batch --out data/track_a --dev 2000 --test 0 --hand 0 --showcase 0 --seed 200000`, at about 0.15 s per deal (`--mc 400`).
+- **Leak audit: clean.** Neither the teaser, `list_documents` (titles, domains, page counts), nor any non-evidence document's text predicts a fact's role. The only cues are the known, realistic ones: the add-back gap, and a thin face-value margin predicting flips.
+
 **Open questions to settle in brainstorming:**
+- **Regret normaliser:** spec §4 says "normalised by EV". Pick one definition and use it everywhere. Asking price is the natural choice: it's known and it's the same for every system.
+- **The $ value of a budget unit.** The stewardship veto ("score below cost") compares dollars with pages, so it needs an exchange rate.
 - How to add noise to the priors: width, bias, and how often the true value falls outside the range. The spec's "Deal Lead prior calibration" metric comes from this.
 - The simulated investigator's failure and noise variants, and what they cost.
 - Router 6's exact estimator: the number of outer and inner draws, and how pair screening picks pairs.
@@ -208,7 +218,7 @@ Unknown fields, NaN/inf and out-of-range values all raise `ValidationError`.
 
 **Codex layer:**
 - `prose.py`: Codex writes prose one call per document. It may write no digits or number words, and a broken paragraph is retried on its own.
-- `recover.py`: a positive and a negative probe per fact.
+- `recover.py`: a positive and a negative probe per fact. Each question says "answer 0 only if the documents show…", so an unrelated document gets null, not 0. The handoff review fixed this: "answer 0 if none" contradicted the "null if not found" rule.
 
 **The command** (`batch.py`):
 ```bash
@@ -316,7 +326,7 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
 ## Git state
 
 ```
-main               4a113ba spec → 6b34612 Plan 1 (squash) → eb6a3ee Plan 2 (squash); 130 tests
+main               4a113ba spec → 6b34612 Plan 1 (squash) → eb6a3ee Plan 2 (squash) → c137451 handoff → handoff review; 130 tests
 plan-1-lbo-engine  full Plan 1 history
 plan-2-generator   full Plan 2 history
 claude/plan-1-implementation-review-727227  finished review branch (kept)

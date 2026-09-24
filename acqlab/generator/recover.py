@@ -10,15 +10,18 @@ from acqlab.generator.truth import DealTruth
 Complete = Callable[..., tuple[str, int]]
 SCHEMA = {"type": "object", "properties": {"low": {"type": ["number", "null"]}, "high": {"type": ["number", "null"]}},
           "required": ["low", "high"], "additionalProperties": False}
+# "Answer 0 only if the documents show..." so an unrelated document gets null (not found), not 0.
 QUESTIONS = {
     "addback": "How much of the claimed {label} add-back, in $M, should be disallowed because the cost recurs? "
-               "Answer 0 if it is a genuine one-time cost.",
-    "debt_like": "What amount, in $M, should be treated as debt at closing for any {label}? Answer 0 if none.",
-    "concentration": "By how much, in $M per year, will revenue from the largest customer fall? Answer 0 if it "
-                     "will not fall.",
-    "nwc": "By how much, in $M, will net working capital at closing fall below the peg? Answer 0 if it will not.",
-    "capex": "How much additional capital expenditure, in $M per year, is needed because of {label}? Answer 0 if "
-             "none.",
+               "Answer 0 only if the documents show it is a genuine one-time cost.",
+    "debt_like": "What amount, in $M, should be treated as debt at closing for any {label}? Answer 0 only if the "
+                 "documents show there is none.",
+    "concentration": "By how much, in $M per year, will revenue from the largest customer fall? Answer 0 only if "
+                     "the documents show it will not fall.",
+    "nwc": "By how much, in $M, will net working capital at closing fall below the peg? Answer 0 only if the "
+           "documents show it will not.",
+    "capex": "How much additional capital expenditure, in $M per year, is needed because of {label}? Answer 0 only if "
+             "the documents show none is needed.",
 }
 
 
