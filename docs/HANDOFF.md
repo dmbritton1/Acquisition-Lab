@@ -1,10 +1,10 @@
 # Acquisition Lab: Session Handoff
 
-*Last updated 2026-09-23, after Plans 1 and 2 were built, reviewed and squash-merged to `main`. Read this first, then the spec it points to. The spec is the binding authority on design; this file is the source of truth for status and next steps.*
+*Last updated 2026-09-23, after the handoff review, the Codex proof of concept and the Plan 3 spec and plan. Read this first, then the spec it points to. The spec is the binding authority on design; this file is the source of truth for status and next steps.*
 
 ## Start here
 
-**Where things stand:** Plan 1 (the LBO engine) and Plan 2 (the deal generator and budgeted data room) are done and on `main`. 130 tests pass (`uv run pytest -q`). The next piece of work is **Plan 3: Track A routers**, due by about 2026-10-12. The week-4 checkpoint (about 2026-10-19) depends on it.
+**Where things stand:** Plan 1 (the LBO engine) and Plan 2 (the deal generator and budgeted data room) are done and on `main`. 130 tests pass (`uv run pytest -q`). Plan 3 (Track A routers) is designed, written and pre-verified; the next piece of work is **executing it**, due by about 2026-10-12. The week-4 checkpoint (about 2026-10-19) depends on it.
 
 **Do these in order:**
 
@@ -35,7 +35,7 @@
 
 **Suggested first message for the next session:**
 
-> Read `docs/HANDOFF.md` and the spec, regenerate the deals, then help me design and write Plan 3 (Track A routers).
+> Read `docs/HANDOFF.md`, the spec and the Plan 3 design, regenerate the deals, then execute `docs/superpowers/plans/2026-09-23-plan-3-track-a.md` with subagent-driven development.
 
 ## Plan 3: what the next session needs to know
 
