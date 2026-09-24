@@ -27,7 +27,11 @@
      **Prose run done 2026-09-23:** 4 deals, 0 batch problems, 0 prose fallbacks, 31 calls, about 200k tokens per deal (184k–225k). Codex mostly splits the template sentences, so it adds little realism; loosening the prose prompt is a cheap later improvement.
      **`--recover 3` is half done:** Codex hit the usage limit after 21 of 40 calls, and those 21 are cached. 20 of the 21 passed. The one failure was a clean customer contract: the question asked about "the largest customer", which the contract never says. The question now says "the customer named in the documents". **Rerun the `--recover 3` command** to finish; it pays only for the missing calls plus the reworded concentration questions.
      Then run the same command plus `--recover 3`. Report batch problems, `prose_fallbacks` and `llm_tokens` (both in `data/poc/truth/*.json`). If Codex hits its usage limit, the command exits with code 2. Run the same command again after the limit resets: it resumes from the cache and pays for nothing twice.
-3. **Write Plan 3 (Track A routers).** Start with superpowers:brainstorming for the open details listed under "Plan 3: what the next session needs to know". Then use superpowers:writing-plans, and execute with superpowers:subagent-driven-development.
+3. **Plan 3 (Track A routers) is designed, written and pre-verified (2026-09-23). Next: execute it** with superpowers:subagent-driven-development.
+   - Spec: `docs/superpowers/specs/2026-09-23-plan-3-track-a-design.md` (§7 has the pre-verification revisions).
+   - Plan: `docs/superpowers/plans/2026-09-23-plan-3-track-a.md`. Rebuilt from its own text on a fresh clone: 154 tests pass, and Plan 2's answer keys are byte-identical.
+   - Tasks 1–4 are code transcription. Task 5 is about 6 hours of unattended, resumable Track A runs, done by the controller.
+   - **Early warning for the week-4 checkpoint:** on 120 deals, every router is close to random on generator truth, because the priors carry no clue about which issue is real. In the fair game (truth drawn from the router's own beliefs), routers 3 and 6 clearly beat random, but router 6 only ties router 3, because page costs are nearly flat. H2 may fail in Track A; the plan's "Findings" section has the numbers.
 
 **Suggested first message for the next session:**
 

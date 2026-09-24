@@ -1,6 +1,6 @@
 # Acquisition Lab — Track A Routers Design (Plan 3)
 
-Status: Approved in brainstorming 2026-09-23.
+Status: Approved in brainstorming 2026-09-23; revised the same day after pre-verification (see §7).
 Parent spec: `2026-09-22-acquisition-lab-design.md` §3 (Router) and §4 (Track A). The parent stays the binding authority; deviations are listed at the end.
 Inputs: the engine (Plan 1) and generator answer keys (Plan 2). All money in $M.
 
@@ -17,6 +17,8 @@ Show that the router math is right, on thousands of simulated runs, with no LLM.
 | Noisy priors at 3 levels, forgotten issues, residual sweep | The veto for every router; a page-price sweep (later, see below) |
 | Simulated investigator: perfect, failure, noisy | Track B (real LLMs) |
 | "6 + veto" row | |
+| Two truth modes: generator and self-consistent (§7) | |
+| A hints study: priors with a noisy hint about which issues are real, labelled "what if" (§7) | |
 
 ## 1. Components
 
@@ -108,9 +110,9 @@ uv run python -m acqlab.generator.batch --out data/track_a --dev 2000 --test 0 -
 
 **Command:**
 ```
-uv run python -m acqlab.routers.track_a --deals data/track_a --grid headline|full [--workers 8] [--limit N]
+uv run python -m acqlab.routers.track_a --deals data/track_a --grid headline|full|hints [--workers 8] [--limit N]
 ```
-Parallel over deals with `concurrent.futures.ProcessPoolExecutor` (stdlib). A deal that fails to load or run is logged and skipped, never scored as 0.
+Parallel over deals with `concurrent.futures.ProcessPoolExecutor` (stdlib); `--workers 1` runs in-process. A deal that fails to load or run is logged and skipped, never scored as 0.
 
 ## 5. Testing
 
@@ -124,17 +126,29 @@ Test-first with fixed seeds, as in Plans 1 and 2:
 - **Resume:** skips finished runs.
 - **Isolation:** router functions never see the answer key.
 - **The shared helper:** Plan 2's decision values are unchanged.
-- **Statistical check on a generated batch** (standing rule): router 6's first read is a flipper or interaction fact clearly more often than a decoy, measured as rates over a batch. The plan states the observed rates from pre-verification.
+- **Statistical check on a generated batch** (standing rule): in the self-consistent mode, router 6's regret is below random's, with a paired bootstrap 95% CI that excludes zero. On generator truth, the rate at which each router reads a decision-relevant fact is measured and reported, not asserted (§7 explains why).
 
 ## 6. Process
 
 Pre-verify the plan's code in a scratch copy: run the suite and a small real Track A run (for example the headline grid with `--limit 100`), and put measured runtimes and first results in the plan. Then rebuild from the plan's own text on a fresh `main`. The final review runs on Opus and includes the statistical check.
+
+## 7. Revisions from pre-verification (2026-09-23)
+
+Found by running the plan's code on 120 Track A deals before writing the plan:
+
+1. **On generator truth, every router is close to random.** At the 50% budget, mean normalised regret was: random 0.0151, checklist 0.0142, router 5 0.0132, router 3 0.0126, router 6 0.0122, oracle 0.0011. Routers read a decision-relevant fact in about 37 of 62 flip deals, against 32 for random. The noisy priors carry no deal-specific signal about *which* issue is real, and the generator builds its problems to sit near the decision edge, which the priors don't assume. The clue that separates issues lives in the documents, which Track A doesn't have.
+2. **The math works when beliefs are right.** With true values drawn from the router's own priors (360 runs), routers 3 and 6 cut regret by about 60% against random (0.0050 against 0.0131; the CI for router 6 − random excludes zero). Router 6 tied router 3 (+0.0002, CI [−0.0010, +0.0015]): with page costs nearly flat, "$ per page" ranks issues almost the same as "how far the value moves". This is an early warning for H2.
+3. **User decision: add both.**
+   - **`truth` axis:** "generator" (the answer key) or "self" (the fair game). Self mode keeps the deal but draws every issue's true value from the medium-noise priors, forgotten issues included. Roles become "problem" or "clean". It is the clean check that the router math is correct.
+   - **`clue` axis (hints study):** each issue gets a hint ("real problem" or "clean") that is right with probability `clue`, and `p_real` is scaled by the likelihood ratio clue / (1 − clue). 0.5 means no hint; the study uses 0.7 and 0.9. Hints come from the answer key, so this is a "what if" study of how good a Deal Lead's reading must be, never evidence (parent spec review finding #3).
+   - **Grids:** headline = both truths (clue 0.5), on 2,000 deals. full = unchanged, generator truth, on 500. hints = clue 0.7 and 0.9, perfect investigator, medium priors, generator truth, on 500.
 
 ## Deviations from the parent spec
 
 - Router 2 moves to Plan 4 (it needs the LLM adapter).
 - Budget stewardship is tested as a single "6 + veto" row, not applied to every router, so H2 compares routers at equal spend.
 - Track A budgets are 25/50/100% of the default: the default alone barely binds (handoff review finding).
+- Track A adds a self-consistent truth mode and a hints study (§7). The spec's rule "priors must be noisy, never the generator's prior" still holds in every mode; hints are labelled as using the answer key.
 
 ## Later
 
