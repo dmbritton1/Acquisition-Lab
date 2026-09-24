@@ -2,9 +2,10 @@ import warnings
 from collections import Counter
 
 import numpy as np
+import pytest
 
 from acqlab.generator.traps import TEST_ONLY, TRAPS
-from acqlab.generator.truth import generate, prior_draws, simulate, value_of_knowing
+from acqlab.generator.truth import cross_fit, generate, prior_draws, simulate, value_groups, value_of_knowing
 
 
 def test_same_seed_gives_the_same_answer_key():
@@ -68,3 +69,21 @@ def test_fewer_draws_than_bins_gives_finite_decision_values():
         warnings.simplefilter("error")  # an empty bin used to average nothing (NaN), silently clipped to 0
         t = generate("x", "test", 3, mc=5)
     assert all(np.isfinite(f.decision_value) and f.decision_value >= 0 for f in t.facts)
+
+
+def test_cross_fit_regret_is_the_mean_regret_of_its_own_decisions():
+    rng = np.random.default_rng(0)
+    reg_go, reg_no = rng.random(101), rng.random(101)
+    groups = value_groups(np.where(rng.random(101) < 0.5, 0.0, rng.random(101)), bins=4)
+    assert sorted(np.concatenate(groups).tolist()) == list(range(101))
+    regret, decision = cross_fit(groups, reg_go, reg_no)
+    assert regret == pytest.approx(np.where(decision, reg_go, reg_no).mean())
+    one = cross_fit([np.arange(101)], reg_go, reg_no)[1]
+    assert set(one[::2]) | set(one[1::2]) <= {True, False} and len(set(one[::2])) == 1
+
+
+def test_value_groups_puts_zeros_first_and_sorts_the_rest_into_size_groups():
+    col = np.array([0.0, 5.0, 0.0, 1.0, 3.0, 2.0])
+    groups = value_groups(col, bins=2)
+    assert groups[0].tolist() == [0, 2]
+    assert [col[g].tolist() for g in groups[1:]] == [[1.0, 2.0], [3.0, 5.0]]

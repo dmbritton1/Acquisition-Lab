@@ -124,33 +124,42 @@ def simulate(b: BaseDeal, worst: dict[str, float], n: int, rng: np.random.Genera
     return draws, np.maximum(0.0, ask - w), np.maximum(0.0, w - ask)
 
 
-def value_of_knowing(draws: np.ndarray, reg_go: np.ndarray, reg_no: np.ndarray, bins: int = 10) -> list[float]:
-    """Per column: expected regret with every fact at its prior, minus expected regret with that fact known.
-    Knowing a fact is approximated by deciding separately within bins of its draws: one bin for severity 0, and
-    quantile bins for the rest. Cross-fitted: each bin's decision is chosen on one half of the draws and scored on
-    the other (both ways round), so noise in a bin that cannot matter does not look like value."""
-    n = len(draws)
+def value_groups(col: np.ndarray, bins: int = 10) -> list[np.ndarray]:
+    """Draw indices grouped by one column's value: one group where it is exactly 0, then quantile groups for the
+    rest (empty groups dropped)."""
+    rest = np.flatnonzero(col > 0)
+    groups = [np.flatnonzero(col == 0)] + np.array_split(rest[np.argsort(col[rest])], bins)
+    return [g for g in groups if len(g)]
+
+
+def cross_fit(groups: list[np.ndarray], reg_go: np.ndarray, reg_no: np.ndarray) -> tuple[float, np.ndarray]:
+    """Expected regret when the go/no-go decision is chosen separately within each group, and each draw's decision
+    (True = go). Cross-fitted: a group's decision is chosen on one half of the draws and scored on the other (both
+    ways round), so noise in a group that cannot matter does not look like value."""
+    n = len(reg_go)
     first = np.arange(n) % 2 == 0  # draws are iid, so alternate draws make two independent halves
+    decision = np.zeros(n, dtype=bool)
 
     def go(idx: np.ndarray) -> bool:
         return bool(reg_go[idx].mean() <= reg_no[idx].mean())
 
-    def regret(groups: list[np.ndarray]) -> float:
-        total = 0.0
-        for half in (first, ~first):
-            prior_go = go(np.flatnonzero(~half))  # a bin with no draws in the other half keeps the prior decision
-            for g in groups:
-                score, fit = g[half[g]], g[~half[g]]
-                total += (reg_go if (go(fit) if len(fit) else prior_go) else reg_no)[score].sum()
-        return total / n
+    total = 0.0
+    for half in (first, ~first):
+        prior_go = go(np.flatnonzero(~half))  # a group with no draws in the other half keeps the prior decision
+        for g in groups:
+            score, fit = g[half[g]], g[~half[g]]
+            chosen = go(fit) if len(fit) else prior_go
+            decision[score] = chosen
+            total += (reg_go if chosen else reg_no)[score].sum()
+    return total / n, decision
 
-    everything = regret([np.arange(n)])
-    out = []
-    for col in draws.T:
-        rest = np.flatnonzero(col > 0)
-        groups = [np.flatnonzero(col == 0)] + np.array_split(rest[np.argsort(col[rest])], bins)
-        out.append(max(0.0, everything - regret([g for g in groups if len(g)])))
-    return out
+
+def value_of_knowing(draws: np.ndarray, reg_go: np.ndarray, reg_no: np.ndarray, bins: int = 10) -> list[float]:
+    """Per column: expected regret with every fact at its prior, minus expected regret with that fact known.
+    Knowing a fact is approximated by deciding separately within groups of its draws (`value_groups`), cross-fitted
+    (`cross_fit`)."""
+    everything = cross_fit([np.arange(len(draws))], reg_go, reg_no)[0]
+    return [max(0.0, everything - cross_fit(value_groups(col, bins), reg_go, reg_no)[0]) for col in draws.T]
 
 
 def _decision_values(b: BaseDeal, worst: dict[str, float], n: int, rng: np.random.Generator) -> dict[str, float]:

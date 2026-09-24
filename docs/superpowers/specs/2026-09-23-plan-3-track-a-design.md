@@ -30,7 +30,7 @@ Three files in `acqlab/routers/`:
   - *known range*: `(low, high)`, from unresolvable facts or the noisy investigator
   - *unproposed*: forgotten, so it is never scored
 
-  `sample_worlds(beliefs, base, n, rng)` returns an n×5 matrix of $M values and each world's walk-away. It converts with `acqlab.generator.traps.params_for` and never hand-rolls units. An unproposed issue is fixed at 0 in the router's worlds: no one thought of it, so the beliefs implicitly assume no problem. This is why forgetting hurts, and why the sweep exists. Routers score only proposed, open issues.
+  `draw(beliefs, n, rng)` returns an n×5 matrix of $M values, and `walk_aways(base, values)` returns each world's walk-away (split so routers that need no worlds skip the engine, and worlds can be cached). It converts with `acqlab.generator.traps.params_for` and never hand-rolls units. An unproposed issue is fixed at 0 in the router's worlds: no one thought of it, so the beliefs implicitly assume no problem. This is why forgetting hurts, and why the sweep exists. Routers score only proposed, open issues.
 - **`routers.py`: scoring rules and the decision.**
   - Routers 3, 5 and 6 are functions from (worlds, walk-aways, asking price, costs) to a score per open issue.
   - Checklist, random and oracle are ordering rules.
@@ -104,7 +104,7 @@ uv run python -m acqlab.generator.batch --out data/track_a --dev 2000 --test 0 -
 
 **Outputs:**
 - `data/track_a/results.jsonl`: one line per run. Reruns skip keys already present, so it is resumable.
-- `data/track_a/summary.json` plus a printed table: mean normalised regret per router and setting, overall and on flip, decoy and interaction slices; paired bootstrap 95% CIs (2,000 resamples over deals) for router 6 − router 3 and router 6 − router 5; prior calibration per level; the share of runs with a sweep find.
+- `data/track_a/summary_<grid>.json` plus a printed table: mean normalised regret per router and setting, overall and on flip, decoy and interaction slices; paired bootstrap 95% CIs (2,000 resamples over deals) for router 6 − router 3 and router 6 − router 5 (also − random and − checklist, the floors); prior calibration per level; the share of runs with a sweep find.
 
 **H2 decision rule (fixed before any run):** router 6 beats router k in a cell if its mean normalised regret is lower and the paired bootstrap 95% CI of the difference excludes zero. Every cell is reported; none is dropped after the fact.
 
