@@ -19,10 +19,13 @@
      uv run python -c "from pathlib import Path; from acqlab.llm import complete; print(complete('Reply with the single word: ok', cache_dir=Path('data/llm_cache')))"
      ```
      Expect `('ok', <tokens>)` with tokens above 0. If tokens is 0, look at `codex exec --json` output and fix `_usage_tokens` in `acqlab/llm.py` (with a test).
+     **Done 2026-09-23:** it returned `('ok', 19648)`. Token parsing works, but nearly all of those tokens are the Codex CLI's own built-in instructions, so every call carries about 20k tokens of overhead. Plan 4 needs this number: spec §4 requires comparable token overhead across systems, or scored runs move to the API.
    - **Proof-of-concept Codex batch** (about 70 calls, roughly half a Codex usage window):
      ```bash
      uv run python -m acqlab.generator.batch --out data/poc --dev 3 --test 0 --hand 0 --showcase 1 --llm
      ```
+     **Prose run done 2026-09-23:** 4 deals, 0 batch problems, 0 prose fallbacks, 31 calls, about 200k tokens per deal (184k–225k). Codex mostly splits the template sentences, so it adds little realism; loosening the prose prompt is a cheap later improvement.
+     **`--recover 3` is half done:** Codex hit the usage limit after 21 of 40 calls, and those 21 are cached. 20 of the 21 passed. The one failure was a clean customer contract: the question asked about "the largest customer", which the contract never says. The question now says "the customer named in the documents". **Rerun the `--recover 3` command** to finish; it pays only for the missing calls plus the reworded concentration questions.
      Then run the same command plus `--recover 3`. Report batch problems, `prose_fallbacks` and `llm_tokens` (both in `data/poc/truth/*.json`). If Codex hits its usage limit, the command exits with code 2. Run the same command again after the limit resets: it resumes from the cache and pays for nothing twice.
 3. **Write Plan 3 (Track A routers).** Start with superpowers:brainstorming for the open details listed under "Plan 3: what the next session needs to know". Then use superpowers:writing-plans, and execute with superpowers:subagent-driven-development.
 
@@ -250,6 +253,7 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
   - The CIM's "renewed on a long-term basis" reads against every contract's "renews annually".
   - The number-word guard rejects "third-party"; drop "third" if Codex fallbacks pile up.
   - One capex claim is ungrammatical for plural labels.
+  - Company-name suffixes ignore the industry (the showcase deal is "Marlow Mill Manufacturing", an information services business). Fix this before polishing the showcase deal. Note that it changes every prose prompt, so the cached prose would be paid for again.
 - **Recoverability failures are reported, not regenerated.** Every test deal must pass recoverability before the main benchmark.
 - **Plan 1's Task 9 spreadsheet check is still deferred by the user.** The spec lists it as required.
 - **Negative `debt_like` / `nwc_adjustment` values are rejected, not modelled.** A favourable surprise can only enter through `ebitda_adjustment`.

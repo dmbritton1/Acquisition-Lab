@@ -16,8 +16,8 @@ QUESTIONS = {
                "Answer 0 only if the documents show it is a genuine one-time cost.",
     "debt_like": "What amount, in $M, should be treated as debt at closing for any {label}? Answer 0 only if the "
                  "documents show there is none.",
-    "concentration": "By how much, in $M per year, will revenue from the largest customer fall? Answer 0 only if "
-                     "the documents show it will not fall.",
+    "concentration": "By how much, in $M per year, will revenue from the customer named in the documents fall? "
+                     "Answer 0 only if the documents show it will not fall.",
     "nwc": "By how much, in $M, will net working capital at closing fall below the peg? Answer 0 only if the "
            "documents show it will not.",
     "capex": "How much additional capital expenditure, in $M per year, is needed because of {label}? Answer 0 only if "
