@@ -1,8 +1,10 @@
+import json
+
 import pytest
 
 import acqlab.agents.record as record_mod
 from acqlab.agents.knowledge import typical_high
-from acqlab.agents.record import Record, load_face, next_doc
+from acqlab.agents.record import Record, load_face, next_doc, settle_weights
 from acqlab.engine import is_go
 from acqlab.generator.batch import AnswerKey
 from acqlab.generator.traps import params_for
@@ -171,6 +173,39 @@ def test_the_router_ranks_open_issues_per_page(data):
     r.plan([_issue("debt_like", 0.6, 0, 1.0), _issue("capex", 0.0, 0, 0.1)])
     scores = r.rank(["debt_like", "capex"], {"debt_like": 5.0, "capex": 5.0})
     assert scores["debt_like"] > 0 == scores["capex"]
+
+
+def test_settle_weights_follow_the_map_split_a_kind_and_move_after_a_miss():
+    pages = {"qoe": 8, "audited": 14, "cim": 11, "legal": 2, "board_minutes": 2, "contract_1": 3, "contract_2": 2}
+    w = settle_weights("addback", pages, set(), [])
+    assert (w["qoe"], w["audited"], w["cim"]) == pytest.approx((0.45, 0.25, 0.15))
+    assert w["legal"] == w["board_minutes"] == pytest.approx(0.15 / 4)  # the rest: every other document
+    assert sum(w.values()) == pytest.approx(1.0)
+    named = settle_weights("addback", pages, set(), ["board_minutes", "qoe", "nowhere"])
+    assert named["board_minutes"] == pytest.approx(0.15) and "legal" not in named  # a named off-map document takes it
+    c = settle_weights("concentration", pages, set(), [])
+    assert c["contract_1"] == c["contract_2"] == pytest.approx(0.45 / 2)  # one kind's share, split among its documents
+    miss = settle_weights("addback", pages, {"qoe"}, [])  # read without settling it: the evidence is elsewhere
+    assert "qoe" not in miss and miss["audited"] == pytest.approx(0.25 / 0.55)
+    assert sum(miss.values()) == pytest.approx(1.0)
+    assert settle_weights("nwc", {"qoe": 8, "audited": 14}, {"qoe", "audited"}, []) == {}
+
+
+def test_the_document_router_prices_what_each_document_may_settle_per_page(data):
+    r = _record(data)
+    index = json.loads((data / "deals" / "dev-000" / "room" / "index.json").read_text())
+    pages = {d["id"]: d["pages"] for d in index["documents"]}
+    r.plan([_issue("debt_like", 0.6, 0, 1.0, docs=["board_minutes"]), _issue("capex", 0.0, 0, 0.1)])
+    r.challenge([{"type": "nwc", "kind": "elsewhere", "chance": 0.5, "low": 0, "high": 5, "docs": ["credit"],
+                  "reason": "r"}])
+    assert r.targets() == ["debt_like", "nwc"]  # capex has no chance; nwc has a pending objection
+    assert r.named("debt_like") == ["board_minutes"] and r.named("nwc") == ["credit"]
+    w = r.weights(pages, {"legal"})
+    assert "legal" not in w and set(w["audited"]) == {"debt_like", "nwc"}
+    assert w["board_minutes"] == pytest.approx({"debt_like": 0.15 / 0.75})
+    scores = r.rank_docs(pages, {"legal"}, ["audited", "travel"])
+    assert scores["audited"] > 0 == scores["travel"]  # travel may settle nothing open
+    assert scores == r.rank_docs(pages, {"legal"}, ["audited", "travel"])
 
 
 def test_next_doc_walks_the_diligence_map():

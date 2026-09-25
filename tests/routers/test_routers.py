@@ -7,8 +7,8 @@ import acqlab.routers.routers as routers
 from acqlab.generator.traps import TRAPS
 from acqlab.generator.truth import generate
 from acqlab.routers.beliefs import Issue, draw, walk_aways
-from acqlab.routers.routers import (ROUTERS, checklist, decide, random_order, score_flip, score_regret,
-                                    score_sensitivity)
+from acqlab.routers.routers import (ROUTERS, checklist, decide, random_order, score_docs, score_flip,
+                                    score_regret, score_sensitivity)
 
 COSTS = {t: 1.0 for t in TRAPS}
 
@@ -65,6 +65,24 @@ def test_pair_screening_lifts_an_interaction_pair(roomy, monkeypatch):
     monkeypatch.setattr(routers, "PAIR_TOP", 0)
     alone = score_regret(*args)
     assert all(with_pairs[x] > alone[x] for x in ("nwc", "debt_like"))
+
+
+def test_the_document_router_scores_how_far_a_read_moves_the_walk_away_per_page():
+    """D2 §2: router 3's sensitivity per document. Two issues, each 0, 3 or 9 in equal thirds; walk-away 110 less both.
+    Learning one moves the mean walk-away (102) by (4 + 1 + 5) / 3; learning both, by the mean of |a + b - 8| = 40 / 9.
+    """
+    grid = np.array([(a, b) for a in (0.0, 3.0, 9.0) for b in (0.0, 3.0, 9.0)] * 100)
+    values = np.zeros((len(grid), len(TRAPS)))
+    values[:, TRAPS.index("addback")], values[:, TRAPS.index("nwc")] = grid[:, 0], grid[:, 1]
+    w = 110.0 - grid.sum(axis=1)
+    u = np.random.default_rng(1).random(values.shape)
+    both = {"addback": 1.0, "nwc": 1.0}
+    weights = {"both": both, "both_long": both, "one": {"addback": 1.0}, "none": {}}
+    pages = {"both": 2.0, "both_long": 4.0, "one": 1.0, "none": 1.0}
+    s = score_docs(values, w, weights, pages, ["addback", "nwc"], u)
+    assert s["one"] == pytest.approx(10 / 3) and s["both"] == pytest.approx(40 / 9 / 2) and s["none"] == 0
+    assert s["both_long"] == pytest.approx(s["both"] / 2)  # twice the pages, half the score
+    assert s == score_docs(values, w, weights, pages, ["addback", "nwc"], u)
 
 
 def test_ordering_rules():

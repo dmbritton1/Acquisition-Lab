@@ -15,9 +15,12 @@ from acqlab.engine import Deal, is_go
 from acqlab.generator.sample import Teaser
 from acqlab.generator.traps import TRAPS, params_for
 from acqlab.routers.beliefs import HAIRCUT_CAP, Issue, draw, walk_aways
-from acqlab.routers.routers import decide, score_regret
+from acqlab.routers.routers import decide, score_docs, score_regret
 
 N_WORLDS = 400
+MAP_WEIGHTS = (0.45, 0.25, 0.15)  # the chance a map document is where an issue is settled, by place on the map.
+# ponytail: hand-set from the map's order (the order S1b's guide states in words), not measured; tune here if the
+# order dominates the router
 PAIR_TOP = 3  # the pair screen looks at the top open issues by chance x size
 FLIP_STEPS = 30  # bisection steps for a flip amount
 
@@ -41,6 +44,25 @@ def is_kind(doc: str, kind: str) -> bool:
 def on_map(doc: str) -> bool:
     """True if the diligence map names this document's kind for some issue type."""
     return any(is_kind(doc, k) for kinds in DILIGENCE_MAP.values() for k in kinds)
+
+
+def settle_weights(trap: str, pages: dict[str, float], read: set[str], named: list[str]) -> dict[str, float]:
+    """The chance each unread document is where issue `trap` is settled (D2 §1). Map places get MAP_WEIGHTS, split
+    evenly among documents of one kind; the rest goes to the named documents off the map, or else to every other
+    document. Every issue is settled somewhere (a clean fact states $0.0M), so read documents drop out and the rest
+    renormalize: a read that misses moves where the evidence is, not whether the issue is real."""
+    w = dict.fromkeys(pages, 0.0)
+    for kind, share in zip(DILIGENCE_MAP[trap], MAP_WEIGHTS):
+        docs = [d for d in pages if is_kind(d, kind)]
+        for d in docs:
+            w[d] += share / len(docs)
+    left = 1.0 - sum(w.values())
+    rest = [d for d in dict.fromkeys(named) if w.get(d) == 0.0] or [d for d in pages if w[d] == 0.0]
+    for d in rest:
+        w[d] = left / len(rest)
+    unread = {d: v for d, v in w.items() if d not in read and v > 0}
+    total = sum(unread.values())
+    return {d: v / total for d, v in unread.items()}
 
 
 def next_doc(trap: str, pages: dict[str, float], read: set[str]) -> str | None:
@@ -140,8 +162,8 @@ class Record:
             return Issue(proposed=False)
         return Issue(p_real=e.chance, hi=max(e.high, typical_high(t, self.face.teaser)))
 
-    def worlds(self) -> tuple[np.ndarray, np.ndarray]:
-        values = draw({t: self.issue(t) for t in TRAPS}, N_WORLDS, np.random.default_rng(0))
+    def worlds(self, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+        values = draw({t: self.issue(t) for t in TRAPS}, N_WORLDS, np.random.default_rng(seed))
         return values, walk_aways(self.face, values)
 
     def decide(self) -> tuple[bool, float]:
@@ -190,6 +212,30 @@ class Record:
         """Router 6: expected $M of decision regret removed per page, for each candidate issue."""
         values, w = self.worlds()
         return score_regret(values, w, self.face.deal.asking_price, costs, candidates)
+
+    def targets(self) -> list[str]:
+        """Issues a read can still settle: open ones with a chance, and any with a pending objection."""
+        return [t for t, e in self.entries.items() if e.objections or (e.open and e.chance > 0)]
+
+    def named(self, t: str) -> list[str]:
+        """Documents the Deal Lead or a pending objection named for issue t."""
+        e = self.entries[t]
+        return list(dict.fromkeys(e.docs + [d for o in e.objections for d in o.get("docs", [])]))
+
+    def weights(self, pages: dict[str, float], read: set[str]) -> dict[str, dict[str, float]]:
+        """Per unread document, the chance it settles each target issue (D2 §1)."""
+        out: dict[str, dict[str, float]] = {}
+        for t in self.targets():
+            for d, v in settle_weights(t, pages, read, self.named(t)).items():
+                out.setdefault(d, {})[t] = v
+        return out
+
+    def rank_docs(self, pages: dict[str, float], read: set[str], docs: list[str], seed: int = 0) -> dict[str, float]:
+        """The document router (D2 §2): expected $M the mean walk-away moves per page by reading each document."""
+        values, w = self.worlds(seed)
+        u = np.random.default_rng(seed + 1).random(values.shape)
+        wts = self.weights(pages, read)
+        return score_docs(values, w, {d: wts.get(d, {}) for d in docs}, pages, self.targets(), u)
 
     def view(self, reasons: bool = True) -> str:
         """The record as text, for the Deal Lead (and, without the Lead's issue names, the Challenger)."""

@@ -9,6 +9,7 @@ from acqlab.generator.truth import cross_fit, value_groups
 
 PAIR_TOP = 3  # pair screening looks at the top issues by value
 PAIR_BINS = 4  # size groups per issue when two issues are grouped jointly
+DOC_BINS = 2  # settled sizes per issue for the document router: below or above the median (0 is its own label)
 
 
 def regrets(w: np.ndarray, ask: float) -> tuple[np.ndarray, np.ndarray]:
@@ -50,6 +51,23 @@ def score_regret(values, w, ask, costs, open_, rng=None) -> dict[str, float]:
             pair = joint / (costs[a] + costs[b])
             score[a], score[b] = max(score[a], pair), max(score[b], pair)
     return score
+
+
+def score_docs(values, w, weights, pages, open_, u) -> dict[str, float]:
+    """Document router (D2 §2): router 3's sensitivity per document, per page. In each world a document settles open
+    issue t where u < its weight for t; worlds are grouped by what the reader would learn (each issue settled at 0,
+    small, large, or not here), and the score is the expected absolute move of the mean walk-away from learning the
+    group. One table u for every document, so noise can't reorder them."""
+    labels = {t: _labels(values[:, TRAPS.index(t)], DOC_BINS) for t in open_}
+    m, out = w.mean(), {}
+    for d, wd in weights.items():
+        key = np.zeros(len(w), dtype=np.int64)
+        for t in open_:
+            seen = u[:, TRAPS.index(t)] < wd.get(t, 0.0)
+            key = key * (DOC_BINS + 2) + np.where(seen, labels[t], DOC_BINS + 1)
+        groups = [np.flatnonzero(key == k) for k in np.unique(key)]
+        out[d] = float(sum(len(g) * abs(w[g].mean() - m) for g in groups) / len(w)) / pages[d]
+    return out
 
 
 def score_flip(values, w, ask, costs, open_, rng=None) -> dict[str, float]:
