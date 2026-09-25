@@ -1,36 +1,66 @@
 # Acquisition Lab: Session Handoff
 
-*Last updated 2026-09-25, after Plan 4 merged to `main` and the Plan 5 plan was written and pre-verified. Read this first,
-then the reframe spec. The specs are the binding authority on design; this file is the source of truth for status and
-next steps.*
+*Last updated 2026-09-25, after Plan 5 Tasks 1–5 were built and reviewed, and the first real S4 runs (Task 6) were done.
+Read this first, then the reframe spec. The specs are the binding authority on design; this file is the source of truth
+for status and next steps.*
 
 ## Start here
 
 **Where things stand:**
-- Plans 1–4 are merged to `main` (Plan 4 squash-merged as `382bf35`; full history on `plan-4`). 223 tests pass.
-- **Calibration passed on round 2, with the user's ruling on test size.** Profile `r2` is frozen as the `batch --profile`
-  default. The test size is 160 deals.
-  - Pre-registration: `docs/results/plan-4b-preregistration.md`.
-  - Results: `docs/results/plan-4b-calibration.md`.
-- **Plan 5 (S4) is planned and pre-verified, not yet executed:** `docs/superpowers/plans/2026-09-25-plan-5-s4-panel.md`,
-  on branch `plan-5` (worktree `.claude/worktrees/plan-4b-calibration-round-1-5f0549`).
-  - Its code was run in a scratch copy (264 tests), and the plan was rebuilt from its own text on a fresh `main` with
-    identical files and matching test counts after every task.
-  - Read its "Decisions made in this plan" first: 10 choices the spec left open, for the user to review.
-- **The next step is the user's review of the Plan 5 plan, then executing it** (Tasks 1–5 are code; Task 6 is the real
-  dev checks against S1b, each round with the user's OK).
+- Plans 1–4 are merged to `main`. Calibration passed on round 2: profile `r2` is frozen and the test size is 160 deals
+  (`docs/results/plan-4b-preregistration.md`).
+- **Plan 5 (S4, the multi-agent panel): Tasks 1–5 are built** on branch `plan-5` (worktree
+  `.claude/worktrees/plan-4b-calibration-round-1-5f0549`). 277 tests pass. The work was subagent-driven, with a review
+  per task and a final Opus review of the whole branch.
+  - The reviews found and fixed real bugs the pre-verification missed. The plan's "Post-review changes (after
+    execution)" section lists each fix.
+  - The SDD ledger, with every ruling and every deferred minor, is at
+    `.superpowers/sdd/2026-09-25-plan-5-s4-panel/progress.md` (git-ignored).
+- **Task 6 (real runs) is in progress.** Results are in `docs/results/plan-5-dev-checks.md`.
+  - Smoke run on 3 deals (`ef8f418`): the machinery works. It fed two code fixes (`c989fb1`): an objection nobody could
+    afford to check changes nothing, and the sweep reads only documents on the diligence map. The smoke runs are kept in
+    `data/cal-r2/s4-smoke-ef8f418`.
+  - `s4` on `cal-r2` dev-000..009 (`c989fb1`):
+    - 7/10 correct, the same as S1b; paired regret difference −0.0037, 95% CI [−0.024, 0.018].
+    - $0.49 and 9.4 sessions per deal; `s3_n` = 2. The Committer refused 0 of 37 reports.
+  - **S4's two wrong NO-GOs (dev-000, dev-006) come from two causes, both diagnosed offline:**
+    1. **The router is myopic.** The Deal Lead starts every issue at chance 0.35–0.5 over wide ranges. At those chances,
+       no single check can change the engine's call, so router 6 scores every issue 0 and `panel.pick()` stops. dev-006
+       did no directed reading at all.
+    2. **The Lead barely lowers a chance after reading without settling it.** For example, concentration went
+       0.4 → 0.4 → 0.35 across three documents.
 
-**Suggested first message for the next session:**
-
-> Read `docs/HANDOFF.md`, then execute the Plan 5 plan with me.
+**Suggested first message for the next session:** see "Next steps" below. The user has a paste-ready message for fixes
+1–3.
 
 ### Next steps
 
-1. **Plan 5, Tasks 1–5 (code, no Claude calls).** Subagent-driven or inline; the plan has complete code.
-2. **Plan 5, Task 6 (real runs, user's OK each time).** Smoke S4 on 3 `cal-r2` deals and measure tokens per deal, then
-   the build-step checks against S1b. This sets S3's N and the main-run budget.
-3. **Budget note for Plan 6.** 160 test deals, not 100, raises the spec's §6 estimate of about $300–400 roughly
-   1.6-fold for the main runs.
+1. **Code fix (no Claude calls): router fallback.**
+   - In `acqlab/agents/panel.py` `pick()`: when router 6's best score is not above the veto (0), but candidates with
+     chance > 0 remain and budget is available, fall back to the Deal Lead's order (the no-router rule already in
+     `pick()`) instead of stopping.
+   - Rationale: unspent budget earns nothing (Decision 4), and one-step value of information misses issues that only
+     matter together.
+   - Pin it with a test that reproduces dev-006's shape: every single-check score is 0, yet it still investigates.
+2. **Prompt fix (logged; parity rule): the Lead lowers a chance after reading finds nothing.**
+   - Add the guidance "reading the documents that normally hold an issue and finding nothing is strong evidence against
+     it; lower its chance".
+   - Either put it in `knowledge.GUIDE`, which S1b shares (S1b's prompt then changes, so re-run S1b on the same deals),
+     or put it in the Lead prompt only and offer S1b the same effort. The user picks.
+   - Create `docs/results/plan-5-prompt-log.md` (format: `docs/results/plan-4a-prompt-log.md`) and log the edit there.
+3. **Re-run and compare.**
+   - Archive `data/cal-r2/runs/s4` to `data/cal-r2/s4-c989fb1`, because the pilot skips finished runs. Re-run `s4` on
+     dev-000..009, and S1b too if the GUIDE changed (archive `runs/s1b` first).
+   - Record the results in `plan-5-dev-checks.md` and compare with the table there.
+   - Each real run needs the user's OK. `export CLAUDE_BIN="$HOME/Library/Application
+     Support/Claude/claude-code/2.1.280/claude.app/Contents/MacOS/claude"` (stay on 2.1.280 for parity, even though
+     2.1.281 is installed).
+4. **Then the rest of Task 6:**
+   - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
+   - the prompt tuning loop, confirmed on `cal-r1`;
+   - `s3_n` and the main-run budget. At the current cost: 160 × (S1b + S3@N=2 + S4 + S0) is about $165 notional and about
+     11 h, plus the ablations.
+   - Then the handoff update, and Plan 6.
 
 ### Other outstanding items
 - **Codex recoverability rerun.** It needs the user's OK, because it uses their ChatGPT Codex quota. See "Codex status"
@@ -559,7 +589,8 @@ The reframe spec's §5–6 replace the old Plan 4–7 outline. In short:
 main               4a113ba spec → 6b34612 Plan 1 (squash) → eb6a3ee Plan 2 (squash) → handoff review, Codex PoC, Plan 3 spec and plan (7e965f0); 130 tests
                    → a796026 Plan 3 (squash); 159 tests
                    → 382bf35 Plan 4 (squash: 4a checkpoint + 4b hard benchmark, r2 frozen, pre-registration); 223 tests
-plan-5             main + the Plan 5 plan (and this handoff); worktree .claude/worktrees/plan-4b-calibration-round-1-5f0549
+plan-5             main + the Plan 5 plan, Tasks 1–5 (S4), review fixes, smoke fixes, dev-check results; 277 tests;
+                   worktree .claude/worktrees/plan-4b-calibration-round-1-5f0549
 plan-4             full Plan 4 history (0d5db70)
 claude/plan-4b-calibration-round-1-5f0549  Plan 4b calibration commits, contained in plan-4 (kept)
 plan-3-track-a     full Plan 3 history
