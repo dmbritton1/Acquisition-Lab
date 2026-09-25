@@ -88,9 +88,18 @@ def test_an_objection_reopens_an_issue_and_widens_an_open_belief(data):
                   "reason": "r"}])
     nwc, debt = r.entries["nwc"], r.entries["debt_like"]
     assert (nwc.chance, nwc.high, nwc.docs[0]) == (0.4, 50, "audited")
-    assert debt.known == (0.0, 0.0) and r.issue("debt_like").p_real == 0.3 and r.issue("debt_like").hi == 9
+    assert debt.known == (0.0, 0.0) and r.issue("debt_like").known == (0.0, 9)
     debt.objections = []
     assert r.issue("debt_like").known == (0.0, 0.0)
+
+    r2 = _record(data)
+    f = r2.flip_amount("debt_like")
+    r2.apply([{"type": "debt_like", "kind": "quoted", "low": 1.3 * f, "high": 1.3 * f, "quotes": []}])
+    assert not r2.decide()[0]
+    r2.challenge([{"type": "debt_like", "kind": "bigger", "chance": 0.3, "low": 0, "high": 1.5 * 1.3 * f,
+                   "docs": ["legal"], "reason": "r"}])
+    assert not r2.decide()[0]  # a "bigger" objection must not shrink a committed value below its floor
+    assert r2.issue("debt_like").known == pytest.approx((1.3 * f, 1.5 * 1.3 * f))
 
 
 def test_the_router_ranks_open_issues_per_page(data):

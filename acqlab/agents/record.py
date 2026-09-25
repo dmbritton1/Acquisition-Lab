@@ -109,9 +109,8 @@ class Record:
 
     def issue(self, t: str) -> Issue:
         e = self.entries[t]
-        if e.known is not None and e.objections:  # in doubt until checked: priced as open
-            return Issue(p_real=max(o["chance"] for o in e.objections),
-                         hi=max([o["high"] for o in e.objections] + [e.known[1]]))
+        if e.known is not None and e.objections:  # in doubt until checked: the committed floor stands, the top widens
+            return Issue(known=(e.known[0], max([o["high"] for o in e.objections] + [e.known[1]])))
         if e.known is not None:
             return Issue(known=e.known)
         if not e.proposed:
