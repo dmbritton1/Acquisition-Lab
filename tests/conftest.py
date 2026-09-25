@@ -1,6 +1,12 @@
+import sys
+from pathlib import Path
+
 import pytest
 
 from acqlab.engine import Company, Deal, Financing, Params, Policy
+from acqlab.generator import batch
+
+FAKE = Path(__file__).parent / "agents" / "fake_claude.py"
 
 
 def make_simple(covenant: float = 5.0) -> Deal:
@@ -40,3 +46,25 @@ def simple() -> Deal:
 @pytest.fixture
 def full() -> Deal:
     return make_full()
+
+
+@pytest.fixture(scope="session")
+def data(tmp_path_factory):
+    """Two generated dev deals (rooms, answer keys, splits), shared by the agents tests."""
+    out = tmp_path_factory.mktemp("data")
+    assert batch.run(out, {"dev": 2, "test": 0, "hand": 0, "showcase": 0}, mc=20) == []
+    return out
+
+
+@pytest.fixture
+def fake_claude(tmp_path, monkeypatch):
+    """Path to an executable fake `claude`; set FAKE_CLAUDE (mode) with monkeypatch.setenv."""
+    from acqlab.agents import solver
+    exe = tmp_path / "claude"
+    exe.write_text(f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(FAKE)!r}, run_name='__main__')\n")
+    exe.chmod(0o755)
+    monkeypatch.setenv("FAKE_ARGS", str(tmp_path / "args.json"))
+    # solver.py scrubs the child env to an allowlist (F1); widen it here only, so the fake still gets its mode
+    # and args-file path, without production code ever knowing these test-only names.
+    monkeypatch.setattr(solver, "ENV_KEEP", solver.ENV_KEEP + ("FAKE_CLAUDE", "FAKE_ARGS"))
+    return str(exe)

@@ -128,6 +128,8 @@ Architecture: a **blackboard** (Deal Record) + a **code scheduler** (Router) + L
 S4 beats S1b if decision regret is **≥ 25% lower** AND the paired bootstrap 95% CI on the difference excludes zero, on ~100 test deals. The pilot checks whether 100 deals can detect that effect; adjust deal count before the main run, not after.
 
 ### Pre-registered hypotheses
+> **Revised 2026-09-24:** after the Plan 4a checkpoint (verdict: reframe), `2026-09-24-reframe-design.md` replaces the claim, these hypotheses and the benchmark difficulty, and adds a calibration protocol. Where the two conflict, the revision wins.
+
 - H1: S4 has lower regret than S1b at equal cost (and than S1a, S3).
 - H2: Router 6 beats routers 3 and 5, especially on decoy/interaction cases.
 - H3: removing the Challenger increases evidence errors and regret.

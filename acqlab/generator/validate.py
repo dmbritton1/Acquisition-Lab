@@ -1,21 +1,30 @@
 """Checks run on every generated deal (design §7). Each returns a list of problems; empty means it passed."""
 import re
+from collections import Counter
 
 import numpy as np
 
 from acqlab.engine import is_go, walk_away
 from acqlab.generator.documents import PLACEHOLDER, Doc, money, pct
-from acqlab.generator.render import FILLER, LABELS, Evidence, answer
+from acqlab.generator.padding import EXTRA_FILLER
+from acqlab.generator.render import FILLER, LABELS, MINUTES_TITLE, Evidence, answer, span
 from acqlab.generator.roles import DECOY_MOVE, MARGIN, PULL_BACK, UNRESOLVED_WIDTH
 from acqlab.generator.traps import params_for
 from acqlab.generator.truth import DealTruth, Fact
 
 ROUND_STEP = 0.051  # amounts are rounded to $0.1M, so allow half a step (plus float fuzz) of slack
 CORE_TITLES = {"Confidential Information Memorandum", "Quality of Earnings Report", "Credit Agreement Excerpt",
-               "Fixed Asset and Lease Schedule", "Legal Letter"} | set(FILLER.values())
+               "Fixed Asset and Lease Schedule", "Legal Letter", MINUTES_TITLE} | set(FILLER.values()) \
+    | set(EXTRA_FILLER.values())
 LEAK_WORDS = ("disallow", "recur", "notice", "lawsuit", "unfunded", "shortfall", "below the peg", "deferred maintenance",
               "re-tender", "not renew")
 ADDBACK_MIN_GROUP = 20  # smaller groups are too noisy to compare
+# every trap's evidence lives in these
+PAGE_DOCS = ("cim", "qoe", "audited", "contract_1", "assets", "legal", "board_minutes")
+PAGE_Z = 4.0  # flag a length gap wider than 4 standard errors (40 comparisons per batch, so false alarms are rare)
+PAGE_MIN_GROUP = 10
+WORD_LEAK_AUC = 0.15  # |AUC - 0.5| above this: a word's count in a document tells trap deals from clean ones
+WORD_LEAK_Z = 5.0  # ...and above 5 null standard errors, so hundreds of words tested on small groups stay quiet
 TOPIC_WORDS = {"addback": "add-back", "debt_like": "debt", "concentration": "customer", "nwc": "working capital",
                "capex": "capital expenditure"}
 
@@ -88,8 +97,9 @@ def check_consistency(t: DealTruth, docs: list[Doc], evidence: list[Evidence]) -
         if not ok:
             problems.append(f"{f.trap}: evidence gives {got}, answer key says {want}")
         body = " ".join(text[d] for d in ev.docs)
-        for name, v in ev.values.items():
-            shown = pct(v) if name == "fraction" else money(v)
+        shown_all = ({"range": span(ev.values["low"], ev.values["high"])} if ev.formula == "range" else
+                     {name: pct(v) if name == "fraction" else money(v) for name, v in ev.values.items()})
+        for name, shown in shown_all.items():
             if shown not in body:
                 problems.append(f"{f.trap}: {name} {shown} not found in {ev.docs}")
     for d in docs:
@@ -127,9 +137,29 @@ def _addback_problems(truths: list[DealTruth], texts: dict[str, str]) -> list[st
     return []
 
 
-def check_batch(truths: list[DealTruth], texts: dict[str, str]) -> list[str]:
-    """Batch-level checks: go rate near 50%, topic mentions equally common in trap and clean deals, and add-back
-    line items the same size for clean and trap facts."""
+def _page_problems(truths: list[DealTruth], pages: dict[str, dict[str, int]]) -> list[str]:
+    """Bigger rooms must not make a trap's document (or the room) longer: mean pages by role, per trap."""
+    problems = []
+    for trap in TOPIC_WORDS:
+        for doc in PAGE_DOCS + ("room",):
+            by: dict[bool, list[int]] = {True: [], False: []}
+            for t in truths:
+                role = next(f.role for f in t.facts if f.trap == trap)
+                by[role != "clean"].append(sum(pages[t.id].values()) if doc == "room" else pages[t.id][doc])
+            a, c = np.array(by[True], float), np.array(by[False], float)
+            if min(len(a), len(c)) < PAGE_MIN_GROUP:
+                continue
+            gap = a.mean() - c.mean()
+            se = np.sqrt(a.var(ddof=1) / len(a) + c.var(ddof=1) / len(c))
+            if (abs(gap) > PAGE_Z * se) if se > 0 else gap != 0:
+                problems.append(f"pages: {doc} is {gap:+.2f} pages longer on average when {trap!r} is a trap")
+    return problems
+
+
+def check_batch(truths: list[DealTruth], texts: dict[str, str], pages: dict[str, dict[str, int]] | None = None
+                ) -> list[str]:
+    """Batch-level checks: go rate near 50%, topic mentions equally common in trap and clean deals, add-back line
+    items the same size for clean and trap facts, and (given page counts) documents the same length."""
     problems = []
     rate = float(np.mean([t.go for t in truths]))
     if len(truths) >= 100 and not 0.38 <= rate <= 0.62:  # smaller batches are too noisy to judge
@@ -143,4 +173,40 @@ def check_batch(truths: list[DealTruth], texts: dict[str, str]) -> list[str]:
             ratio = np.mean(counts[True]) / np.mean(counts[False])
             if not 0.67 <= ratio <= 1.5:
                 problems.append(f"presence: {trap!r} mentioned {ratio:.2f}x as often in trap deals")
+    if pages is not None and len(truths) >= 100:  # smaller batches are too noisy to judge
+        problems += _page_problems(truths, pages)
     return problems + _addback_problems(truths, texts)
+
+
+def doc_words(docs: list[Doc]) -> dict[str, Counter]:
+    """Word counts of the evidence documents, as a search tool would see them."""
+    return {d.id: Counter(re.findall(r"[a-z]+", d.render().lower())) for d in docs if d.id in PAGE_DOCS}
+
+
+def _auc(a: np.ndarray, b: np.ndarray) -> float:
+    """Chance a random trap-deal count beats a random clean-deal count, ties counted half (Mann-Whitney)."""
+    _, inv = np.unique(np.concatenate([a, b]), return_inverse=True)
+    n = np.bincount(inv)
+    rank = np.cumsum(n) - n + (n + 1) / 2
+    return float((rank[inv[:len(a)]].sum() - len(a) * (len(a) + 1) / 2) / (len(a) * len(b)))
+
+
+def word_leaks(truths: list[DealTruth], words: dict[str, dict[str, Counter]]) -> list[dict]:
+    """(trap, document, word) triples where the word's count separates trap deals from clean ones: what a search
+    tool returning hit counts would leak. Just a report here (batch.py is what turns a non-empty result into a
+    batch problem, on batches of 100+ deals where the count is meaningful): search is back since Plan 4b, so any
+    leak found here is real."""
+    out = []
+    for trap in TOPIC_WORDS:
+        real = np.array([next(f.role for f in t.facts if f.trap == trap) != "clean" for t in truths])
+        if min(real.sum(), (~real).sum()) < PAGE_MIN_GROUP:
+            continue
+        n1, n0 = int(real.sum()), int((~real).sum())
+        bar = max(WORD_LEAK_AUC, WORD_LEAK_Z * np.sqrt((n1 + n0 + 1) / (12 * n1 * n0)))
+        for doc in PAGE_DOCS:
+            for w in sorted(set().union(*(words[t.id][doc] for t in truths))):
+                x = np.array([words[t.id][doc][w] for t in truths])
+                auc = _auc(x[real], x[~real])
+                if abs(auc - 0.5) > bar:
+                    out.append({"trap": trap, "doc": doc, "word": w, "auc": round(auc, 3)})
+    return sorted(out, key=lambda r: -abs(r["auc"] - 0.5))

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from acqlab.generator.documents import PLACEHOLDER, Doc, heading, money, pct, slot, table
 from acqlab.generator.sample import FISCAL_YEARS
-from acqlab.generator.truth import DealTruth, Fact
+from acqlab.generator.truth import PROFILES, DealTruth, Fact
 
 FY_LAST, FY_NEXT = str(FISCAL_YEARS[-1]), str(FISCAL_YEARS[-1] + 1)
 TERM = "Term: renews annually each fiscal year."  # the same in every contract, so the term never leaks or conflicts
@@ -20,8 +20,6 @@ LABELS = {
     "aged_equipment": "equipment past its useful life", "deferred_maintenance": "deferred maintenance",
     "lease_return": "lease return conditions on leased equipment",
 }
-SUPPORT = {"earnout": "earnout calculation", "pension": "actuarial valuation",
-           "deferred_revenue": "deferred revenue roll-forward"}
 BOILERPLATE = (
     "This document has been prepared solely for the use of prospective acquirers in connection with the proposed "
     "transaction. It does not purport to contain all information a prospective acquirer may require.",
@@ -44,8 +42,9 @@ BOILERPLATE = (
     "Terms not otherwise defined have the meaning given in the purchase agreement. Headings are for convenience "
     "only and do not affect interpretation.",
 )
+MINUTES_TITLE = "Board Meeting Minutes"  # a core document: under profiles r2 and r3 it can hold a fact's answer
 FILLER = {
-    "board_minutes": "Board Meeting Minutes", "hr_policy": "Human Resources Policy Manual",
+    "hr_policy": "Human Resources Policy Manual",
     "insurance": "Insurance Certificates", "it_policy": "IT and Information Security Policy",
     "environmental": "Environmental, Health and Safety Policy",
 }
@@ -95,15 +94,33 @@ def _range_evidence(f: Fact, vals: dict, formula: str, values: dict) -> tuple[st
     return "range", {"low": f.documented[0], "high": f.documented[1]}
 
 
-def _clean_item_severity(rng: np.random.Generator) -> float:
-    """Severity for a clean add-back's line item, shaped like trap severities (quartiles about 0.5/0.7/0.9), so the
-    item's size relative to the claimed add-backs says nothing about the fact's role."""
-    return 0.2 + 0.8 * float(rng.random()) ** 0.7
+def span(low: float, high: float) -> str:
+    """A $M range with one unit sign ("$6.8–$19.2M"), so it holds as many words as a single amount."""
+    return f"${low:,.1f}–{money(high)}"
+
+
+def _span(f: Fact) -> str:
+    """An unresolvable fact's documented range, written where a resolved fact writes its amount (no extra words)."""
+    return span(*f.documented)
+
+
+def _minutes(sid: str, neutral: str, reveal: str, f: Fact, **vals: str) -> list:
+    """The board minutes' line on a topic, in every deal: the reveal only when the fact is placed there ("minutes"),
+    else a neutral line. Placement is role-blind, so the choice leaks nothing."""
+    return [slot(sid, "Record the board's review of this topic", reveal if f.placement == "minutes" else neutral,
+                 **vals)]
+
+
+def _clean_item_severity(rng: np.random.Generator, power: float) -> float:
+    """Severity for a clean add-back's line item, shaped like trap severities under the deal's case mix (base: quartiles
+    about 0.5/0.7/0.9), so the item's size relative to the claimed add-backs says nothing about the fact's role."""
+    return 0.2 + 0.8 * float(rng.random()) ** power
 
 
 def _addback(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evidence]:
     lab, claimed, style = LABELS[f.variant], t.base.teaser.claimed_addbacks, t.style
-    clean_item = min(claimed, max(0.1, round(_clean_item_severity(rng) * f.worst, 1)))  # drawn for every role
+    power = PROFILES[t.profile]["clean_item_power"]
+    clean_item = min(claimed, max(0.1, round(_clean_item_severity(rng, power) * f.worst, 1)))  # drawn for every role
     item = f.documented[1] if f.documented else (f.amount if _trap_side(f) else clean_item)
     sites = {"cim.addback": [table(style, ["Add-back", "Amount"], [[_cap(lab), money(item)],
                                                                       ["Other one-time items", money(claimed - item)],
@@ -115,32 +132,27 @@ def _addback(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evi
     note = "Note 9 — {{label_cap}}. {{label_cap}} are included in operating expenses."
     rows = None
     trap = _trap_side(f)
-    if f.placement in ("explicit", "contradicted"):
-        qoe = ("We do not accept {{label}} of {{item}} as an add-back: the cost recurred in each of the last three "
-               "years and is expected to continue." if trap else
-               "We accept {{label}} of {{item}} as an add-back: the cost arose once and has not recurred.")
-        if f.placement == "contradicted":
-            qoe = "Contrary to the CIM, {{label}} recur every year; we do not accept the {{item}} add-back."
+    # A real problem and a clean fact share each sentence word for word; only the numbers differ (Plan 4b).
+    if f.placement in ("explicit", "contradicted"):  # contradicted: the CIM's one-time claim is the other side
+        qoe = ("We reviewed the add-back for {{label}} of {{item}}. Of this, {{recurring}} recurred in each of the "
+               "last three years and is expected to continue, so we exclude it from adjusted EBITDA.")
     elif f.placement == "footnote":
-        note = ("Note 9 — {{label_cap}}. The Company incurred {{label}} of {{item}} in {{fy_last}}; similar costs were "
-                "incurred in each prior year and management expects them to continue." if trap else
-                "Note 9 — {{label_cap}}. The Company incurred {{label}} of {{item}} in {{fy_last}}; no similar costs "
-                "were incurred in prior years and none are expected.")
+        note = ("Note 9 — {{label_cap}}. The Company incurred {{label}} of {{item}} in {{fy_last}}. Of this, "
+                "{{recurring}} was also incurred in each prior year and is expected to continue.")
     elif f.placement == "calculation":
         past = [round(item * k, 1) for k in (0.92, 1.05)] if trap else [0.0, 0.0]
         rows = [_cap(lab)] + [money(x) for x in past + [item]]
         note = "Note 9 — {{label_cap}}. {{label_cap}} are shown separately in the income statement."
-    elif f.placement == "range":
-        qoe = ("We could not determine whether {{label}} will recur. Between {{low}} and {{high}} of the {{item}} "
-               "add-back may prove recurring; supporting invoices were not provided.")
-    vals = dict(label=lab, label_cap=_cap(lab), item=money(item), fy_last=FY_LAST)
-    if f.documented:
-        vals |= dict(low=money(f.documented[0]), high=money(f.documented[1]))
+    vals = dict(label=lab, label_cap=_cap(lab), item=money(item), fy_last=FY_LAST,
+                recurring=_span(f) if f.documented else money(item if trap else 0.0))
     sites["qoe.addback"] = [slot("qoe_addback", "Give the QoE view on this add-back", qoe, **vals)]
     sites["audited.note9"] = _note("note9", "Write the note on this cost line", note, **vals)
     sites["audited.is_rows"] = [rows] if rows else []
+    sites["minutes.addback"] = _minutes("minutes_addback", "The board reviewed the add-back for {{label}}.",
+                                        "The board reviewed the add-back for {{label}}: {{recurring}} of it recurs "
+                                        "every year.", f, **vals)
     doc = {"explicit": ["qoe"], "contradicted": ["cim", "qoe"], "footnote": ["audited"],
-           "calculation": ["audited"], "range": ["qoe"]}[f.placement]
+           "calculation": ["audited"], "minutes": ["board_minutes"]}[f.placement]
     if f.documented:
         ev = Evidence(trap=f.trap, docs=doc, formula="range", values={"low": f.documented[0], "high": f.documented[1]})
     else:
@@ -151,7 +163,7 @@ def _addback(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evi
 
 def _debt(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evidence]:
     lab, trap, lit = LABELS[f.variant], _trap_side(f), f.variant == "litigation"
-    vals = dict(label=lab, label_cap=_cap(lab), amount=money(f.amount), support=SUPPORT.get(f.variant, ""))
+    vals = dict(label=lab, label_cap=_cap(lab), amount=money(f.amount))
     cim = ("The business will be delivered cash-free and debt-free; the price excludes items such as any {{label}}. "
            "The business has no {{label}}.")
     qoe = "Debt-like items, including any {{label}}: see the notes to the audited financial statements."
@@ -160,33 +172,26 @@ def _debt(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Eviden
     legal = "We are not aware of any material pending litigation against the Company."
     ev_formula, ev_vals = _point_evidence(f)
     if lit:
-        docs = ["cim", "legal"] if f.placement == "contradicted" else ["legal"]
+        docs = {"contradicted": ["cim", "legal"], "minutes": ["board_minutes"]}.get(f.placement, ["legal"])
         if f.placement in ("explicit", "footnote", "contradicted"):
             legal = ("We represent the Company in a {{label}}. We expect it to settle for {{amount}}, payable by the "
-                     "Company." if trap else "The {{label}} against the Company was dismissed; there is no liability.")
+                     "Company.")
         elif f.placement == "calculation":
-            gross = round(f.amount + (float(np.round(f.worst * 0.3, 1)) if trap else 0.0), 1) if trap else 0.0
-            insured = round(gross - f.amount, 1) if trap else 0.0
+            gross = round(f.amount + float(np.round(f.worst * 0.3, 1)), 1)  # clean: insurance covers the whole claim
+            insured = round(gross - f.amount, 1)
             legal = ("A {{label}} claims damages of {{gross}}. Insurance available to cover the claim is {{settled}}; "
-                     "the Company bears the rest." if trap else
-                     "The {{label}} against the Company was dismissed; there is no liability.")
+                     "the Company bears the rest.")
             vals |= dict(gross=money(gross), settled=money(insured))
             if trap:
                 ev_formula, ev_vals = "difference", {"gross": gross, "settled": insured}
-        elif f.placement == "range":
-            legal = ("We cannot predict the outcome of the {{label}}; a settlement between {{low}} and {{high}} "
-                     "is possible.")
     else:
         docs = {"explicit": ["qoe"], "footnote": ["audited"], "calculation": ["audited"],
-                "contradicted": ["cim", "audited"], "range": ["audited"]}[f.placement]
+                "contradicted": ["cim", "audited"], "minutes": ["board_minutes"]}[f.placement]
         if f.placement == "explicit":
-            qoe = ("Debt-like items: we identify a {{label}} of {{amount}}, which should be treated as debt at closing."
-                   if trap else "Debt-like items: we reviewed any {{label}} and identify no amount to be treated as "
-                   "debt at closing.")
+            qoe = "Debt-like items: we identify a {{label}} of {{amount}}, which should be treated as debt at closing."
         elif f.placement in ("footnote", "contradicted"):
             note = ("Note 12 — Commitments and contingencies. The Company has a {{label}} of {{amount}}, payable "
-                    "within twelve months of closing." if trap else
-                    "Note 12 — Commitments and contingencies. The Company has no {{label}}.")
+                    "within twelve months of closing.")
         elif f.placement == "calculation":
             settled = round(float(np.round(f.worst * 0.5, 1)), 1)
             gross = round(settled + f.amount, 1) if trap else settled
@@ -195,14 +200,15 @@ def _debt(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Eviden
             vals |= dict(gross=money(gross), settled=money(settled))
             if trap:
                 ev_formula, ev_vals = "difference", {"gross": gross, "settled": settled}
-        elif f.placement == "range":
-            note = ("Note 12 — Commitments and contingencies. Management estimates the {{label}} at between {{low}} "
-                    "and {{high}}; the supporting {{support}} is referenced but was not provided.")
     ev_formula, ev_vals = _range_evidence(f, vals, ev_formula, ev_vals)
+    if f.documented:
+        vals["amount"] = _span(f)
     sites = {"cim.debt": [slot("cim_debt", "State the cash-free, debt-free basis", cim, **vals)],
              "qoe.debt": [slot("qoe_debt", "Summarise debt-like items", qoe, **vals)],
              "audited.note12": _note("note12", "Write the commitments note", note, **vals),
-             "legal.letter": [slot("legal", "Write the litigation paragraph of a legal letter", legal, **vals)]}
+             "legal.letter": [slot("legal", "Write the litigation paragraph of a legal letter", legal, **vals)],
+             "minutes.debt": _minutes("minutes_debt", "The board reviewed any {{label}}.",
+                                      "The board reviewed a {{label}} of {{amount}}, payable at closing.", f, **vals)}
     return sites, Evidence(trap=f.trap, docs=docs, formula=ev_formula, values=ev_vals)
 
 
@@ -214,36 +220,35 @@ def _customer(f: Fact, t: DealTruth, customer: str, rng: np.random.Generator) ->
     cim = ("Our largest customer, {{customer}}, accounts for {{share}} of revenue. {{customer}} has renewed its "
            "contract on a long-term basis.")
     terms = TERM + " Annual purchases under this agreement: {{purchases}}."
-    notice = "Purchase volumes are reviewed with {{customer}} each year."
+    notice = "Purchase volumes of {{purchases}} are reviewed with {{customer}} each year."  # one $ figure, as always
     note = ("Note 14 — Subsequent events. Management evaluated subsequent events through the date these statements "
             "were issued.")
     ev_formula, ev_vals = _point_evidence(f)
     docs = {"explicit": ["contract_1"], "contradicted": ["cim", "contract_1"], "footnote": ["audited"],
-            "calculation": ["cim", "contract_1"], "range": ["contract_1"]}[f.placement]
+            "calculation": ["cim", "contract_1"], "minutes": ["board_minutes"]}[f.placement]
     if f.placement in ("explicit", "contradicted"):
-        notice = ("{{customer}} has notified the Company that, because {{reason}}, it will reduce annual purchases by "
-                  "{{amount}} from {{fy_next}}." if trap else "{{customer}} has confirmed it will renew on the same "
-                  "terms.")
+        notice = ("{{customer}} has set out its purchase plans for {{fy_next}}: annual purchases will fall by "
+                  "{{amount}}.")
     elif f.placement == "footnote":
-        note = ("Note 14 — Subsequent events. After year end, {{customer}} gave notice that, because {{reason}}, it "
-                "will reduce annual purchases by {{amount}}." if trap else
-                "Note 14 — Subsequent events. After year end, {{customer}} confirmed its purchase commitments for the "
-                "coming year.")
+        note = ("Note 14 — Subsequent events. After year end, {{customer}} set out its purchase plans: annual "
+                "purchases will fall by {{amount}}.")
     elif f.placement == "calculation":
         fraction = f.amount / purchases if trap else 0.0
-        notice = ("{{customer}} has given notice that, because {{reason}}, it will move {{fraction}} of its volume to "
-                  "another supplier." if trap else "{{customer}} has confirmed it will keep all of its volume.")
+        notice = ("{{customer}} has set out its purchase plans for {{fy_next}}: it will move {{fraction}} of its "
+                  "{{purchases}} of annual purchases to another supplier.")
         vals |= dict(fraction=pct(fraction))
         if trap:
             ev_formula, ev_vals = "product", {"purchases": share * rev, "fraction": fraction}
-    elif f.placement == "range":
-        notice = ("{{customer}} is re-tendering this contract and the outcome is expected after closing. Management "
-                  "estimates that {{low}} to {{high}} of annual revenue is at risk.")
     ev_formula, ev_vals = _range_evidence(f, vals, ev_formula, ev_vals)
+    if f.documented:
+        vals["amount"] = _span(f)
     sites = {"cim.customer": [slot("cim_customer", "Describe customer relationships", cim, **vals)],
              "contract_1.terms": [slot("contract_terms", "State the contract term and volumes", terms, **vals)],
              "contract_1.notice": [slot("contract_notice", "State the customer's current position", notice, **vals)],
-             "audited.note14": _note("note14", "Write the subsequent-events note", note, **vals)}
+             "audited.note14": _note("note14", "Write the subsequent-events note", note, **vals),
+             "minutes.customer": _minutes("minutes_customer", "The board reviewed {{customer}}'s purchase plans.",
+                                          "The board reviewed {{customer}}'s purchase plans: annual purchases will "
+                                          "fall by {{amount}}.", f, **vals)}
     return sites, Evidence(trap=f.trap, docs=docs, formula=ev_formula, values=ev_vals)
 
 
@@ -256,17 +261,15 @@ def _nwc(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evidenc
     note = "Note 6 — Working capital. Working capital comprises receivables, inventory and payables."
     cim = "Net working capital is managed closely and is at normal levels."
     ev_formula, ev_vals = _point_evidence(f)
-    docs = {"explicit": ["qoe"], "contradicted": ["cim", "qoe"], "footnote": ["audited"], "calculation": ["qoe"],
-            "range": ["qoe"]}[f.placement]
+    docs = {"explicit": ["qoe"], "contradicted": ["cim", "qoe"], "footnote": ["audited"],
+            "calculation": ["qoe"], "minutes": ["board_minutes"]}[f.placement]
     extra: list = []
     if f.placement in ("explicit", "contradicted"):
-        qoe = ("At closing, net working capital is expected to be {{amount}} below the peg because of {{label}}."
-               if trap else "At closing, net working capital is expected to be in line with the peg; we found no "
+        qoe = ("At closing, net working capital is expected to be {{amount}} below the peg; our review covered "
                "{{label}}.")
     elif f.placement == "footnote":
-        note = ("Note 6 — Working capital. At year end, {{label}} reduced net working capital by {{amount}} below "
-                "normal levels." if trap else "Note 6 — Working capital. At year end, net working capital was at "
-                "normal levels, with no {{label}}.")
+        note = ("Note 6 — Working capital. At year end, net working capital was {{amount}} below normal levels; the "
+                "review covered {{label}}.")
     elif f.placement == "calculation":
         latest = round(peg - f.amount, 1) if trap else peg
         months = [money(round(peg * float(rng.uniform(0.97, 1.03)), 1)) for _ in range(5)] + [money(latest)]
@@ -274,14 +277,16 @@ def _nwc(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evidenc
         extra = [table(style, ["Month", "Net working capital"], [[f"Month {i + 1}", m] for i, m in enumerate(months)])]
         if trap:
             ev_formula, ev_vals = "gap", {"peg": peg, "latest": latest}
-    elif f.placement == "range":
-        qoe = ("Net working capital at closing could fall between {{low}} and {{high}} below the peg; the closing "
-               "balance sheet was not provided.")
     ev_formula, ev_vals = _range_evidence(f, vals, ev_formula, ev_vals)
+    if f.documented:
+        vals["amount"] = _span(f)
     sites = {"qoe.nwc": [slot("qoe_peg", "Explain the working-capital peg", hint, **vals),
                          slot("qoe_nwc", "Give the closing working-capital view", qoe, **vals)] + extra,
              "audited.note6": _note("note6", "Write the working-capital note", note, **vals),
-             "cim.nwc": [slot("cim_nwc", "Comment on working capital", cim, **vals)]}
+             "cim.nwc": [slot("cim_nwc", "Comment on working capital", cim, **vals)],
+             "minutes.nwc": _minutes("minutes_nwc", "The board reviewed net working capital at closing.",
+                                     "The board reviewed net working capital at closing: {{amount}} below the peg, "
+                                     "covering {{label}}.", f, **vals)}
     return sites, Evidence(trap=f.trap, docs=docs, formula=ev_formula, values=ev_vals)
 
 
@@ -295,29 +300,28 @@ def _capex(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evide
     note = "Note 7 — Property, plant and equipment. Assets are depreciated on a straight-line basis."
     ev_formula, ev_vals = _point_evidence(f)
     docs = {"explicit": ["assets"], "contradicted": ["cim", "assets"], "footnote": ["audited"],
-            "calculation": ["assets"], "range": ["assets"]}[f.placement]
+            "calculation": ["assets"], "minutes": ["board_minutes"]}[f.placement]
     if f.placement in ("explicit", "contradicted"):
-        review = ("Condition review: {{label}} requires additional capital expenditure of {{amount}} per year over "
-                  "the plan." if trap else "Condition review: we found no {{label}}; no additional capital "
-                  "expenditure is required.")
+        review = ("Condition review: additional capital expenditure for {{label}} of {{amount}} per year is required "
+                  "over the plan.")
     elif f.placement == "footnote":
-        note = ("Note 7 — Property, plant and equipment. Because of {{label}}, management expects additional capital "
-                "expenditure of {{amount}} per year." if trap else "Note 7 — Property, plant and equipment. "
-                "Management expects no additional capital expenditure; there is no {{label}}.")
+        note = ("Note 7 — Property, plant and equipment. Management expects additional capital expenditure for "
+                "{{label}} of {{amount}} per year.")
     elif f.placement == "calculation":
         gross = round(f.amount * 5, 1)
-        review = ("Replacement cost of {{label}}: {{gross}}, to be spent evenly over the {{years}}-year plan."
-                  if trap else "Replacement cost of {{label}}: none identified.")
+        review = "Replacement cost of {{label}}: {{gross}}, to be spent evenly over the {{years}}-year plan."
         vals |= dict(gross=money(gross))
         if trap:
             ev_formula, ev_vals = "per_year", {"gross": gross}
-    elif f.placement == "range":
-        review = ("An engineering survey was commissioned but not provided. Management estimates additional capital "
-                  "expenditure for {{label}} of {{low}} to {{high}} per year.")
     ev_formula, ev_vals = _range_evidence(f, vals, ev_formula, ev_vals)
+    if f.documented:
+        vals["amount"] = _span(f)
     sites = {"cim.capex": [slot("cim_capex", "Describe the asset base", cim, **vals)],
              "assets.review": [slot("asset_review", "Summarise the equipment condition review", review, **vals)],
-             "audited.note7": _note("note7", "Write the fixed-asset note", note, **vals)}
+             "audited.note7": _note("note7", "Write the fixed-asset note", note, **vals),
+             "minutes.capex": _minutes("minutes_capex", "The board reviewed {{label}}.",
+                                       "The board reviewed {{label}}: additional capital expenditure of {{amount}} per "
+                                       "year.", f, **vals)}
     return sites, Evidence(trap=f.trap, docs=docs, formula=ev_formula, values=ev_vals)
 
 
@@ -408,8 +412,11 @@ def render(t: DealTruth) -> tuple[list[Doc], list[Evidence]]:
             *sites["assets.review"]]),
         Doc(id="legal", title="Legal Letter", domain="legal", blocks=[heading(style, 1, "Litigation"),
                                                                      *sites["legal.letter"], *boiler(1)]),
+        Doc(id="board_minutes", title=MINUTES_TITLE, domain="governance", blocks=[
+            heading(style, 1, "Matters reviewed"), *sites["minutes.addback"], *sites["minutes.debt"],
+            *sites["minutes.customer"], *sites["minutes.nwc"], *sites["minutes.capex"], *boiler(1)]),
     ]
-    for key in rng.choice(list(FILLER), int(rng.integers(4, 6)), replace=False):
+    for key in rng.choice(list(FILLER), int(rng.integers(3, 5)), replace=False):
         docs.append(Doc(id=str(key), title=FILLER[key], domain="filler",
                         blocks=[heading(style, 1, FILLER[key]), *boiler(int(rng.integers(4, 11)))]))
     return docs, evidence

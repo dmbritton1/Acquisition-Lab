@@ -4,25 +4,28 @@ from functools import partial
 
 import pytest
 
-from acqlab.dataroom.tools import DataRoom
+from acqlab.dataroom.tools import BUDGET_SHARE, DataRoom
 from acqlab import llm
 from acqlab.generator import batch
+from acqlab.generator.truth import PROFILES
 
 COUNTS = {"dev": 4, "test": 3, "hand": 2, "showcase": 1}
 
 
 def test_batch_writes_rooms_answer_keys_and_splits(tmp_path):
     assert batch.run(tmp_path, COUNTS, mc=20) == []
+    assert json.loads((tmp_path / "problems.json").read_text()) == []  # saved for the calibration check
     splits = json.loads((tmp_path / "splits.json").read_text())
     assert {k: len(v) for k, v in splits.items()} == COUNTS
     for ids in splits.values():
         for deal_id in ids:
             room = tmp_path / "deals" / deal_id / "room"
             key = json.loads((tmp_path / "truth" / f"{deal_id}.json").read_text())
-            assert not any(p.name.endswith(".json") and p.name != "index.json" for p in room.iterdir())
+            assert {p.name for p in room.iterdir() if p.suffix == ".json"} == {"index.json", "engine.json"}
+            assert set(json.loads((room / "engine.json").read_text())) == {"teaser", "deal"}  # visible numbers only
             dr = DataRoom(room)
             pages = sum(d["pages"] for d in dr.list_documents())
-            assert key["budget"] == dr.budget == math.ceil(0.35 * pages)
+            assert key["budget"] == dr.budget == math.ceil(BUDGET_SHARE * pages)
             assert set(key["retrieval_cost"]) == {"addback", "debt_like", "concentration", "nwc", "capex"}
     showcase = json.loads((tmp_path / "truth" / "showcase-000.json").read_text())
     assert showcase["truth"]["case_type"] == "flip"
@@ -39,6 +42,13 @@ def test_recoverability_is_phased_in_to_hand_showcase_and_a_dev_sample(tmp_path)
     checked = {p.split(":")[0] for p in problems}  # this extractor fails every deal it is shown
     assert {"hand-000", "hand-001", "showcase-000"} <= checked
     assert sum(d.startswith("dev-") for d in checked) == 1 and not any(d.startswith("test-") for d in checked)
+
+
+def test_a_profile_sets_the_deals_and_the_budget_share(tmp_path):
+    assert batch.run(tmp_path, {"dev": 2, "test": 0, "hand": 0, "showcase": 0}, mc=20, profile="r3") == []
+    key = json.loads((tmp_path / "truth" / "dev-000.json").read_text())
+    pages = sum(d["pages"] for d in DataRoom(tmp_path / "deals" / "dev-000" / "room").list_documents())
+    assert key["truth"]["profile"] == "r3" and key["budget"] == math.ceil(PROFILES["r3"]["budget_share"] * pages)
 
 
 def test_cli_runs_without_an_llm(tmp_path):

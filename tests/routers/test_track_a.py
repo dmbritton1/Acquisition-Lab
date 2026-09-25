@@ -76,6 +76,8 @@ def test_a_run_is_deterministic_within_budget_and_records_what_it_read(keys):
 
 def test_the_sweep_finds_a_forgotten_problem(keys, monkeypatch):
     key = next(k for k in keys if any(f.role != "clean" for f in k.truth.facts))
+    # enough budget to read every fact, so the premise (the sweep can reach the problem) holds whatever its placement
+    key = key.model_copy(update={"budget": sum(key.retrieval_cost.values())})
     problem = next(f.trap for f in key.truth.facts if f.role != "clean")
     real = ta.priors
     monkeypatch.setattr(ta, "priors", lambda k, level, clue=0.5: {
@@ -132,8 +134,8 @@ def test_the_veto_stops_routing_and_leaves_the_rest_to_the_sweep(keys, monkeypat
     monkeypatch.setattr(ta, "VETO", 1e9)
     differs = False
     for k in keys:
-        s = Setting("regret+veto", "perfect", "medium", 0.5)
-        want, left = [], 0.5 * k.budget
+        s = Setting("regret+veto", "perfect", "medium", 1.0)  # the full budget leaves routers a choice in big rooms
+        want, left = [], 1.0 * k.budget
         while cand := [x for x in TRAPS if x not in want and k.retrieval_cost[x] <= left + 1e-9]:
             want.append(min(cand, key=lambda x: (k.retrieval_cost[x], TRAPS.index(x))))
             left -= k.retrieval_cost[want[-1]]
@@ -144,7 +146,7 @@ def test_the_veto_stops_routing_and_leaves_the_rest_to_the_sweep(keys, monkeypat
 
 def test_a_failed_read_is_charged_again_on_retry(keys, monkeypatch):
     monkeypatch.setattr(ta, "FAIL_P", 1.0)
-    k = keys[0]
+    k = keys[0].model_copy(update={"budget": 4 * max(keys[0].retrieval_cost.values())})  # room for a retry
     row = run(k, Setting("checklist", "failure", "low", 1.0))
     first = row["reads"][0]
     assert row["reads"][:2] == [first, first]

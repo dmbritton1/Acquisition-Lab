@@ -7,19 +7,37 @@ from acqlab.generator.roles import DECOY_MOVE, MARGIN, PULL_BACK, flip_severity,
 from acqlab.generator.sample import BaseDeal, sample_base, with_asking
 from acqlab.generator.traps import PARAM, TRAPS, params_for, sample_variant, trap_weight, worst_amount
 
-GENERATOR_VERSION = "2.0.0"
+GENERATOR_VERSION = "4.0.0"
 ASK_NOISE = (-0.15, 0.10)  # asking = market EV x (1 + N(mean, sd)); a 20% hurdle rarely clears at market prices
 CASE_MIX = {"clean": 0.15, "flip": 0.25, "interaction": 0.10, "none": 0.50}
 FACE_GO = 0.97  # P(face-value go) for clean and no-flip deals; flip deals are always face-value go
 PRIOR_CLEAN = 0.70  # generator prior: share of facts that are clean (roughly the realized mix)
 OTHER_ROLES = {"decoy": 0.25, "unresolvable": 0.06, "clean": 0.69}  # roles for the remaining facts
-PLACEMENT = {  # mode weights by role: decoys lean loud, flippers lean buried (design §4)
-    "flipper": {"explicit": 1, "footnote": 2, "calculation": 2, "contradicted": 1},
-    "interaction": {"explicit": 1, "footnote": 2, "calculation": 2, "contradicted": 1},
-    "decoy": {"explicit": 3, "footnote": 1, "calculation": 1, "contradicted": 1},
-    "clean": {"explicit": 2, "footnote": 1, "calculation": 1},
-    "unresolvable": {"range": 1},
+
+
+def _role_blind(weights: dict[str, float]) -> dict[str, dict[str, float]]:
+    """Placement weights (mode -> weight) for every role alike, so where a sentence sits says nothing about whether it
+    is a real problem (Plan 4b: search is back, and it would see a role-dependent placement). An unresolvable fact
+    states its range in the same places, except a calculation."""
+    return {r: weights for r in ("flipper", "interaction", "decoy", "clean")} | {
+        "unresolvable": {k: w for k, w in weights.items() if k != "calculation"}}
+
+
+PLACEMENT = _role_blind({"explicit": 2, "footnote": 2, "calculation": 2, "contradicted": 1})
+# Reframe design §4: the difficulty levers, pulled in this order by calibration (base, then r1, r2, r3). Fixed before
+# any calibration run.
+# - r1: two-issue interaction deals 2.5x as common; flip + interaction stays at 35% so the go rate stays near half.
+# - r2: evidence more buried: less explicit, more contradicted, and the board minutes as a place.
+# - r3: a tighter budget.
+# clean_item_power shapes a clean add-back's line item to match trap sizes under that case mix (render).
+_MULTI_ISSUE = {"clean": 0.15, "flip": 0.10, "interaction": 0.25, "none": 0.50}
+_BURIED = _role_blind({"explicit": 1, "footnote": 2, "calculation": 2, "contradicted": 2, "minutes": 2})
+PROFILES = {
+    "base": {"case_mix": CASE_MIX, "placement": PLACEMENT, "budget_share": 0.25, "clean_item_power": 0.7},
+    "r1": {"case_mix": _MULTI_ISSUE, "placement": PLACEMENT, "budget_share": 0.25, "clean_item_power": 1.0},
+    "r2": {"case_mix": _MULTI_ISSUE, "placement": _BURIED, "budget_share": 0.25, "clean_item_power": 1.0},
 }
+PROFILES["r3"] = PROFILES["r2"] | {"budget_share": 0.20}
 
 
 class Fact(BaseModel):
@@ -50,6 +68,7 @@ class DealTruth(BaseModel):
     go: bool
     debt_limit: str
     case_type: str
+    profile: str = "base"  # difficulty profile (PROFILES); deals before generator 4.0.0 are "base"
 
     @property
     def deal(self) -> Deal:
@@ -167,10 +186,11 @@ def _decision_values(b: BaseDeal, worst: dict[str, float], n: int, rng: np.rando
 
 
 def generate(deal_id: str, split: str, seed: int, *, mc: int = 400, force_case: str | None = None,
-             max_tries: int = 500) -> DealTruth:
+             max_tries: int = 500, profile: str = "base") -> DealTruth:
     rng = np.random.default_rng(seed)
     dev = split == "dev"
-    case = force_case or _pick(rng, CASE_MIX)  # drawn once, so hard cases aren't swapped for easy ones on retry
+    prof = PROFILES[profile]
+    case = force_case or _pick(rng, prof["case_mix"])  # drawn once, so hard cases aren't swapped for easy ones on retry
     for _ in range(max_tries):
         b = sample_base(rng)
         want_go = case in ("flip", "interaction") or rng.random() < FACE_GO
@@ -182,14 +202,15 @@ def generate(deal_id: str, split: str, seed: int, *, mc: int = 400, force_case: 
         placed = roles and place(b, roles, rng)
         if not placed:
             continue
-        facts = _facts(rng, b, roles, placed, dev)
-        truth = _finish(deal_id, split, seed, rng, b, facts, mc)
+        facts = _facts(rng, b, roles, placed, dev, prof["placement"])
+        truth = _finish(deal_id, split, seed, rng, b, facts, mc, profile)
         if truth is not None:
             return truth
     raise RuntimeError(f"could not generate {deal_id} (seed {seed}) in {max_tries} tries")
 
 
-def _facts(rng, b: BaseDeal, roles: dict[str, str], placed: dict[str, dict], dev: bool) -> list[Fact]:
+def _facts(rng, b: BaseDeal, roles: dict[str, str], placed: dict[str, dict], dev: bool,
+           placement: dict[str, dict[str, float]]) -> list[Fact]:
     facts = []
     for t in TRAPS:
         worst = worst_amount(t, b)
@@ -200,12 +221,12 @@ def _facts(rng, b: BaseDeal, roles: dict[str, str], placed: dict[str, dict], dev
             amount = round((doc_range[0] + doc_range[1]) / 2, 1)
         realized = amount if doc_range is None else round(float(rng.uniform(*doc_range)), 1)
         facts.append(Fact(trap=t, variant=sample_variant(rng, t, b.kind, dev), param=PARAM[t], role=roles[t],
-                          placement=_pick(rng, PLACEMENT[roles[t]]), worst=worst, amount=amount,
+                          placement=_pick(rng, placement[roles[t]]), worst=worst, amount=amount,
                           documented=doc_range, realized=realized, alone_flips=False))
     return facts
 
 
-def _finish(deal_id, split, seed, rng, b: BaseDeal, facts: list[Fact], mc: int) -> DealTruth | None:
+def _finish(deal_id, split, seed, rng, b: BaseDeal, facts: list[Fact], mc: int, profile: str) -> DealTruth | None:
     t = b.teaser
     true_margin = (t.adj_ebitda - facts[0].amount) / t.revenue_ltm
     capex = t.capex_pct + facts[4].amount / t.revenue_ltm
@@ -228,4 +249,4 @@ def _finish(deal_id, split, seed, rng, b: BaseDeal, facts: list[Fact], mc: int) 
                      style="A" if split == "dev" else str(rng.choice(["A", "B"])), base=b, facts=facts,
                      face_walk_away=walk_away(b.deal, Params()), face_go=face_go,
                      walk_away=walk_away(b.deal, params), go=go_, debt_limit=result.debt_limit,
-                     case_type=case_type([f.role for f in facts]))
+                     case_type=case_type([f.role for f in facts]), profile=profile)

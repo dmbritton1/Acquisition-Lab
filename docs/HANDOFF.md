@@ -1,29 +1,267 @@
 # Acquisition Lab: Session Handoff
 
-*Last updated 2026-09-24, after Plan 3 (Track A routers) was built and run. Read this first, then the spec it points to. The spec is the binding authority on design; this file is the source of truth for status and next steps.*
+*Last updated 2026-09-25, after Plan 4b's calibration: profile `r2` frozen and H1–H6 pre-registered. Read this first,
+then the reframe spec. The specs are the binding authority on design; this file is the source of truth for status and
+next steps.*
 
 ## Start here
 
-**Where things stand:** Plans 1 (LBO engine), 2 (deal generator and data room) and 3 (Track A routers) are built. 159 tests pass (`uv run pytest -q`). Plan 3 lives on branch `plan-3-track-a`; its final Opus review is done and its findings fixed, so it is ready to merge. The week-4 checkpoint (about 2026-10-19) is next, and **Track A's H2 verdict below is an input to it**.
-
-**Do these in order:**
-
-1. **Regenerate the deals in this checkout** (`data/` is git-ignored; about 30 s, no LLM):
-   ```bash
-   uv run python -m acqlab.generator.batch
-   ```
-   Expect `generated 181 deals into data; 0 batch problems`. The Track A batch (`data/track_a`, 2,000 deals, about 5 min) and its results are only needed to re-check Plan 3.
-2. **Finish the Codex recoverability check** (with the user's OK; it uses their ChatGPT Codex quota). The smoke call and the prose run are done; see "Codex status" below. Rerun:
-   ```bash
-   uv run python -m acqlab.generator.batch --out data/poc --dev 3 --test 0 --hand 0 --showcase 1 --llm --recover 3
-   ```
-   It pays only for the 19 calls that didn't run plus 4 reworded concentration questions (all prose replies are cached). Exit code 2 means the usage limit hit again: rerun after it resets.
-3. **Decide the week-4 checkpoint framing with the user**, using the Track A results below (spec §4: "if the router doesn't help, reframe the claim before building S4 in full").
-4. **Plan 4** (brainstorm, then write): LLM adapter hardening (`claude -p`, API backend), the solver sandbox, baselines S1a/S1b/S0/trivial/B0, router 2, the 30-deal pilot, and the S1b vs S1b + router 6 checkpoint.
+**Where things stand:**
+- Plans 1–3 are merged to `main`.
+- Plan 4a (the router checkpoint) and all of Plan 4b (the hard benchmark, Tasks 1–6) are built, unmerged.
+  - The calibration commits are on `claude/plan-4b-calibration-round-1-5f0549` (worktree
+    `.claude/worktrees/plan-4b-calibration-round-1-5f0549`).
+  - That branch is `plan-4` plus 3 commits, so `plan-4` fast-forwards to it.
+- 223 tests pass (`uv run pytest -q`).
+- **Calibration passed on round 2, with the user's ruling on test size.** Profile `r2` is frozen as the `batch --profile`
+  default. The test size is 160 deals.
+  - Pre-registration: `docs/results/plan-4b-preregistration.md`.
+  - Results: `docs/results/plan-4b-calibration.md`.
+- **The next step is closing out Plan 4b, then Plan 5 (S4).**
 
 **Suggested first message for the next session:**
 
-> Read `docs/HANDOFF.md` and the spec, regenerate the deals, then help me decide the week-4 checkpoint framing from the Track A results and brainstorm Plan 4.
+> Read `docs/HANDOFF.md`, then close out Plan 4b and start Plan 5 with me.
+
+### Next steps
+
+1. **Close out Plan 4b.**
+   - The SDD ledger is `.superpowers/sdd/2026-09-24-plan-4b-hard-benchmark/progress.md`. It is git-ignored and lives in
+     the `acqlab-handoff-review-677fc2` worktree.
+   - Append the Task 6 result there, then delete that directory; git history is the record.
+2. **Finish the branch.** Use superpowers:finishing-a-development-branch.
+   - First fast-forward `plan-4` to the calibration branch.
+   - The user decides whether to merge to `main`.
+3. **Then Plan 5 (S4).**
+   - Write a plan with superpowers:writing-plans from the reframe spec §5. Its design is already approved, so no new
+     brainstorm is needed unless something changes.
+   - Measure S4's tokens per deal early on dev deals. It sets S3's N (see the pre-registration) and the main-run budget.
+4. **Budget note for Plan 6.** 160 test deals, not 100, raises the spec's §6 estimate of about $300–400 roughly
+   1.6-fold for the main runs.
+
+### Other outstanding items
+- **Codex recoverability rerun.** It needs the user's OK, because it uses their ChatGPT Codex quota. See "Codex status"
+  below:
+  ```bash
+  uv run python -m acqlab.generator.batch --out data/poc --dev 3 --test 0 --hand 0 --showcase 1 --llm --recover 3
+  ```
+- **The Plan 1 Task 9 spreadsheet check** is still deferred by the user.
+
+## The claim and the hypotheses (reframe design, 2026-09-24)
+
+**Headline to prove:** "On deals where a strong single Opus agent makes costly mistakes, a panel that uses a
+deterministic LBO engine to challenge its own beliefs cuts decision regret by at least 25%, at the same diligence
+budget."
+
+**User decisions:**
+- **The goal** is to win the competition *and* have a number that survives a sceptical judge.
+- **The headline must beat a single Opus.** A tie or an efficiency claim is not acceptable.
+- **Approach 1:** a hard benchmark, calibrated on S1b alone.
+
+**Why the claim changed.** At the Plan 4a checkpoint, four router versions (120 runs, the last on 30 fresh,
+pre-registered deals) never improved a decision over S1b:
+- **The router reliably changes reading:** 8–12% fewer pages and 68% fewer decoy pages.
+- **S1b's misses come from beliefs:**
+  - two-issue interactions
+  - evidence it thinks is somewhere else, or smaller than it is
+  - caution on good deals
+- **H1 was untestable on the old benchmark.** S1b's regret was 0.006–0.009 per asking price.
+
+**The contribution is now engine-grounded challenge of beliefs.** Code and the engine test "what would have to be true
+to flip this deal":
+- pairwise interactions
+- "could it be bigger?"
+- "is the evidence elsewhere?"
+
+The Challenger and the Deal Lead must answer those tests. The router stays as a component. The fallback claim, "the
+router is what matters even for one agent", is retired.
+
+**Hypotheses** (to be pre-registered at the freeze, before any test deal exists; spec §3):
+- **H1 (headline).** S4's regret is ≥ 25% lower than S1b's on the frozen hard test set, with a paired bootstrap 95% CI
+  excluding zero. S4 must also beat S3 (best-of-N S1b at matched tokens), so "more tokens" can't explain the win.
+- **H2.** The gain concentrates on interaction and belief-error deals.
+- **H3.** Removing the Challenger increases regret.
+- **H4.** S4 spends less budget on decoys than S1b.
+- **H5.** Removing the engine sharply increases walk-away error.
+- **H6.** The residual sweep helps when a trap isn't on the Deal Lead's initial list.
+
+**Fairness.** S1b, S3 and every single-agent system get the same diligence knowledge that S4 has in code,
+`knowledge.GUIDE`, in their prompt: where each issue is usually settled, and its typical size. The only difference
+between systems is then architecture.
+
+**Schedule** (competition about mid/late November 2026; spec §6):
+
+| When | Plan | Delivers |
+|---|---|---|
+| now to about 2026-10-02 | 4b | Calibration rounds, freeze, pre-registration |
+| about 10-02 to 10-23 | 5 | S4, in the build order below, each step checked against S1b on dev and calibration deals |
+| about 10-23 to 11-06 | 6 | Test set generated once; S1b, S3, S4, S0 and ablations; paired bootstrap for H1–H6 |
+| about 11-06 to 11-20 | 7 | Demo (fork chart, the "these two together flip it" moment, the evidence trail) and slides |
+
+**S4's build order** (spec §5):
+1. Deal Record, Committer, and the engine making the go/no-go call
+2. Investigator with intent briefs
+3. Challenger with the pairwise screen
+4. Router plus residual sweep
+
+**Ablations:** −Challenger, −engine, −residual sweep, and "LLM decides".
+
+**The main run** is funded by API credits (roughly $300–400) or spread over several days on the subscription. Decide in
+Plan 5 from S4's measured tokens per deal.
+
+## Plan 4b: the hard benchmark (2026-09-24)
+
+Spec: `docs/superpowers/specs/2026-09-24-reframe-design.md` (§4, and the §8 revisions from pre-verification). Plan:
+`docs/superpowers/plans/2026-09-24-plan-4b-hard-benchmark.md` (its "Findings" section matters). Commits `8c1dbd3` to
+`94d8df3` on `plan-4`.
+
+**What it built:**
+- **Search-safe reveal wording** (generator **4.0.0**).
+  - A real problem and a clean fact render the *same* sentences; only the numbers differ, and a clean fact states
+    `$0.0M`.
+  - An unresolvable fact writes its range where an amount would go, e.g. `$6.8–$19.2M`.
+  - Word leaks on 500 deals went from 48 to 0.
+- **Role-blind placement.** Placement no longer depends on a fact's role, so where a sentence sits says nothing either.
+  Plan 2's "decoys loud, flippers buried" rule is gone, and so is the "range" placement.
+- **Search is back** for every system.
+  - It costs 1 unit and returns the ids of the documents holding the 5 best-matching paragraphs, often fewer than 5
+    documents.
+  - It never returns text, and it matches letters only.
+- **`acqlab/agents/knowledge.py`** holds `DILIGENCE_MAP`, `typical_high` and `GUIDE`. `GUIDE` is in every system's
+  prompt, and a test keeps it in step with the map and sizes.
+- **Difficulty profiles** (`truth.PROFILES`, `batch --profile`):
+
+  | Profile | Case mix | Placement | Budget share |
+  |---|---|---|---|
+  | `base` | today's | role-blind | 0.25 |
+  | `r1` | clean 0.15, flip 0.10, interaction 0.25, none 0.50 | role-blind | 0.25 |
+  | `r2` | as r1 | more buried, including `board_minutes` | 0.25 |
+  | `r3` | as r2 | as r2 | 0.20 |
+
+  `board_minutes` is now a core document (domain governance), with a neutral line per topic.
+- **Batch checks:** word leaks count as batch problems, and every batch writes `problems.json`.
+- **Pilot:**
+  - **S0** gets the whole room plus `MAX_CALLS` as budget, so searches can't crowd out reading. Its prompt says its
+    budget covers every document; S1b's prompt is unchanged.
+  - Also new: `--reps`, `--flip-only`, and S3 (the majority of S1b runs, with a tie going to no-go; `--report --s3 N`).
+- **`acqlab/bench/calibrate.py`:** the round check described above.
+
+**Calibration (Task 6, 2026-09-24 to 25).** Each round ran S1b on 30 dev deals and S0 on their flip deals, all on Opus
+5.5 through `CLAUDE_BIN` (CLI 2.1.280). Full numbers are in `docs/results/plan-4b-calibration.md`.
+
+| Round | Profile | S1b wrong on flips | Test deals needed | S0 right on flips | Beats B0 / the margin rule | Margin AUC | Cost |
+|---|---|---|---|---|---|---|---|
+| 1 | `r1` | 0.214 **miss** | 308 **miss** | 1.000 | −0.019 / −0.006 | 0.595 | $6.14 |
+| 2 | `r2` | 0.353 | 160 **miss** | 1.000 | −0.028 / −0.003 | 0.611 | $6.84 |
+
+- **Both audits:** 500 deals, 0 batch problems, 0 word leaks.
+- **The ruling.** Round 2's only miss was "test deals needed", which the plan leaves to the user. The user chose to accept
+  160 test deals and freeze `r2`, rather than run round 3 (`r3`, budget share 0.20).
+- **Caveats:**
+  - 160 rests on only 8 of 30 deals with nonzero regret, so it is a rough estimate.
+  - S1b beats the margin rule by only 0.003.
+- **Per-run cost:** S1b about $0.13, S0 about $0.15–0.17.
+- **The pilot's log is buffered.** Its per-deal lines appear only when the pilot exits. To watch progress, count the
+  `runs/<system>/*.json` files.
+
+**Review and audits:**
+- **Reviews.** Every task passed its per-task review. The Opus final review found 1 Important issue (S0's budget and
+  prompt) and minors; all were fixed in `94d8df3` and re-reviewed.
+- **Final-review leak audit** (500 deals each):
+  - `base` at seed 910000 and `r2` at 920000: 0 batch problems and 0 word leaks.
+  - A wider scan of about 4,700 word, page, position and document-count features found a largest |z| of 3.7. Noise alone
+    would give about 3.9.
+- **Margin shortcut AUC:**
+  - `r1`/`r2` measure 0.59–0.67 across seeds.
+  - `base` measures 0.70–0.75, right at the limit. The plan's 0.66 for `base` didn't reproduce. `base` isn't a
+    calibration profile, so this doesn't block anything, but don't cite 0.66.
+
+**Controller rulings made during execution** (all in the ledger):
+- **Final-review scope.** It covered only Plan 4b's commits; Plan 4a had its own Opus review.
+- **S0's prompt** swaps one sentence ("You cannot read everything…"). S0 is a ceiling, not a competitor, so §3's parity
+  rule is untouched. It's logged in `docs/results/plan-4a-prompt-log.md`.
+- **Search** kept its leak-audited top-5-paragraph behaviour; only its description was corrected.
+- **S3's `correct`** is derived from the floors rather than from the key's `go`. The two differ only on an exact tie.
+
+**Deferred cosmetic minors:**
+- one render sentence says "annual purchases" twice (changing it would change the audited wording)
+- the pilot reads each room's `index.json` even without S0
+- a redundant NaN guard in `calibrate.check`
+
+## Plan 4a: router checkpoint tooling (2026-09-24)
+
+Spec: `docs/superpowers/specs/2026-09-24-plan-4a-checkpoint-design.md` (its "Revisions from pre-verification" matter). Plan: `docs/superpowers/plans/2026-09-24-plan-4a-checkpoint.md`. Code: `acqlab/generator/padding.py`, `acqlab/agents/` (`server.py`, `prompts.py`, `solver.py`), `acqlab/bench/pilot.py`.
+
+**What it built:**
+- **Bigger rooms.** Neutral padding brings every document to a seeded target length, with 3–6 contracts and 6–9 filler documents. Page counts reveal nothing. Generator version 3.0.0.
+- **A tighter budget.** `BUDGET_SHARE = 0.25`. Every room also carries `engine.json`, holding the face-value teaser and deal.
+- **Two leak checks.** A page-length Welch check that is a batch problem, and a word-level AUC report (`word_leaks.json`) that is only a report.
+- **The tool server.** A stdlib MCP stdio server that offers the room, the engine, issue notes and, for the router system, router 6 over the agent's notes. It has a budget, a JSONL trace and an 80-call cap. It never reads an answer key and has **no search tool**.
+- **The solver.** A sandboxed `claude -p` adapter. The child process gets only an allowlisted environment: PATH, HOME, USER, LOGNAME, SHELL, TMPDIR, LANG, TERM and `LC_*`. No `CLAUDE*`, `ANTHROPIC*` or `MCP_*` setting from the launching session reaches scored runs. Each run row records `env_keys` and the `models` the CLI reports. The pre-verification sandbox call ran before this scrub existed, so the smoke run's first call is also the check that auth still works without those variables.
+- **The pilot runner.** It covers scoring, the no-AI floors, and the pre-registered checkpoint:
+  - The checkpoint looks at flip deals only. On those, if the router has lower regret *and* opens decision-relevant documents more often, the verdict is **keep**.
+  - If neither holds, it is **reframe**. Otherwise it is **mixed**.
+
+**Numbers on `data/v3` (181 deals):**
+- **Room size.** 68–106 pages, 87.7 on average, with an average budget of 22.3 pages.
+- **Budget coverage.** The budget covers all evidence in 14% of deals, and the decision-relevant documents in 89% of the 89 deals that have them.
+- **Word-level leaks.** `data/v3` has 17.
+- **500-deal audit.** 0 batch problems and 48 word-level leaks, the same as pre-verification.
+
+**Search was off for agents in Plan 4a** (one search for "confirmed" identified concentration traps). Plan 4b fixed the wording and brought it back.
+
+**Running it** needs Claude Code CLI 2.1.280 or newer; the `claude` on PATH (2.1.266) can't run Opus 5.5. Every real run needs the user's OK first, and costs their Claude subscription usage.
+```bash
+export CLAUDE_BIN="$HOME/Library/Application Support/Claude/claude-code/2.1.280/claude.app/Contents/MacOS/claude"
+uv run python -m acqlab.bench.pilot --data data/v3 --n 3 --confirm-claude     # smoke: 6 runs
+uv run python -m acqlab.bench.pilot --data data/v3 --n 30 --confirm-claude    # pilot: 60 runs
+uv run python -m acqlab.bench.pilot --data data/v3 --report
+```
+- **Exit codes.** 0 means done. 2 means Claude stopped, for example at a usage limit; rerun later and finished runs are skipped. 3 means the run was refused without `--confirm-claude`.
+- **After the smoke run,** report tokens per run before asking about the pilot.
+- **Log any prompt edit** made after the smoke run in `docs/results/plan-4a-prompt-log.md`.
+
+### Plan 4a pilot results (2026-09-24, 30 dev deals × 2 systems, $6.61, about 26 s and $0.11 per run)
+
+Raw: `data/v3/runs/` (git-ignored); summary with `uv run python -m acqlab.bench.pilot --data data/v3 --report`.
+
+| | regret ÷ ask | on flip deals | correct | opened a relevant doc (flip deals) | pages |
+|---|---|---|---|---|---|
+| S1b | 0.0090 | 0.0169 | 25/30 | 10/14 | 20.3 |
+| S1b + router | 0.0112 | 0.0169 | 24/30 | 11/14 | 19.2 |
+| B0 (face value) | 0.0490 | | | | |
+| margin rule (best hindsight threshold, 13.5%) | 0.0148 | | | | |
+
+**Pre-registered verdict: mixed.** The two systems had identical regret on all 14 flip deals, and the router opened a relevant doc on one more deal. No `b0_warning`, and S1b beats the margin shortcut.
+
+**What the verdict means:**
+- **The router was barely tested.** The router system called `rank_issues` in only 2 of 30 runs; Opus treats an optional adviser as ignorable. Its one extra error, dev-007 (a decoy deal, wrong no-go), came from a run that never called the router.
+- **S1b is not at ceiling.** It got 5 of 30 wrong, and both systems made the same 5 mistakes:
+  - **dev-020 and dev-025 are routing failures, exactly the case the router targets.** In each, a debt-like flipper sat in the 14-page audited financials. S1b even noted debt-like items at 40%, but opened the 10–11-page QoE first and could no longer afford the audited financials.
+  - **dev-019 and dev-026:** interaction deals.
+  - **dev-021:** an unresolvable, non-flip deal where the model was too cautious.
+
+**Router v2** (done 2026-09-24): reading is gated on an open note, and the ranking is shown with every note and document. The router arm was rerun ($4.07).
+- **Verdict: mixed again.** Flip-deal regret is identical, the router system opens more relevant documents (12 vs 10 of 14), and it reads 12% fewer pages.
+- **The same hard deals are missed.** The router faithfully prices the agent's beliefs, and the misses come from wrong beliefs: which document holds the evidence, and how big an item could be.
+
+**Router v3** (done 2026-09-24, $4.09): page costs come from a fixed diligence map, and the ranking names `next_doc`.
+- **Verdict: mixed again.** The decisions are identical to v2's.
+- **The map sent the agent to the right document** (the audited financials).
+- **The router still ranked that check last, correctly given the agent's belief.** The agent believed the debt was at most $8–10M, too small to flip the deal. It was really $16–22M.
+- **The bottleneck is now the agent's size beliefs.** Three router versions tried on the same 30 deals leave flip-deal decisions unchanged.
+
+**Router v4 on 30 fresh deals** (`data/v3-fresh`, `--seed 500000`, pre-registered, $7.83): open notes are priced over at least the usual size range.
+- **Pre-registered verdict: reframe.** On flip deals the router's regret is higher by +0.014 (CI [0, 0.043]).
+- **All of the difference is one deal (dev-001).** Both systems read the same documents and missed the flipper; S1b said no-go on a thin margin and was right, the router system said go.
+- **The router's consistent effect is on reading, not decisions.** It reads 8–12% fewer pages, and on fresh deals 68% fewer decoy pages.
+
+**Checkpoint outcome: reframe.** Decided with the user on 2026-09-24; see `docs/superpowers/specs/2026-09-24-reframe-design.md`.
+- **The headline still has to beat Opus**, but on a hard benchmark calibrated on S1b alone.
+- **The contribution becomes engine-grounded challenge of beliefs.**
+- **Next is Plan 4b:** the hard benchmark, the wording fix, S0 and S3, S1b's fairness prompt, and calibration.
+
+The full results and diagnosis are in `docs/results/plan-4a-prompt-log.md`. Earlier router runs are archived in `data/v3/runs-router-v1/`, `data/v3/runs-router-v2/` and `data/v3/runs-router-v3/`.
 
 ## Codex status (Plan 2 proof of concept)
 
@@ -99,7 +337,7 @@ A multi-agent framework, with Opus in every role, investigates under a diligence
 - a code Committer
 - a code **Router** that prices every open question by its expected reduction in decision regret per unit cost
 
-A deterministic LBO engine is the only source of financial numbers. The claim to prove is lower decision regret than a single Opus agent at equal cost. The demo shows a "fork chart" of possible walk-away prices narrowing as evidence arrives.
+A deterministic LBO engine is the only source of financial numbers. The claim to prove is lower decision regret than a single Opus agent at equal cost; since the Plan 4a checkpoint it is sharpened to "engine-grounded challenge of beliefs" on a hard, calibrated benchmark (see "The claim and the hypotheses" above). The demo shows a "fork chart" of possible walk-away prices narrowing as evidence arrives.
 
 ## Decisions already made (don't re-litigate; the spec has the rationale)
 
@@ -113,7 +351,7 @@ A deterministic LBO engine is the only source of financial numbers. The claim to
 | "Noticeable difference" | S4 regret ≥ 25% lower than S1b **and** a paired bootstrap 95% CI excluding zero, on ~100 test deals |
 | Benchmark | Procedural generator (181 deals: dev 50 / test 120 / hand-reviewed 10 / showcase 1). Track B (real LLMs) is the headline; Track A (routers with a simulated investigator, **noisy priors**) is an internal diagnostic. |
 | Scope tiers | Core vs Stretch tables in spec §3–4 |
-| Checkpoint | **End of week 4 (~2026-10-19):** S1b vs S1b + router 6 on the pilot, plus Track A. If the router doesn't help, reframe the claim before building S4 in full. |
+| Checkpoint | Done 2026-09-24: verdict **reframe** (router changes reading, not decisions). The reframe spec (`2026-09-24-reframe-design.md`) now wins over the main spec where they conflict. |
 | Demo | A recorded S4 trace replay is the primary path. Engine interactions are always live. |
 | Stack | Python 3.12, uv, pydantic 2, numpy, pytest + hypothesis. JSON files, no database. Demo is FastAPI + Vite/React (Streamlit fallback). |
 | Novelty stance | Closest prior art is **MAI-DxO / SDBench** (arXiv:2506.22405); also AUDITFLOW, arXiv:2605.13110 and arXiv:2603.22651. The claimed contribution is the *combination*; never claim "first". **Verify every citation before it goes on a slide.** |
@@ -139,14 +377,21 @@ acquisition-lab/
     superpowers/plans/2026-09-23-plan-2-generator.md        ← Plan 2 (done)
     superpowers/specs/2026-09-23-plan-3-track-a-design.md   ← Plan 3 design; read §7
     superpowers/plans/2026-09-23-plan-3-track-a.md          ← Plan 3 (done; results above)
+    superpowers/specs/2026-09-24-plan-4a-checkpoint-design.md, plans/2026-09-24-plan-4a-checkpoint.md ← Plan 4a (done)
+    superpowers/specs/2026-09-24-reframe-design.md          ← the reframe: wins over the main spec where they conflict
+    superpowers/plans/2026-09-24-plan-4b-hard-benchmark.md  ← Plan 4b (Tasks 1–5 done; Task 6 = calibration)
+    results/plan-4a-prompt-log.md                           ← every prompt/router change and its result
   acqlab/engine/      model.py, lbo.py, walkaway.py, beliefs.py         (Plan 1)
   acqlab/generator/   industries.py, sample.py, traps.py, roles.py, truth.py, documents.py,
                       render.py, validate.py, prose.py, recover.py, batch.py   (Plan 2)
   acqlab/dataroom/tools.py                                              (Plan 2)
   acqlab/llm.py                                                         (Plan 2)
   acqlab/routers/     beliefs.py, routers.py, track_a.py                (Plan 3)
+  acqlab/agents/      server.py, prompts.py, solver.py (Plan 4a), knowledge.py (Plan 4b)
+  acqlab/bench/       pilot.py (Plan 4a/4b), calibrate.py (Plan 4b)
   tests/engine/, tests/generator/, tests/routers/, tests/test_llm.py, tests/conftest.py
-  data/               git-ignored: deals/<id>/room/, truth/<id>.json, splits.json, llm_cache/, poc/, track_a/
+  data/               git-ignored: deals/<id>/room/, truth/<id>.json, splits.json, llm_cache/, poc/, track_a/,
+                      v3/ and v3-fresh/ (Plan 4a runs), cal-r1/ (calibration round 1)
 ```
 
 ### The engine (`acqlab.engine`, Plan 1)
@@ -233,9 +478,9 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
 
 **Data room** (`dataroom/tools.py`): `DataRoom(room, budget)`.
 - `teaser()` and `list_documents()` are free.
-- `search(query)` costs 1 unit and returns the top 5 hits as 150-character snippets.
+- `search(query)` costs 1 unit and returns the top 5 paragraph hits (letters-only tokens). The agents' tool server exposes only the hits' document ids (Plan 4b), never text.
 - `open_document(id)` costs 1 unit per 120-word page.
-- The default budget is 35% of the room.
+- The default budget is `BUDGET_SHARE` = 25% of the room (profile `r3`: 20%).
 - Every call is logged, over-budget calls are refused, and only indexed ids can be opened.
 
 **Codex adapter** (`llm.py`): `complete(prompt, *, schema=None, run=..., cache_dir=...)`.
@@ -260,29 +505,14 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
 - **Plan 1's Task 9 spreadsheet check is still deferred by the user.** The spec lists it as required.
 - **Negative `debt_like` / `nwc_adjustment` values are rejected, not modelled.** A favourable surprise can only enter through `ebitda_adjustment`.
 
-## Later plans (after Plan 3)
+## Later plans
 
-- **Plan 4 (week 4, ~2026-10-19):** (router 2, LLM judgement, joins Track A here)
-  - Harden the LLM adapter (`claude -p --output-format json`, API backend).
-  - **Sandbox:** every scored call runs from an empty temp dir with file and shell tools disabled, and data-room access only through the budgeted tools. This also closes the Codex read gap above.
-  - Baselines: S1a, S1b, S0, the trivial baselines, B0.
-  - The 30-deal pilot, which measures variance and **real tokens per run**.
-  - The **checkpoint:** S1b vs S1b + router 6.
-- **Plan 5 (weeks 4–6):** the S4 framework.
-  - Deal Record: blackboard, issue tree, progress ledger.
-  - Committer with quoted / computed / contradicted commits.
-  - Deal Lead, never shown the trap library.
-  - Investigator with intent briefs from `flip_threshold`.
-  - Modeler, Challenger, a residual sweep, and the stopping rule.
-- **Plan 6 (weeks 6–7):**
-  - A resumable benchmark runner and the spec §4 metrics.
-  - Paired bootstrap confidence intervals.
-  - Core ablations: −Challenger, −engine, −residual sweep.
-  - **Pre-register hypotheses H1–H6 before touching the test set, and log prompt-tuning effort equally across systems.**
-- **Plan 7 (weeks 7–8):**
-  - Demo UI (FastAPI + React): fork chart, router board, evidence viewer, agent timeline.
-  - Recorded-trace replay as the primary path.
-  - Slides and judge answers.
+The reframe spec's §5–6 replace the old Plan 4–7 outline. In short:
+- **Plan 4b (done, 2026-09-25):** calibration passed on round 2; `r2` frozen, H1–H6 pre-registered with 160 test deals.
+- **Plan 5:** S4 in the build order above (Deal Record + Committer + engine decides → Investigator with intent briefs → Challenger with the pairwise screen → router + residual sweep); each step checked on dev/calibration deals against S1b; prompt tuning logged equally for S1b. Measure S4 tokens per deal early (sets S3's N and the main-run budget).
+- **Plan 6:** generate the test set once; S1b, S3, S4, S0 and ablations (−Challenger, −engine, −residual sweep, LLM decides); paired bootstrap for H1–H6.
+- **Plan 7:** demo UI (FastAPI + React: fork chart, pairwise "these two together flip it", evidence viewer, agent timeline), recorded-trace replay as the primary path, slides and judge answers.
+- **Parked:** Track A's seed-stream fix (only if Track A is rerun); router 2 is now Stretch.
 - **Anytime before slides:** read arXiv:2605.13110 and arXiv:2603.22651 in full and verify every citation.
 
 **Later additions** (from the Plan 2 design):
@@ -333,7 +563,13 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
 
 ```
 main               4a113ba spec → 6b34612 Plan 1 (squash) → eb6a3ee Plan 2 (squash) → handoff review, Codex PoC, Plan 3 spec and plan (7e965f0); 130 tests
-plan-3-track-a     Plan 3 (Tasks 1–5) plus final-review fixes on top of main; 159 tests; ready to merge
+                   → a796026 Plan 3 (squash); 159 tests
+plan-4             Plan 4a (tooling, pilot, router v1–v4, results), the reframe spec, Plan 4b plan and Tasks 1–5
+                   + final-review fixes (94d8df3) on top of main; 223 tests. Unmerged: merging is the user's call.
+claude/plan-4b-calibration-round-1-5f0549
+                   plan-4 + Plan 4b Task 6 (calibration rounds 1–2, r2 frozen, pre-registration); 223 tests.
+                   plan-4 fast-forwards to it.
+plan-3-track-a     full Plan 3 history
 plan-1-lbo-engine  full Plan 1 history
 plan-2-generator   full Plan 2 history
 claude/plan-1-implementation-review-727227  finished review branch (kept)

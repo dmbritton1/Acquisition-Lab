@@ -1,3 +1,4 @@
+import json
 import math
 
 import pytest
@@ -37,6 +38,7 @@ def test_search_costs_one_unit_and_returns_short_snippets(room):
     hits = dr.search("working capital peg")
     assert dr.spent == 1 and 0 < len(hits) <= 5
     assert all(len(h["snippet"]) <= 150 and h["doc_id"] for h in hits)
+    assert dr.search("0 2025") == []  # letters only: numbers such as a clean fact's $0.0M can't be searched for
 
 
 def test_over_budget_calls_are_refused_and_logged(room):
@@ -53,3 +55,13 @@ def test_only_indexed_documents_can_be_opened(room):
         with pytest.raises(KeyError):
             dr.open_document(bad)
     assert dr.spent == 0
+
+
+def test_engine_file_is_written_only_when_given(tmp_path):
+    t = generate("d1", "test", 1, mc=20)
+    docs, _ = render(t)
+    write_room(tmp_path / "a", teaser_text(t), docs)
+    face = {"teaser": t.base.teaser.model_dump(), "deal": t.deal.model_dump()}
+    write_room(tmp_path / "b", teaser_text(t), docs, engine=face)
+    assert not (tmp_path / "a" / "engine.json").exists()
+    assert json.loads((tmp_path / "b" / "engine.json").read_text()) == face

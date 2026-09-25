@@ -1,7 +1,12 @@
+from collections import Counter
+
+import pytest
+
 from acqlab.generator.documents import money
 from acqlab.generator.render import LABELS, render, teaser_text
 from acqlab.generator.truth import generate
-from acqlab.generator.validate import check_batch, check_consistency, check_engine, check_leaks
+from acqlab.generator.validate import (check_batch, check_consistency, check_engine, check_leaks, doc_words,
+                                      word_leaks)
 from acqlab.generator import validate
 from acqlab.generator.validate import TOPIC_WORDS
 
@@ -136,3 +141,34 @@ def test_generated_addback_items_look_the_same_for_clean_and_trap_facts():
     assert sum(t.facts[0].role != "clean" for t in deals) >= 20  # enough for the check to run
     texts = {t.id: " ".join(d.render() for d in render(t)[0]) for t in deals}
     assert not any("add-back" in p for p in check_batch(deals, texts))
+
+
+@pytest.fixture(scope="module")
+def big_batch():
+    """100 padded test deals: (truths, texts, pages, words)."""
+    from acqlab.generator.padding import pad
+    deals = [generate(f"p{s}", "test", s, mc=4) for s in range(100)]
+    rooms = {t.id: pad(render(t)[0], t.base, t.style, t.seed) for t in deals}
+    texts = {tid: " ".join(d.render() for d in docs) for tid, docs in rooms.items()}
+    pages = {tid: {d.id: d.pages for d in docs} for tid, docs in rooms.items()}
+    return deals, texts, pages, {tid: doc_words(docs) for tid, docs in rooms.items()}
+
+
+def test_batch_check_flags_documents_that_are_longer_in_trap_deals(big_batch):
+    deals, texts, pages, _ = big_batch
+    assert not any("pages" in p for p in check_batch(deals, texts, pages))
+    debt = {t.id for t in deals if any(f.trap == "debt_like" and f.role != "clean" for f in t.facts)}
+    skewed = {tid: dict(p, legal=p["legal"] + 2 * (tid in debt)) for tid, p in pages.items()}
+    assert any("pages: legal" in p for p in check_batch(deals, texts, skewed))
+
+
+def test_word_leaks_finds_a_planted_word_and_the_reveal_wording_has_none(big_batch):
+    deals, _, _, words = big_batch
+    assert word_leaks(deals, words) == []  # Plan 4b: a real problem and a clean fact share every reveal word
+    from acqlab.generator.padding import pad
+    hard = [generate(f"q{s}", "test", s, mc=4, profile="r2") for s in range(100)]  # the hardest placements too
+    assert word_leaks(hard, {t.id: doc_words(pad(render(t)[0], t.base, t.style, t.seed)) for t in hard}) == []
+    capex = {t.id for t in deals if any(f.trap == "capex" and f.role != "clean" for f in t.facts)}
+    planted = {tid: dict(w, qoe=w["qoe"] + Counter({"zebra": tid in capex})) for tid, w in words.items()}
+    assert ("capex", "qoe", "zebra") in {(r["trap"], r["doc"], r["word"]) for r in word_leaks(deals, planted)}
+    assert not any(r["word"] == "zebra" for r in word_leaks(deals, words))

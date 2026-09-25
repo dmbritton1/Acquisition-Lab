@@ -5,7 +5,8 @@ import numpy as np
 import pytest
 
 from acqlab.generator.traps import TEST_ONLY, TRAPS
-from acqlab.generator.truth import cross_fit, generate, prior_draws, simulate, value_groups, value_of_knowing
+from acqlab.generator.truth import (PROFILES, cross_fit, generate, prior_draws, simulate, value_groups,
+                                   value_of_knowing)
 
 
 def test_same_seed_gives_the_same_answer_key():
@@ -87,3 +88,16 @@ def test_value_groups_puts_zeros_first_and_sorts_the_rest_into_size_groups():
     groups = value_groups(col, bins=2)
     assert groups[0].tolist() == [0, 2]
     assert [col[g].tolist() for g in groups[1:]] == [[1.0, 2.0], [3.0, 5.0]]
+
+
+def test_profiles_raise_the_share_of_interaction_deals_and_make_placement_role_blind():
+    base = [generate(f"b{s}", "test", s, mc=4) for s in range(60)]
+    hard = [generate(f"h{s}", "test", s, mc=4, profile="r2") for s in range(60)]
+    assert all(t.profile == "base" for t in base) and all(t.profile == "r2" for t in hard)
+    assert sum(t.case_type == "interaction" for t in hard) > sum(t.case_type == "interaction" for t in base)
+    for t in hard:  # r2: every role draws from the same placements; unresolvable facts too, less calculation
+        for f in t.facts:
+            assert f.placement in PROFILES["r2"]["placement"][f.role]
+            assert f.role != "unresolvable" or f.placement != "calculation"
+    assert any(f.placement == "minutes" for t in hard for f in t.facts)
+    assert PROFILES["r3"]["budget_share"] < PROFILES["r2"]["budget_share"]

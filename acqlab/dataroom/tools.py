@@ -8,15 +8,17 @@ from acqlab.generator.documents import Doc
 
 SEARCH_COST = 1.0
 SNIPPET_CHARS = 150
-BUDGET_SHARE = 0.35  # default budget buys ~35% of the room's total page cost (design §5)
+BUDGET_SHARE = 0.25  # the default budget covers every evidence document in ~21% of deals (Plan 4a design §1)
 
 
 class BudgetExceeded(Exception):
     pass
 
 
-def write_room(room: Path, teaser: str, docs: list[Doc], budget_share: float = BUDGET_SHARE) -> float:
-    """Write documents and index; return the default budget."""
+def write_room(room: Path, teaser: str, docs: list[Doc], budget_share: float = BUDGET_SHARE,
+               engine: dict | None = None) -> float:
+    """Write documents and index (and, given it, engine.json: the face-value deal the engine tool prices);
+    return the default budget."""
     room.mkdir(parents=True, exist_ok=True)
     budget = float(math.ceil(budget_share * sum(d.pages for d in docs)))
     for d in docs:
@@ -24,11 +26,15 @@ def write_room(room: Path, teaser: str, docs: list[Doc], budget_share: float = B
     index = {"teaser": teaser, "default_budget": budget,
              "documents": [{"id": d.id, "title": d.title, "domain": d.domain, "pages": d.pages} for d in docs]}
     (room / "index.json").write_text(json.dumps(index, indent=2))
+    if engine is not None:
+        (room / "engine.json").write_text(json.dumps(engine, indent=2))
     return budget
 
 
 def _words(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9]+", text.lower()))
+    """Letters only: search sees what validate.doc_words audits, so a number (such as a clean fact's $0.0M) can't be
+    searched for."""
+    return set(re.findall(r"[a-z]+", text.lower()))
 
 
 class DataRoom:
