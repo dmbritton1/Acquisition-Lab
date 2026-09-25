@@ -1,42 +1,35 @@
 # Acquisition Lab: Session Handoff
 
-*Last updated 2026-09-25, after Plan 4b's calibration: profile `r2` frozen and H1–H6 pre-registered. Read this first,
+*Last updated 2026-09-25, after Plan 4 merged to `main` and the Plan 5 plan was written and pre-verified. Read this first,
 then the reframe spec. The specs are the binding authority on design; this file is the source of truth for status and
 next steps.*
 
 ## Start here
 
 **Where things stand:**
-- Plans 1–3 are merged to `main`.
-- Plan 4a (the router checkpoint) and all of Plan 4b (the hard benchmark, Tasks 1–6) are built, unmerged.
-  - The calibration commits are on `claude/plan-4b-calibration-round-1-5f0549` (worktree
-    `.claude/worktrees/plan-4b-calibration-round-1-5f0549`).
-  - That branch is `plan-4` plus 3 commits, so `plan-4` fast-forwards to it.
-- 223 tests pass (`uv run pytest -q`).
+- Plans 1–4 are merged to `main` (Plan 4 squash-merged as `382bf35`; full history on `plan-4`). 223 tests pass.
 - **Calibration passed on round 2, with the user's ruling on test size.** Profile `r2` is frozen as the `batch --profile`
   default. The test size is 160 deals.
   - Pre-registration: `docs/results/plan-4b-preregistration.md`.
   - Results: `docs/results/plan-4b-calibration.md`.
-- **The next step is closing out Plan 4b, then Plan 5 (S4).**
+- **Plan 5 (S4) is planned and pre-verified, not yet executed:** `docs/superpowers/plans/2026-09-25-plan-5-s4-panel.md`,
+  on branch `plan-5` (worktree `.claude/worktrees/plan-4b-calibration-round-1-5f0549`).
+  - Its code was run in a scratch copy (264 tests), and the plan was rebuilt from its own text on a fresh `main` with
+    identical files and matching test counts after every task.
+  - Read its "Decisions made in this plan" first: 10 choices the spec left open, for the user to review.
+- **The next step is the user's review of the Plan 5 plan, then executing it** (Tasks 1–5 are code; Task 6 is the real
+  dev checks against S1b, each round with the user's OK).
 
 **Suggested first message for the next session:**
 
-> Read `docs/HANDOFF.md`, then close out Plan 4b and start Plan 5 with me.
+> Read `docs/HANDOFF.md`, then execute the Plan 5 plan with me.
 
 ### Next steps
 
-1. **Close out Plan 4b.**
-   - The SDD ledger is `.superpowers/sdd/2026-09-24-plan-4b-hard-benchmark/progress.md`. It is git-ignored and lives in
-     the `acqlab-handoff-review-677fc2` worktree.
-   - Append the Task 6 result there, then delete that directory; git history is the record.
-2. **Finish the branch.** Use superpowers:finishing-a-development-branch.
-   - First fast-forward `plan-4` to the calibration branch.
-   - The user decides whether to merge to `main`.
-3. **Then Plan 5 (S4).**
-   - Write a plan with superpowers:writing-plans from the reframe spec §5. Its design is already approved, so no new
-     brainstorm is needed unless something changes.
-   - Measure S4's tokens per deal early on dev deals. It sets S3's N (see the pre-registration) and the main-run budget.
-4. **Budget note for Plan 6.** 160 test deals, not 100, raises the spec's §6 estimate of about $300–400 roughly
+1. **Plan 5, Tasks 1–5 (code, no Claude calls).** Subagent-driven or inline; the plan has complete code.
+2. **Plan 5, Task 6 (real runs, user's OK each time).** Smoke S4 on 3 `cal-r2` deals and measure tokens per deal, then
+   the build-step checks against S1b. This sets S3's N and the main-run budget.
+3. **Budget note for Plan 6.** 160 test deals, not 100, raises the spec's §6 estimate of about $300–400 roughly
    1.6-fold for the main runs.
 
 ### Other outstanding items
@@ -509,6 +502,7 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
 
 The reframe spec's §5–6 replace the old Plan 4–7 outline. In short:
 - **Plan 4b (done, 2026-09-25):** calibration passed on round 2; `r2` frozen, H1–H6 pre-registered with 160 test deals.
+- **Plan 5 (planned, 2026-09-25):** `docs/superpowers/plans/2026-09-25-plan-5-s4-panel.md`.
 - **Plan 5:** S4 in the build order above (Deal Record + Committer + engine decides → Investigator with intent briefs → Challenger with the pairwise screen → router + residual sweep); each step checked on dev/calibration deals against S1b; prompt tuning logged equally for S1b. Measure S4 tokens per deal early (sets S3's N and the main-run budget).
 - **Plan 6:** generate the test set once; S1b, S3, S4, S0 and ablations (−Challenger, −engine, −residual sweep, LLM decides); paired bootstrap for H1–H6.
 - **Plan 7:** demo UI (FastAPI + React: fork chart, pairwise "these two together flip it", evidence viewer, agent timeline), recorded-trace replay as the primary path, slides and judge answers.
@@ -564,11 +558,10 @@ The reframe spec's §5–6 replace the old Plan 4–7 outline. In short:
 ```
 main               4a113ba spec → 6b34612 Plan 1 (squash) → eb6a3ee Plan 2 (squash) → handoff review, Codex PoC, Plan 3 spec and plan (7e965f0); 130 tests
                    → a796026 Plan 3 (squash); 159 tests
-plan-4             Plan 4a (tooling, pilot, router v1–v4, results), the reframe spec, Plan 4b plan and Tasks 1–5
-                   + final-review fixes (94d8df3) on top of main; 223 tests. Unmerged: merging is the user's call.
-claude/plan-4b-calibration-round-1-5f0549
-                   plan-4 + Plan 4b Task 6 (calibration rounds 1–2, r2 frozen, pre-registration); 223 tests.
-                   plan-4 fast-forwards to it.
+                   → 382bf35 Plan 4 (squash: 4a checkpoint + 4b hard benchmark, r2 frozen, pre-registration); 223 tests
+plan-5             main + the Plan 5 plan (and this handoff); worktree .claude/worktrees/plan-4b-calibration-round-1-5f0549
+plan-4             full Plan 4 history (0d5db70)
+claude/plan-4b-calibration-round-1-5f0549  Plan 4b calibration commits, contained in plan-4 (kept)
 plan-3-track-a     full Plan 3 history
 plan-1-lbo-engine  full Plan 1 history
 plan-2-generator   full Plan 2 history
