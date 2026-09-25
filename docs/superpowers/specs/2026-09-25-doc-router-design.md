@@ -1,6 +1,6 @@
 # Acquisition Lab: Document Router Design (Plan 5, change D2)
 
-Status: approved in brainstorming on 2026-09-25.
+Status: approved in brainstorming on 2026-09-25; §2 revised after pre-verification the same day (§8).
 Parent specs: `2026-09-24-reframe-design.md` (§3 fairness, §5 S4) and the Plan 5 plan
 (`docs/superpowers/plans/2026-09-25-plan-5-s4-panel.md`, Decision 4 and change D1). The reframe spec stays the binding
 authority on design; this spec changes only how S4's router chooses what to read.
@@ -26,12 +26,13 @@ those traces found why S4 misses the deals that matter: it reads the wrong docum
 - **The same short-sightedness caused dev-006** (fixed as D1): no single issue could flip the call, so every issue
   scored 0 and S4 did no directed reading.
 
-**The fix:** the router prices **documents**, not issues. A document's value is the decision regret it is expected to
-remove across every open issue it could settle, jointly, per page.
+**The fix:** the router prices **documents**, not issues. A document's value is how far what it may reveal is
+expected to move the engine's walk-away, across every open issue it could settle, per page (router 3's sensitivity,
+per document; §2, and §8 for why not regret).
 
 **Success:**
-- Offline, on the recorded Lead plans: the audited notes get credit for every issue they may settle, and a document
-  that settles several issues can score above 0 when no single issue can.
+- Offline, on the recorded Lead plans: the audited notes get credit for every issue they may settle, the first pick is
+  stable over seeds, and the reading path reaches the evidence (§5).
 - Then a paid re-run on 15 dev deals (§6) shows whether S4's calls improve against S1b.
 
 ## Constraints
@@ -86,55 +87,52 @@ the documents the panel's own roles named.
 
 ## 2. A document's value
 
-`score_docs(values, w, ask, weights, pages, open_, rng)` in `acqlab/routers/routers.py`, next to `score_regret`, is a
-pure numpy function. `Record.rank_docs(docs, pages, read)` wraps it for S4 and replaces router 6's `rank` in S4's
-router mode.
+`score_docs(values, w, weights, pages, open_, u)` in `acqlab/routers/routers.py`, next to `score_sensitivity`, is a
+pure numpy function. `Record.rank_docs(pages, read, docs, seed=0)` wraps it for S4 and replaces router 6's `rank` in
+S4's router mode.
 
-1. **Simulated deals.** The record's simulated deals: sampled values for every issue, and each deal's engine
-   walk-away. Committed issues are fixed; open issues and issues with a pending objection vary, as today
-   (`Record.issue`).
+1. **Simulated deals.** The record's simulated deals (`worlds()`, the same 400 the engine's call uses): sampled values
+   for every issue, and each deal's engine walk-away. Committed issues are fixed; open issues and issues with a pending
+   objection vary, as today (`Record.issue`).
 2. **What reading d would reveal.** For each simulated deal and each open issue t, d settles t if a uniform draw is
    below d's weight for t. One fixed table of uniform draws (seeded, one column per issue type) is shared by every
    document, so random noise cannot reorder documents.
 3. **Group by what the reader would learn.** Each open issue gets a label per simulated deal: settled at 0, settled
    small, settled large (split at the median of its nonzero sampled sizes), or not here. Simulated deals with the
    same labels across all open issues form one group.
-4. **Value.** The drop in cross-fitted regret from making the go/no-go call within each group instead of once overall
-   (`cross_fit`, as in `score_regret`), floored at 0. **Score = value ÷ d's pages.**
+4. **Value.** The expected absolute move of the mean walk-away from learning the group: the sum over groups of (share
+   of deals in the group) × |group mean walk-away − overall mean walk-away|. **Score = value ÷ d's pages.**
 
 **What it captures:**
-- **Joint value.** When a document can settle several issues, simulated deals where they all come out large (or all
-  small) land in their own groups, so joint value counts even when no single issue can flip the call (dev-006).
-- **No false value.** A document that settles nothing that matters groups deals in ways that don't change the call,
-  and scores 0. Cross-fitting stops noise in thin groups from looking like value, so the score is conservative.
-- Router 6's pair screen is not needed: the joint grouping covers pairs and more.
-
-**Sample size.** The router uses `ROUTE_WORLDS = 2000` simulated deals; `N_WORLDS = 400` stays for `decide`, so the
-engine's final call is estimated exactly as before. Measured: `worlds()` takes 0.13 s at 400 and 0.66 s at 2,000.
+- **Everything a document may settle.** A document that may settle four open issues moves the walk-away through all
+  of them, so the audited notes get credit for each.
+- **No need for the call to flip.** At the Lead's first plan no single read changes the go/no-go call (§8), but reading
+  still narrows the walk-away, which is what a sequence of reads needs. Sensitivity sees that; the regret score does
+  not.
+- **Nothing for noise.** A document with no weight on open issues forms one group and scores exactly 0; filler gets
+  only the leftover's small share.
 
 **Candidates.** Unread documents with weight above 0 for at least one open issue, whose pages fit the budget left
 (including the sweep reserve; §3).
 
-**Not guaranteed.** On dev-003 the QoE (add-backs' first place, 8 pages) may still rank above the audited notes (13
-pages). What is guaranteed: the audited notes get credit for every issue they may settle, and a QoE read that misses
-the add-backs raises their add-back weight to about 0.45 (0.25 renormalized over 0.55).
+**Not guaranteed.** Cheap documents win per page: the 2-page legal letter is the first pick on 9 of the 10 recorded
+first plans. On dev-003's replayed path (§5) the router reads legal, the QoE and then the audited notes (23 of 25
+pages), which leaves too little for contract_1 unless an earlier find changes the plan.
 
 ## 3. The reading loop (router on)
 
 `Panel.directed()` in router mode:
 
-1. **Pick.** Score the candidates with `rank_docs`; take the best if its score is above 0.
-2. **Fallback (D1).** If nothing scores above 0: the Lead's top open issue (in `record.priority` order) that has an
-   unread document on its map or in its `named` list that fits `budget − spent`; read its highest-weight such document. If no open
-   issue has one, directed reading ends. The fallback never picks a document that is neither on the map nor named, so
-   it never lands on filler.
-3. **Brief.** One Investigator, one document: `prompts.doc_brief`. It names the document and its pages, and for each
+1. **Pick.** Score the candidates with `rank_docs`; take the best (ties: fewer pages, then id) if its score is above
+   0. Otherwise directed reading ends: no unread document can move the walk-away, and the sweep takes over. This
+   replaces D1's fallback, which existed only because the regret score was 0 at the start of most deals.
+2. **Brief.** One Investigator, one document: `prompts.doc_brief`. It names the document and its pages, and for each
    open issue with weight above 0 in it, the existing brief lines (current belief or committed value, and the flip
    amount). It ends: "Report every issue type this document settles, including ones not listed."
-4. **Budget.** The Investigator's reading budget is exactly the document's pages, so the tool server keeps it to that
+3. **Budget.** The Investigator's reading budget is exactly the document's pages, so the tool server keeps it to that
    document (re-opening already-read documents stays free). This also ends the audit's "kept reading after finding
    it" waste.
-5. **Re-plan only after a commit.** The Lead re-plans when the read committed a value or range for some issue. After a
+4. **Re-plan only after a commit.** The Lead re-plans when the read committed a value or range for some issue. After a
    read that settles nothing, it does not: per finding 1 there is nothing for it to update, and this saves a session.
 
 **The sweep reserve.** The router may spend into the sweep's reserve (`SWEEP_SHARE` of the budget) when its chosen
@@ -154,7 +152,7 @@ when a trap is not on the Lead's list) gets less sweep budget; the −sweep abla
   budget of 0, and the named documents free to re-open.
 - Objections still pending at the end change nothing (fix S1, unchanged).
 
-**The `route` row.** Each pick appends a trace row `{"tool": "route", "args": {"doc", "scores" (top 5), "fallback"},
+**The `route` row.** Each pick appends a trace row `{"tool": "route", "args": {"doc", "issues", "scores" (top 5)},
 "cost": 0.0, "refused": false, ...}`, written by the panel like its `submit` row. `spent()` sums it as 0 and `read()`
 ignores it. Audits read the router's choices from it instead of replaying runs, and the demo's evidence trail can show
 why each document was read.
@@ -169,8 +167,9 @@ Challenger's rounds and pair screen, the sweep's own rule, the engine's call, an
   documents.
 - **`score_docs`:**
   - a document with weight 0 for every open issue scores 0;
-  - with two issues that flip the call only together, a document that may settle both scores above 0 while each
-    single-issue document scores 0 (dev-006's shape, on synthetic simulated deals);
+  - a document that may settle two issues scores the walk-away move of both: more than one that may settle either
+    alone, and exactly its hand-computed value on synthetic simulated deals;
+  - dividing by pages: the same document at twice the pages scores half;
   - the same inputs give the same scores.
 - **Panel:**
   - the router briefs one document, with a reading budget of exactly its pages;
@@ -179,18 +178,23 @@ Challenger's rounds and pair screen, the sweep's own rule, the engine's call, an
   - the free re-check runs when every named document was already read;
   - the router may pick a document that fits only with the sweep reserve;
   - `route` rows cost 0 and don't count as reads;
-  - the fallback reads the Lead's top issue's best map-or-named document.
-- **Unchanged behaviour:** the existing `s4_2`/`s4_3` tests pass untouched. The D1 test (`test_panel.py`) moves to the
-  document version.
+  - when no candidate scores above 0, directed reading ends.
+- **Unchanged behaviour:** the existing `s4_2`/`s4_3` tests pass untouched. The D1 test (`test_panel.py`) is replaced by
+  the router tests above.
 
 ## 5. Offline checks before any paid run (no Claude calls)
 
-1. **What ranks first.** Feed each of the 10 deals' recorded first Lead plan, and dev-003's record after contract_1,
-   through `rank_docs`. Report the top 3 documents per deal, and where the audited notes rank on the 5 deals where they
-   held evidence. This is a diagnostic, not a gate: tuning to answer keys past a diagnostic would fit S4 to the
-   generator.
-2. **Stability.** Repeat the first pick over 5 seeds of the uniform table. If the first pick agrees in under 80% of
-   cases, raise `ROUTE_WORLDS` before any paid run.
+Run during pre-verification on the scratch build, from each of the 10 deals' recorded first Lead plan (and dev-003's
+record after contract_1); the plan repeats them on the real code:
+1. **What ranks first, and stability.** Top 3 documents per deal, the audited notes' rank, and the first pick over 5
+   seeds. Pre-verification: first pick agrees in 80–100% of seeds on every deal (100% on 10 of 11 states); the audited
+   notes rank 2–7 everywhere.
+2. **The reading path.** Under the D2 loop the record changes only on a commit, so the path up to the first find can be
+   replayed exactly by assuming reads find nothing. Pre-verification: on the 8 deals with real evidence, the path
+   reaches it on 6 (dev-000, 003, 004, 007, 008, 009); it misses dev-002 and dev-005, where the audited notes held
+   only decoys, which don't change the call.
+
+These are diagnostics, not gates: tuning to answer keys past a diagnostic would fit S4 to the generator.
 
 **The audit becomes a tool:** `acqlab/bench/audit.py`, reading `route` rows. It reports pages by kind (on-map,
 off-map, already-settled, evidence hits), the audited-notes read rate, and reads the router wanted but could not
@@ -208,7 +212,7 @@ afford.
 
 - `docs/results/plan-5-prompt-log.md` (new; format of `plan-4a-prompt-log.md`): the document brief, logged as an S4
   architecture change. Parity note: it adds no knowledge beyond the guide's order.
-- The Plan 5 plan's "Post-review changes" gets **D2**, which supersedes Decision 4's issue-by-issue router in S4.
+- The Plan 5 plan's "Post-review changes" gets **D2**, which supersedes Decision 4's issue-by-issue router in S4 and D1's fallback.
 - `docs/HANDOFF.md`: the deferred Lead prompt fix is withdrawn (finding 1); findings 2 and 3 are recorded as a later
   fairness question.
 
@@ -218,7 +222,31 @@ afford.
 - **Cost per deal rises:** one document per Investigator session. Skipping the re-plan after an unproductive read
   offsets part of it. S3's N rises with S4's tokens.
 - **H6 gets less sweep budget** (§3).
-- **Thin groups.** With up to 5 open issues × 4 labels, some groups are small. Cross-fitting keeps this conservative;
-  the stability check (§5) decides whether `ROUTE_WORLDS` must rise.
+- **Sensitivity is not regret.** The router ranks by walk-away movement, not by decision value, so it may read a
+  document that moves the walk-away far from the asking price. Track A found the two tie on regret (router 3 vs 6),
+  and the call itself stays with the engine; the Challenger's pair screen keeps the "these two flip it together"
+  test.
+- **Cheap documents first** (§2, "Not guaranteed").
 - **The weights are hand-set.** Findings 2 and 3 say the map's order is imperfect for `r2`; the weights inherit that,
   on purpose, for parity.
+
+## 8. Revision from pre-verification (2026-09-25)
+
+The approved §2 scored a document by the decision regret it would remove (router 6's measure, grouped jointly). Built
+and run in a scratch copy on the 10 recorded first Lead plans, it failed the stability check (§5) and picked badly:
+- **At the Lead's first plan no single read of any document changes the call.** The Lead starts with 3–5 issues at
+  35–50% over wide ranges; ruling out one or two leaves the rest. So the audited notes scored about 0 on most deals
+  (rank 15–22), and first-pick agreement over seeds was 20–100%, mostly 40–60%, against the 80% check.
+- **Noise won.** On dev-006 the router read the HR policy, insurance, marketing, whistleblowing, environmental and IT
+  policy documents before D1's fallback took over.
+- **Not a thin-groups problem.** 8,000 simulated deals (instead of 2,000), and grouping on one predicted-walk-away
+  number (a least-squares fit), left it as broken. The short-sightedness is across time: reading pays off as a
+  sequence, and one-read value of information can't see that.
+
+Sensitivity (router 3's measure, per document) was stable at 400 simulated deals and reached the evidence as often on
+the replayed paths, without reading filler. Changes from the approved design:
+- §2 scores by sensitivity; `ROUTE_WORLDS` is dropped (the router uses the record's 400 simulated deals).
+- §3's D1 fallback is dropped: sensitivity is 0 only when no document can move the walk-away.
+- The `route` row loses its `fallback` field.
+- Non-myopic planning (scoring whole reading plans) was the alternative; it was not chosen, being riskier and needing
+  its own design round.
