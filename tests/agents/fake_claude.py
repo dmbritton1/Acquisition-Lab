@@ -38,8 +38,24 @@ if mode != "noserver":
 
     rpc("initialize", {"protocolVersion": "2025-06-18"})
     names = [t["name"] for t in rpc("tools/list")["tools"]]
-    docs = tool("list_documents")
-    if mode == "ok":
+    docs = tool("list_documents") if "list_documents" in names else []
+    if mode == "ok" and "propose" in names:  # S4's Deal Lead
+        tool("propose", issues=[
+            {"type": "addback", "name": "add-back recurs", "chance": 0.5, "low": 0, "high": 2, "docs": ["qoe"]},
+            {"type": "debt_like", "name": "earnout", "chance": 0.3, "low": 0, "high": 5, "docs": ["audited"]}],
+            stop=False, reason="fake")
+    elif mode == "ok" and "report" in names:  # an S4 Investigator: read the shortest document, find nothing
+        small = min(docs, key=lambda d: (d["pages"], d["id"]))
+        tool("open_document", doc_id=small["id"])
+        if isinstance(tool("report", findings=[{"type": "addback", "status": "not_found", "docs": [small["id"]]}]),
+                      str):  # refused (the read didn't fit the budget): report a belief instead
+            tool("report", findings=[{"type": "addback", "status": "open", "chance": 0.1, "low": 0, "high": 1}])
+    elif mode == "ok" and "challenge" in names:  # S4's Challenger: one objection, every flagged pair ruled out
+        pairs = json.loads(spec["args"][spec["args"].index("--pairs") + 1])
+        tool("challenge", objections=[{"type": "addback", "kind": "bigger", "chance": 0.2, "low": 0, "high": 3,
+                                       "docs": ["audited"], "reason": "fake"}],
+             pairs=[{"a": a, "b": b, "answer": "ruled_out", "reason": "fake"} for a, b in pairs])
+    elif mode == "ok":
         tool("note_issue", name="add-back", type="addback", chance=0.5, low=0, high=5, docs=["qoe"])
         tool("open_document", doc_id=docs[-1]["id"])  # a short filler document
         face = tool("evaluate", adjustments={})
