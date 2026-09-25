@@ -11,14 +11,13 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import NamedTuple
 
 import numpy as np
 
-from acqlab.agents.knowledge import DILIGENCE_MAP, typical_high
+from acqlab.agents.knowledge import typical_high
+from acqlab.agents.record import load_face, next_doc
 from acqlab.dataroom.tools import BudgetExceeded, DataRoom
-from acqlab.engine import Deal, is_go, walk_away
-from acqlab.generator.sample import Teaser
+from acqlab.engine import is_go, walk_away
 from acqlab.generator.traps import TRAPS, params_for
 from acqlab.routers.beliefs import HAIRCUT_CAP, Issue, draw, walk_aways
 from acqlab.routers.routers import decide, score_regret
@@ -67,13 +66,6 @@ def tool_names(router: bool) -> list[str]:
     return [t for t in TOOLS if router or t != "rank_issues"]
 
 
-class Face(NamedTuple):
-    """The deal at face value, from visible numbers only. Stands in for BaseDeal in params_for and walk_aways, which
-    read only .teaser and .deal."""
-    teaser: Teaser
-    deal: Deal
-
-
 class ToolError(Exception):
     """A refused or invalid call: reported to the solver as a tool error, not a crash."""
 
@@ -81,8 +73,7 @@ class ToolError(Exception):
 class Session:
     def __init__(self, room: Path, budget: float, trace: Path, router: bool):
         self.room = DataRoom(room, budget)
-        engine = json.loads((room / "engine.json").read_text())
-        self.face = Face(Teaser(**engine["teaser"]), Deal(**engine["deal"]))
+        self.face = load_face(room)
         self.pages = {d["id"]: d["pages"] for d in json.loads((room / "index.json").read_text())["documents"]}
         self.trace, self.router = trace, router
         self.opened: set[str] = set()
@@ -176,21 +167,13 @@ class Session:
         w = walk_aways(self.face, values)
         ask = self.face.deal.asking_price
         go, median = decide(w, ask)
-        nxt = {t: self._next_doc(t) for t in open_}
+        nxt = {t: next_doc(t, self.pages, self.opened) for t in open_}
         costs = {t: max(1, self.pages[nxt[t]]) if nxt[t] else 1 for t in open_}
         scores = score_regret(values, w, ask, costs, open_) if open_ else {}
         ranking = [{"type": t, "name": self.notes[t]["name"], "regret_removed_per_page": round(s, 4),
                     "next_doc": nxt[t], "pages_to_check": costs[t], "size_high_used": round(beliefs[t].hi, 2)}
                    for t, s in sorted(scores.items(), key=lambda kv: -kv[1])]
         return {"ranking": ranking, "current_decision": {"go": go, "walk_away_median": round(median, 2)}}
-
-    def _next_doc(self, trap: str) -> str | None:
-        """The first unread document on the diligence map for this issue type, or None once all are read."""
-        for kind in DILIGENCE_MAP[trap]:
-            for d in sorted(x for x in self.pages if x == kind or x.startswith(kind + "_")):
-                if d not in self.opened:
-                    return d
-        return None
 
     def _submit(self, go: bool, walk_away: float, reason: str) -> dict:
         if not isinstance(go, bool) or not isinstance(walk_away, (int, float)) or not math.isfinite(walk_away):
