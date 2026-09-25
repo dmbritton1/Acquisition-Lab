@@ -285,3 +285,17 @@ def test_the_prompts_say_what_code_does_with_inputs_the_lead_s_list_and_stop():
     lead = " ".join(prompts.LEAD.split())
     assert "in the order you give" not in lead and "reorder" in lead and "override" in lead
     assert "left out is dropped" in lead
+
+
+def test_with_the_router_a_pair_objection_clears_on_any_read_that_may_settle_its_issue(data, tmp_path, monkeypatch):
+    """A pair objection names no documents: any read with weight on its issue answers it, and it never gets the free
+    re-check."""
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: float(d == "qoe" and bool(self.entries["nwc"].objections)) for d in docs})
+    s = scripted(investigator=finds_nothing)
+    p = Panel(_room(data), 40, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s)
+    p.record.challenge([{"type": "nwc", "kind": "pair", "chance": 0.5, "low": 0, "high": 9, "docs": [],
+                         "reason": "with debt_like, it could flip the call"}])
+    p.directed()
+    assert [r for r, _, _ in s.turns] == ["investigator"] and "Brief: read qoe" in s.turns[0][1]
+    assert p.record.entries["nwc"].objections == []

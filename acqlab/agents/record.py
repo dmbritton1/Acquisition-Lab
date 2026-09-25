@@ -1,6 +1,6 @@
 """The Deal Record (main spec §3, the blackboard): what S4 believes about each issue type, and the evidence behind it.
 Code holds it; LLMs only propose. The engine prices it: the decision, each issue's flip amount, the pairs that
-flip together, and router 6's ranking (reframe design §5).
+flip together, and the document router's ranking (reframe design §5; D2).
 
 It reads the room's engine.json and index.json only, never an answer key."""
 import json
