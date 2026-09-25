@@ -95,9 +95,10 @@ def check(finding: dict, texts: dict[str, str]) -> tuple[dict | None, list[str]]
         if op == "difference" and a < b:
             errors.append(f"{t}: {a} - {b} is negative; if there is no shortfall or remaining amount, report value 0 "
                           "with a quote")
-        # product: the percent input, in either order; given as its printed figure (25.0) it counts as its fraction
+        # product: the percent input, in either order: first one given as a quoted percent's fraction (0.25), else
+        # one given as its printed figure (25.0), which counts as its fraction
         fracs = [p / 100 for p in pcts]
-        pct = next((x for x in (b, a) if _in(x, pcts + fracs)), None)
+        pct = next((x for x in (b, a) if _in(x, fracs)), next((x for x in (b, a) if _in(x, pcts)), None))
         if op == "product" and pct is None:
             errors.append(f"{t}: product needs a percent from your quotes as one input (25.0 or 0.25 for 25.0%)")
         if errors:

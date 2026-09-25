@@ -76,6 +76,23 @@ def test_an_open_issue_the_lead_leaves_out_is_dropped(data):
     assert r.entries["capex"].known == (2.0, 2.0) and r.entries["debt_like"].chance == 0.6
 
 
+def test_a_pending_objection_outlasts_a_re_plan_until_it_is_investigated(data):
+    """R1: a re-plan that leaves out an objected issue used to drop it to chance 0, so the router never checked the
+    objection. R2: a re-plan that re-lists it used to overwrite the Challenger's widening."""
+    r = _record(data)
+    r.plan([_issue("debt_like", 0.5, 0, 1.0), _issue("nwc", 0.2, 0, 1.0)])
+    r.challenge([{"type": "nwc", "kind": "bigger", "chance": 0.7, "low": 0, "high": 40, "docs": [], "reason": "r"},
+                 {"type": "debt_like", "kind": "bigger", "chance": 0.6, "low": 0, "high": 30, "docs": [],
+                  "reason": "r"}])
+    r.plan([_issue("debt_like", 0.1, 0, 2.0)])
+    nwc, debt = r.entries["nwc"], r.entries["debt_like"]
+    assert (nwc.chance, nwc.high) == (0.7, 40) and r.rank(["nwc"], {"nwc": 5.0})["nwc"] > 0  # R1: not dropped
+    assert (debt.chance, debt.high) == (0.6, 30)  # R2: the Lead can't lower it below the objection
+    debt.objections = nwc.objections = []  # answered by the extra look
+    r.plan([_issue("debt_like", 0.1, 0, 2.0)])
+    assert (debt.chance, debt.high) == (0.1, 2.0) and nwc.chance == 0.0  # now the Lead sets it freely
+
+
 def test_a_committed_problem_moves_the_engine_s_call(data):
     r = _record(data)
     assert r.decide()[0]  # dev-000 is a go at face value

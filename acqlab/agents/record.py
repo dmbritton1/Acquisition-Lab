@@ -74,16 +74,18 @@ class Record:
 
     def plan(self, issues: list[dict]) -> None:
         """A Deal Lead proposal, the whole plan. Committed values stand; beliefs about the rest are replaced, and an
-        open issue left out is dropped (chance 0; what was read about it stays)."""
+        open issue left out is dropped (chance 0; what was read about it stays). A pending objection holds its issue:
+        not dropped, and no lower than the objection's chance and size, until it is investigated."""
         self.priority = [i["type"] for i in issues]
         for t, e in self.entries.items():
-            if e.open and t not in self.priority:
+            if e.open and not e.objections and t not in self.priority:  # an objection holds it until checked
                 e.chance = 0.0
         for i in issues:
             e = self.entries[i["type"]]
             e.proposed, e.name, e.docs = True, i.get("name", ""), list(i.get("docs", []))
             if e.known is None:
-                e.chance, e.low, e.high = float(i["chance"]), float(i["low"]), float(i["high"])
+                e.chance = max([float(i["chance"])] + [o["chance"] for o in e.objections])
+                e.low, e.high = float(i["low"]), max([float(i["high"])] + [o["high"] for o in e.objections])
 
     def apply(self, commits: list[dict]) -> bool:
         """Committed findings; True if any commit changed a value. A commit that disagrees with what is already known

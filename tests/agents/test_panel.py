@@ -147,6 +147,30 @@ def test_an_objection_buys_one_more_look_and_a_checked_pair_becomes_two(data, tm
     assert [r for r, _, _ in s.turns].count("challenger") == 2
 
 
+def test_with_the_router_an_objected_issue_the_lead_leaves_out_still_gets_its_extra_look(data, tmp_path):
+    """R1: once the Challenger has objected, the Lead re-plans without nwc; nwc's objection still gets its look."""
+    both = [_issue("debt_like", 0.5, docs=["legal"]), _issue("nwc", 0.5, docs=["qoe"])]
+    rounds = [{"objections": [{"type": "debt_like", "kind": "bigger", "chance": 0.9, "low": 0, "high": 90, "docs": [],
+                               "reason": "r"},
+                              {"type": "nwc", "kind": "bigger", "chance": 0.7, "low": 0, "high": 60, "docs": [],
+                               "reason": "r"}]},
+              {"objections": []}]
+
+    def challenger(sess, prompt):
+        sess.call("challenge", rounds.pop(0) | {"pairs": [{"a": a, "b": b, "answer": "ruled_out", "reason": "r"}
+                                                          for a, b in sess.pairs]})
+
+    def lead(sess, prompt):
+        issues = both if len(rounds) == 2 else [_issue("debt_like", 0.1, docs=["legal"])]  # nwc left out
+        sess.call("propose", {"issues": issues, "stop": False, "reason": "r"})
+
+    s = scripted(lead=lead, investigator=finds_nothing, challenger=challenger)
+    Panel(_room(data), 80, tmp_path / "t.jsonl", Config(sweep=False), s).run()
+    roles = [r for r, _, _ in s.turns]
+    after = _briefed(s.turns[roles.index("challenger"):])
+    assert after == ["debt_like", "nwc"]  # the Lead dropped nwc after debt_like's look; its objection stands
+
+
 def test_the_sweep_reads_untouched_domains_first_with_what_is_left(data, tmp_path):
     s = scripted(lead=lead_says(([_issue("debt_like", docs=["legal"])], True)), investigator=finds_nothing)
     p = Panel(_room(data), 20, tmp_path / "t.jsonl", Config(challenger=False, router=False), s)

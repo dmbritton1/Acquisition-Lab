@@ -97,6 +97,18 @@ def test_a_negative_difference_and_a_product_without_a_quoted_percent_are_refuse
     assert errs == ["debt_like: product needs a percent from your quotes as one input (25.0 or 0.25 for 25.0%)"]
 
 
+def test_the_percent_input_is_found_even_when_the_amount_is_also_a_printed_percent():
+    """R3: 12.0 is both the $M amount and, elsewhere in the quotes, a percent; given second it was read as the
+    percent figure and 0.25 x 12.0 / 100 committed 0.03."""
+    texts = {"contract_1": TEXTS["contract_1"] + " Wexford accounts for 12.0% of revenue."}
+    quotes = [q("contract_1", "Wexford accounts for 12.0% of revenue."),
+              q("contract_1", "it will move 25.0% of its $12.0M of annual purchases")]
+    for inputs in ([0.25, 12.0], [12.0, 0.25], [25.0, 12.0], [12.0, 25.0]):
+        c, errs = check({"type": "concentration", "status": "value", "op": "product", "inputs": inputs,
+                         "quotes": quotes}, texts)
+        assert errs == [] and c["low"] == pytest.approx(3.0), inputs
+
+
 def test_a_range_is_committed_from_a_stated_range_or_from_documents_that_disagree():
     c, errs = check({"type": "debt_like", "status": "range", "low": 3.0, "high": 6.2,
                      "quotes": [q("legal", "We expect it to settle for $3.0–$6.2M, payable by the Company.")]}, TEXTS)
