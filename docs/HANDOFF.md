@@ -30,31 +30,34 @@ for status and next steps.*
     2. **The Lead barely lowers a chance after reading without settling it.** For example, concentration went
        0.4 → 0.4 → 0.35 across three documents.
 
-**Suggested first message for the next session:** see "Next steps" below. The user has a paste-ready message for fixes
-1–3.
+**Suggested first message for the next session:** see "Next steps" below.
 
 ### Next steps
 
-1. **Code fix (no Claude calls): router fallback.**
-   - In `acqlab/agents/panel.py` `pick()`: when router 6's best score is not above the veto (0), but candidates with
-     chance > 0 remain and budget is available, fall back to the Deal Lead's order (the no-router rule already in
-     `pick()`) instead of stopping.
-   - Rationale: unspent budget earns nothing (Decision 4), and one-step value of information misses issues that only
-     matter together.
-   - Pin it with a test that reproduces dev-006's shape: every single-check score is 0, yet it still investigates.
-2. **Prompt fix (logged; parity rule): the Lead lowers a chance after reading finds nothing.**
-   - Add the guidance "reading the documents that normally hold an issue and finding nothing is strong evidence against
-     it; lower its chance".
-   - Either put it in `knowledge.GUIDE`, which S1b shares (S1b's prompt then changes, so re-run S1b on the same deals),
-     or put it in the Lead prompt only and offer S1b the same effort. The user picks.
-   - Create `docs/results/plan-5-prompt-log.md` (format: `docs/results/plan-4a-prompt-log.md`) and log the edit there.
-3. **Re-run and compare.**
+1. **Done (D1): router fallback.** When no single check scores above 0, `panel.pick()` reads in the Deal Lead's order
+   instead of stopping; `VETO` is gone. A test pins dev-006's shape, and an offline replay of dev-006's first plan
+   now sends debt_like to the audited notes.
+2. **Deferred: the Lead prompt fix. Decide after the re-run.**
+   - The idea: tell the Lead that "reading the documents that normally hold an issue and finding nothing is strong
+     evidence against it; lower its chance".
+   - **Why it waits.** The trace re-check weakened the case for it (see the correction in `plan-5-dev-checks.md`). The
+     10-deal run's example read the wrong documents for concentration, so holding the chance was reasonable. The only
+     clean example is the smoke run's contract_1. Do it only if the re-run shows a wrong call from a chance held after
+     reading the *mapped* documents.
+   - **If it's done, prefer the Lead prompt only, logged.**
+     - Log it in `docs/results/plan-5-prompt-log.md`; the format is `plan-4a-prompt-log.md`.
+     - Changing `knowledge.GUIDE` would change S1b's and S0's prompts. It would also break the plan's "S1b byte for
+       byte unchanged" rule. Worst, it moves the baseline that `r2`'s calibration and the 160 test deals were measured
+       on.
+     - Under the parity rule, S1b is offered the same effort. That must be weighed against the calibrated baseline;
+       the user decides.
+3. **Re-run S4 and compare.**
    - Archive `data/cal-r2/runs/s4` to `data/cal-r2/s4-c989fb1`, because the pilot skips finished runs. Re-run `s4` on
-     dev-000..009, and S1b too if the GUIDE changed (archive `runs/s1b` first).
+     dev-000..009. S1b is unchanged, so its runs stand.
    - Record the results in `plan-5-dev-checks.md` and compare with the table there.
-   - Each real run needs the user's OK. `export CLAUDE_BIN="$HOME/Library/Application
-     Support/Claude/claude-code/2.1.280/claude.app/Contents/MacOS/claude"` (stay on 2.1.280 for parity, even though
-     2.1.281 is installed).
+   - Each real run needs the user's OK. Set `CLAUDE_BIN` as below, and stay on 2.1.280 for parity even though 2.1.281
+     is installed:
+     `export CLAUDE_BIN="$HOME/Library/Application Support/Claude/claude-code/2.1.280/claude.app/Contents/MacOS/claude"`
 4. **Then the rest of Task 6:**
    - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
    - the prompt tuning loop, confirmed on `cal-r1`;

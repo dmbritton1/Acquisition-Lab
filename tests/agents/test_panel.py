@@ -100,7 +100,8 @@ def test_without_the_router_issues_go_in_the_lead_s_order_until_the_lead_says_st
     assert [r for r, _, _ in s.turns] == ["lead", "investigator", "lead", "investigator", "lead"]
 
 
-def test_the_router_ranks_by_regret_per_page_and_stops_below_the_veto(data, tmp_path, monkeypatch):
+def test_the_router_ranks_by_regret_per_page_and_falls_back_to_the_lead_s_order_when_nothing_scores(
+        data, tmp_path, monkeypatch):
     plan = [_issue("nwc", 0.3), _issue("debt_like", 0.6)]
     s = scripted(lead=lead_says((plan, True)), investigator=finds_nothing, challenger=no_objections)
     p = Panel(_room(data), 40, tmp_path / "a.jsonl", Config(challenger=False, sweep=False), s)
@@ -109,10 +110,12 @@ def test_the_router_ranks_by_regret_per_page_and_stops_below_the_veto(data, tmp_
     scores = p.record.rank(["nwc", "debt_like"], costs)
     p.run()
     assert _briefed(s.turns)[0] == max(scores, key=scores.get)  # the Lead's stop doesn't end a router run
-    monkeypatch.setattr(panel, "VETO", 1.0)  # nothing removes a whole asking price of regret per page
-    s2 = scripted(lead=lead_says((plan, False)), investigator=finds_nothing)
+    # dev-006 (cal-r2): at the Lead's chances no single check flips the call, so every score is 0; the panel still
+    # reads, in the Lead's order, while budget and open issues remain
+    monkeypatch.setattr(panel.Record, "rank", lambda self, cands, costs: dict.fromkeys(cands, 0.0))
+    s2 = scripted(lead=lead_says((plan, True)), investigator=finds_nothing)
     Panel(_room(data), 40, tmp_path / "b.jsonl", Config(challenger=False, sweep=False), s2).run()
-    assert _briefed(s2.turns) == []
+    assert _briefed(s2.turns) == ["nwc", "debt_like"]
 
 
 def test_the_brief_carries_the_flip_amount_where_to_look_and_a_sub_budget(data, tmp_path):

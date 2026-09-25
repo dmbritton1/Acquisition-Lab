@@ -50,3 +50,6 @@ The other five deals were right for both.
 - The sweep then spent the budget by coverage, and debt_like (chance 0.5, up to $46M) was never settled.
 - dev-000 shows the same thing. After the first checks, only addback could still flip the call.
 - The Lead also barely lowers a chance after reading without settling it: concentration went 0.4 → 0.4 → 0.35 across 3 documents.
+  - **Correction (trace re-check):** those 3 documents were the QoE, the legal letter and the board minutes, none of them where concentration usually shows up, and no contract was read. So holding the chance was reasonable there. debt_like was never read in the audited notes (11 pages). On dev-000 the real limit was budget: the QoE took 9 of about 20 usable pages to settle a $0.6M add-back. The clearer case of a sticky chance is the smoke run (concentration held at 0.45 after contract_1 showed nothing).
+
+**Fix D1 (router fallback), code only:** when no single check scores above 0, the router reads in the Lead's order instead of stopping. Replaying dev-006's recorded first plan offline: every score is 0, and the new `pick()` sends debt_like to the audited notes (10 pages). dev-000's first pick is unchanged (addback). The Lead prompt fix is deferred; see `docs/HANDOFF.md`.

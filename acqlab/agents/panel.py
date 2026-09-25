@@ -23,9 +23,6 @@ SWEEP_SHARE = 0.10  # budget held back for the residual sweep (main spec §3)
 SUB_SHARE = 0.5  # an Investigator's budget: its first document plus 2 units, and at least half the deal budget
 MAX_TRIES = 2  # investigations per issue: once, and once more after an objection
 CHALLENGE_ROUNDS = 2
-VETO = 0.0  # the router stops once no issue removes more than this share of the asking price per page. Unspent
-# budget earns nothing under the regret score, so a page costs nothing: stop only when nothing has decision value
-# left. ponytail: Track A's regret+veto used 0.0025, which stops before any reading on ordinary deals.
 SYSTEM = {"lead": prompts.LEAD, "investigator": prompts.INVESTIGATOR, "challenger": prompts.CHALLENGER}
 USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 
@@ -33,8 +30,9 @@ USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_crea
 class Config(NamedTuple):
     lead: bool = True  # False: build step 1, one Investigator reads for every issue type
     challenger: bool = True
-    router: bool = True  # True: code picks by decision value per page and the Lead's stop is ignored. False: the
-    # Lead's order; the first investigation always runs, and the Lead's stop ends later rounds
+    router: bool = True  # True: code picks by decision value per page (the Lead's order when nothing scores) and
+    # the Lead's stop is ignored. False: the Lead's order; the first investigation always runs, and the Lead's stop
+    # ends later rounds
     sweep: bool = True
 
 
@@ -113,13 +111,16 @@ class Panel:
         cands = self.candidates()
         if not cands:
             return None
-        if not self.cfg.router:
-            order = self.record.priority
-            return min(cands, key=lambda t: (order.index(t) if t in order else len(order), TRAPS.index(t)))
-        costs = {t: self.first_cost(t) for t in cands}
-        scores = self.record.rank(cands, costs)
-        best = max(cands, key=lambda t: (scores[t], -TRAPS.index(t)))
-        return best if scores[best] > VETO * self.record.face.deal.asking_price else None
+        if self.cfg.router:
+            scores = self.record.rank(cands, {t: self.first_cost(t) for t in cands})
+            best = max(cands, key=lambda t: (scores[t], -TRAPS.index(t)))
+            if scores[best] > 0:
+                return best
+        # No router, or no single check can flip the call (dev-006: every issue at 35-50% over wide ranges). Unspent
+        # budget earns nothing under the regret score, and issues that only matter together score 0 one at a time,
+        # so keep reading in the Lead's order.
+        order = self.record.priority
+        return min(cands, key=lambda t: (order.index(t) if t in order else len(order), TRAPS.index(t)))
 
     def investigate(self, t: str) -> None:
         e = self.record.entries[t]
