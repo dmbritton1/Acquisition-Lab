@@ -55,6 +55,7 @@ def check(finding: dict, texts: dict[str, str]) -> tuple[dict | None, list[str]]
     errors: list[str] = []
     quotes = finding.get("quotes") or []
     nums: list[float] = []
+    pcts: list[float] = []  # percent figures as printed: 25.0 for "25.0%"
     for q in quotes:
         doc, text = (q.get("doc_id"), q.get("text")) if isinstance(q, dict) else (None, None)
         if doc not in texts:
@@ -64,6 +65,7 @@ def check(finding: dict, texts: dict[str, str]) -> tuple[dict | None, list[str]]
                           "characters exactly)")
         else:
             nums += numbers(text)
+            pcts += [float(d.replace(",", "")) for d, p in _NUM.findall(text) if p]
     base = {"type": t, "chance": 1.0, "quotes": quotes, "docs": sorted({q["doc_id"] for q in quotes
                                                                           if isinstance(q, dict) and "doc_id" in q})}
     if status == "value":
@@ -90,9 +92,17 @@ def check(finding: dict, texts: dict[str, str]) -> tuple[dict | None, list[str]]
                 errors.append(f"{t}: input {x} does not appear in your quotes")
         if op == "divide" and b <= 0:
             errors.append(f"{t}: cannot divide by {b}")
+        if op == "difference" and a < b:
+            errors.append(f"{t}: {a} - {b} is negative; if there is no shortfall or remaining amount, report value 0 "
+                          "with a quote")
+        # product: the percent input, in either order; given as its printed figure (25.0) it counts as its fraction
+        fracs = [p / 100 for p in pcts]
+        pct = next((x for x in (b, a) if _in(x, pcts + fracs)), None)
+        if op == "product" and pct is None:
+            errors.append(f"{t}: product needs a percent from your quotes as one input (25.0 or 0.25 for 25.0%)")
         if errors:
             return None, errors
-        v = {"difference": max(0.0, a - b), "product": a * (b / 100 if b > 1 else b), "divide": a / b}[op]
+        v = a - b if op == "difference" else a / b if op == "divide" else a * b / (1 if _in(pct, fracs) else 100)
         return {**base, "kind": "computed", "low": v, "high": v}, []
     if status == "range":
         lo, hi = _num(finding.get("low")), _num(finding.get("high"))

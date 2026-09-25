@@ -73,8 +73,12 @@ class Record:
         self.priority: list[str] = []  # the Deal Lead's order, most important first
 
     def plan(self, issues: list[dict]) -> None:
-        """A Deal Lead proposal. Committed values stand; beliefs about the rest are replaced."""
+        """A Deal Lead proposal, the whole plan. Committed values stand; beliefs about the rest are replaced, and an
+        open issue left out is dropped (chance 0; what was read about it stays)."""
         self.priority = [i["type"] for i in issues]
+        for t, e in self.entries.items():
+            if e.open and t not in self.priority:
+                e.chance = 0.0
         for i in issues:
             e = self.entries[i["type"]]
             e.proposed, e.name, e.docs = True, i.get("name", ""), list(i.get("docs", []))
@@ -82,19 +86,25 @@ class Record:
                 e.chance, e.low, e.high = float(i["chance"]), float(i["low"]), float(i["high"])
 
     def apply(self, commits: list[dict]) -> bool:
-        """Committed findings; True if any narrowed what is known."""
-        narrowed = False
+        """Committed findings; True if any commit changed a value. A commit that disagrees with what is already known
+        widens it to a range covering both, keeping every quote."""
+        changed = False
         for c in commits:
             e = self.entries[c["type"]]
             e.proposed = True
             if c["kind"] in ("quoted", "computed", "range"):
-                narrowed |= e.known != (c["low"], c["high"])
-                e.known, e.kind, e.quotes = (c["low"], c["high"]), c["kind"], c["quotes"]
+                k = (c["low"], c["high"]) if e.known is None else (min(e.known[0], c["low"]),
+                                                                    max(e.known[1], c["high"]))
+                if k != e.known:
+                    e.kind = c["kind"] if e.known is None else "range"
+                    changed = True
+                e.known = k
+                e.quotes = e.quotes + [q for q in c["quotes"] if q not in e.quotes]
             elif c["kind"] == "not_found":
                 e.searched = sorted(set(e.searched) | set(c["docs"]))
             elif e.known is None:  # open: a belief without evidence
                 e.chance, e.low, e.high = c["chance"], c["low"], c["high"]
-        return narrowed
+        return changed
 
     def challenge(self, objections: list[dict]) -> None:
         """Each objection reopens its issue for one more investigation. For an open issue it also widens the belief:

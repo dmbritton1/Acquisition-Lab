@@ -80,8 +80,10 @@ PANEL_TOOLS = {
                                         "reason": {"type": "string"}}, "required": ["issues", "stop", "reason"]}),
     "report": ("Free. Your findings; ends your turn once every finding passes the Committer's checks (a refused "
                "report says why; fix it and call report again). One finding per issue type. status: value (an "
-               "amount: quote the sentence or table row stating it; if it must be calculated from two or more "
-               "quoted numbers, give op and the two inputs and code does the arithmetic), range (low and high, each "
+               "amount: quote the sentence or table row stating it; if it must be calculated from quoted numbers, "
+               "give op and exactly two inputs, in this order, and code does the arithmetic: difference: [amount, "
+               "amount subtracted]; product: [amount in $M, percent or fraction]; divide: [total, number of "
+               "years]), range (low and high, each "
                "0 or a number in your quotes), not_found (docs: what you read that doesn't settle it), or open "
                "(chance, low, high: a belief without evidence). Quotes must be copied word for word from documents "
                "you have read.",

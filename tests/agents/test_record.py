@@ -49,6 +49,33 @@ def test_commits_stand_when_the_lead_replans_and_not_found_only_records_what_was
     assert r.priority == ["debt_like", "nwc"]
 
 
+def test_a_later_commit_that_disagrees_widens_what_is_known_and_keeps_every_quote(data):
+    """F1: a later commit used to overwrite an earlier one (QoE's 1.2 replaced by the CIM's 0.0, its quote lost)."""
+    qoe, cim = {"doc_id": "qoe", "text": "$1.2M recurred"}, {"doc_id": "cim", "text": "will not recur"}
+    r = _record(data)
+    assert r.apply([{"type": "addback", "kind": "quoted", "low": 1.2, "high": 1.2, "quotes": [qoe]}])
+    assert r.apply([{"type": "addback", "kind": "quoted", "low": 0.0, "high": 0.0, "quotes": [cim]}])
+    e = r.entries["addback"]
+    assert (e.known, e.kind, e.quotes) == ((0.0, 1.2), "range", [qoe, cim])
+    assert not r.apply([{"type": "addback", "kind": "computed", "low": 0.5, "high": 0.5, "quotes": []}])  # inside
+    assert (e.known, e.kind) == ((0.0, 1.2), "range")
+    assert not r.apply([{"type": "addback", "kind": "range", "low": 0.0, "high": 1.2, "quotes": [qoe]}])  # the same
+    assert (e.known, e.quotes) == ((0.0, 1.2), [qoe, cim])
+
+
+def test_an_open_issue_the_lead_leaves_out_is_dropped(data):
+    """F3: the Lead's list is the whole plan; an open issue it leaves out gets chance 0 (what was read stays)."""
+    r = _record(data)
+    r.plan([_issue("debt_like", 0.6), _issue("nwc", 0.4), _issue("capex", 0.3)])
+    r.apply([{"type": "capex", "kind": "quoted", "low": 2.0, "high": 2.0, "quotes": []},
+             {"type": "nwc", "kind": "not_found", "docs": ["qoe"], "quotes": []}])
+    r.entries["nwc"].tries = 1
+    r.plan([_issue("debt_like", 0.6)])
+    nwc = r.entries["nwc"]
+    assert (nwc.chance, nwc.searched, nwc.tries) == (0.0, ["qoe"], 1) and r.issue("nwc").p_real == 0.0
+    assert r.entries["capex"].known == (2.0, 2.0) and r.entries["debt_like"].chance == 0.6
+
+
 def test_a_committed_problem_moves_the_engine_s_call(data):
     r = _record(data)
     assert r.decide()[0]  # dev-000 is a go at face value

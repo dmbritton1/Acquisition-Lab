@@ -95,7 +95,7 @@ def score(key: AnswerKey, system: str, trace: list[dict], cli: dict | None, stat
         "num_turns": (cli or {}).get("num_turns"), "duration_ms": (cli or {}).get("duration_ms"),
         "sessions": (cli or {}).get("sessions", 1 if cli else 0),
         "cost_usd": (cli or {}).get("total_cost_usd"), "models": sorted((cli or {}).get("modelUsage", {})),
-        "env_keys": (cli or {}).get("env_keys"),
+        "env_keys": (cli or {}).get("env_keys"), "timeouts": (cli or {}).get("timeouts", 0),
         "floors": floors(key),
     }
 
@@ -202,6 +202,7 @@ def summarize(rows: list[dict], s3_n: int | None = None) -> dict:
             "by_case": {c: _mean([r for r in rs if r["case_type"] == c], "regret")
                         for c in sorted({r["case_type"] for r in rs})},
             "sessions": _mean([{"sessions": r.get("sessions")} for r in rs], "sessions"),
+            "timeouts": sum(r.get("timeouts", 0) for r in rs),  # S4's skipped turns
         }
         paired = sorted(set(by[s]) & set(by["s1b"])) if s != "s1b" else []
         if paired:  # S4's build-step check (reframe design §5): the same deals, against S1b
@@ -228,9 +229,12 @@ def summarize(rows: list[dict], s3_n: int | None = None) -> dict:
             "regret_lower": regret_lower, "evidence_more": evidence_more,
             "verdict": "keep" if regret_lower and evidence_more else
                        "reframe" if not (regret_lower or evidence_more) else "mixed"}
-    if "s4" in out["systems"] and base:  # S3's N (pre-registration): S4's tokens per deal over S1b's, all four kinds
-        total = {s: sum(out["systems"][s]["tokens"].values()) for s in ("s4", "s1b")}
-        out["s3_n"] = round(total["s4"] / total["s1b"]) if total["s1b"] else None
+    if "s4" in out["systems"]:  # S3's N (pre-registration): S4's tokens per deal over S1b's, all four kinds, on the
+        # deals both answered with usage (paired, like vs_s1b)
+        paired = [d for d in sorted(set(by["s4"]) & set(by["s1b"]))
+                  if any(by["s4"][d]["tokens"].values()) and any(by["s1b"][d]["tokens"].values())]
+        total = {s: sum(sum(by[s][d]["tokens"].values()) for d in paired) for s in ("s4", "s1b")}
+        out["s3_n"] = max(1, round(total["s4"] / total["s1b"])) if total["s1b"] else None
     s1b = out["systems"]["s1b"]["regret"] if base else None
     out["b0_warning"] = s1b is not None and out["floors"]["b0"] is not None and s1b >= out["floors"]["b0"]
     out["margin_warning"] = s1b is not None and base != [] and s1b >= out["floors"]["margin_rule"]

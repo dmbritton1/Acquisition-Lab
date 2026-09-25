@@ -179,3 +179,19 @@ def test_the_panel_sums_usage_over_its_turns(data, tmp_path):
     cli = Panel(_room(data), 30, tmp_path / "t.jsonl", STAGES["s4_2"], s).run()
     assert cli["sessions"] == len(s.turns) == 3 and cli["usage"]["output_tokens"] == 21
     assert cli["num_turns"] == 6 and cli["modelUsage"] == {"claude-opus-5-5": {}} and cli["env_keys"] == ["HOME"]
+
+
+def test_the_prompts_say_what_code_does_with_inputs_the_lead_s_list_and_stop():
+    """F2: the op meanings and input order, exactly two inputs. F3: an issue left out is dropped. M1: code may reorder
+    the reading and override stop."""
+    from acqlab.agents import panel_prompts as prompts
+    from acqlab.agents.server import PANEL_TOOLS
+    for text in (prompts.INVESTIGATOR, PANEL_TOOLS["report"][0]):
+        flat = " ".join(text.split())
+        assert "exactly two" in flat and "two or more" not in flat
+        assert all(s in flat for s in ("difference: [amount, amount subtracted]",
+                                       "product: [amount in $M, percent or fraction]",
+                                       "divide: [total, number of years]"))
+    lead = " ".join(prompts.LEAD.split())
+    assert "in the order you give" not in lead and "reorder" in lead and "override" in lead
+    assert "left out is dropped" in lead

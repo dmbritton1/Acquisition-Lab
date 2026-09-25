@@ -33,7 +33,8 @@ USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_crea
 class Config(NamedTuple):
     lead: bool = True  # False: build step 1, one Investigator reads for every issue type
     challenger: bool = True
-    router: bool = True  # False: issues in the Deal Lead's order, stopping when the Lead says stop
+    router: bool = True  # True: code picks by decision value per page and the Lead's stop is ignored. False: the
+    # Lead's order; the first investigation always runs, and the Lead's stop ends later rounds
     sweep: bool = True
 
 

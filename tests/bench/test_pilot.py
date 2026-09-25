@@ -270,6 +270,34 @@ def test_s4_runs_as_a_panel_and_is_checked_against_s1b_on_the_same_deals(fresh, 
     assert "s4" in json.loads((fresh / "runs" / "summary.json").read_text())["systems"]
 
 
+def _tok(n):
+    return {"input_tokens": n, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
+
+
+def test_s3_n_is_s4_s_tokens_over_s1b_s_on_deals_both_answered_with_usage():
+    """F5: over each system's own deals, d2 (S4 only) and d3 (S1b timed out) would give 1400 / 100 = 14."""
+    rows = [_fake_row("d0", "s1b", 0.1, True) | {"tokens": _tok(100)},
+            _fake_row("d1", "s1b", 0.1, True) | {"tokens": _tok(100)},
+            _fake_row("d3", "s1b", 0.1, True) | {"status": "timeout"},
+            _fake_row("d1", "s4", 0.1, True) | {"tokens": _tok(300)},
+            _fake_row("d2", "s4", 0.1, True) | {"tokens": _tok(3000)},
+            _fake_row("d3", "s4", 0.1, True) | {"tokens": _tok(900)}]
+    assert summarize(rows)["s3_n"] == 3  # the paired subset is d1 alone: 300 / 100
+    assert summarize(rows[:3] + [rows[4]])["s3_n"] is None  # no deal both answered
+    assert summarize(rows[:2] + [_fake_row("d1", "s4", 0.1, True) | {"tokens": _tok(40)}])["s3_n"] == 1
+
+
+def test_s4_s_timed_out_turns_reach_its_rows_and_the_summary(data):
+    """F4: the panel skips a timed-out turn and counts it; the row and the summary must show it."""
+    key = _key(data)
+    t = key.truth
+    submit = _row("submit", {"go": t.face_go, "walk_away": t.face_walk_away, "reason": "engine"})
+    row = score(key, "s4", [submit], {"usage": {}, "timeouts": 2}, "ok")
+    assert row["timeouts"] == 2 and score(key, "s1b", [submit], None, "timeout")["timeouts"] == 0
+    rows = [_fake_row(f"d{i}", "s4", 0.1, True) | {"timeouts": i} for i in range(3)]
+    assert summarize(rows + [_fake_row("d0", "s1b", 0.1, True)])["systems"]["s4"]["timeouts"] == 3
+
+
 def test_the_lead_s_first_plan_is_s4_s_prior(data):
     key = _key(data)  # dev-000: debt_like is unresolvable, realized 18.3
     plan = lambda high: _row("propose", {"issues": [{"type": "debt_like", "name": "n", "chance": 0.5, "low": 0,

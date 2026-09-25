@@ -60,6 +60,10 @@ def test_a_value_must_appear_in_the_quotes_except_zero():
       "quotes": [q("contract_1", "it will move 25.0% of its $12.0M of annual purchases")]}, 3.0),
     ({"type": "concentration", "op": "product", "inputs": [12.0, 0.25],
       "quotes": [q("contract_1", "it will move 25.0% of its $12.0M of annual purchases")]}, 3.0),
+    ({"type": "concentration", "op": "product", "inputs": [25.0, 12.0],  # F2: either order
+      "quotes": [q("contract_1", "it will move 25.0% of its $12.0M of annual purchases")]}, 3.0),
+    ({"type": "concentration", "op": "product", "inputs": [0.25, 12.0],
+      "quotes": [q("contract_1", "it will move 25.0% of its $12.0M of annual purchases")]}, 3.0),
     ({"type": "capex", "op": "divide", "inputs": [7.5, 5],
       "quotes": [q("assets", "$7.5M, to be spent evenly over the five-year plan")]}, 1.5),
 ])
@@ -74,6 +78,23 @@ def test_a_computed_value_needs_its_inputs_in_the_quotes():
     assert errs == ["debt_like: input 2.0 does not appear in your quotes"]
     assert check({"type": "capex", "status": "value", "op": "divide", "inputs": [7.5]}, TEXTS)[1][-1] == \
         "capex: inputs must be two numbers"
+
+
+def test_a_negative_difference_and_a_product_without_a_quoted_percent_are_refused():
+    """F2: a difference below zero used to commit 0.0, a committed "no problem"; a product with no percent in the
+    quotes has no input code can tell is the percent."""
+    errs = check({"type": "debt_like", "status": "value", "op": "difference", "inputs": [3.1, 9.4],
+                  "quotes": [q("audited", "Gross earnout: $9.4M. Amounts settled or funded to date: $3.1M.")]},
+                 TEXTS)[1]
+    assert len(errs) == 1 and "report value 0 with a quote" in errs[0]
+    c, errs = check({"type": "debt_like", "status": "value", "op": "difference", "inputs": [9.4, 0],
+                     "quotes": [q("audited", "Gross earnout: $9.4M. Amounts settled or funded to date: $0.0M.")]},
+                    TEXTS | {"audited": "Gross earnout: $9.4M. Amounts settled or funded to date: $0.0M."})
+    assert errs == [] and c["low"] == 9.4  # a difference never divides: a quoted 0 used to raise ZeroDivisionError
+    errs = check({"type": "debt_like", "status": "value", "op": "product", "inputs": [9.4, 3.1],
+                  "quotes": [q("audited", "Gross earnout: $9.4M. Amounts settled or funded to date: $3.1M.")]},
+                 TEXTS)[1]
+    assert errs == ["debt_like: product needs a percent from your quotes as one input (25.0 or 0.25 for 25.0%)"]
 
 
 def test_a_range_is_committed_from_a_stated_range_or_from_documents_that_disagree():

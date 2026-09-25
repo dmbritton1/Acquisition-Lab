@@ -9,6 +9,8 @@ import numpy as np
 import pytest
 
 import acqlab.agents.committer as committer
+import acqlab.agents.panel as panel
+import acqlab.agents.panel_prompts as panel_prompts
 import acqlab.agents.record as record
 import acqlab.agents.server as server
 from acqlab.agents.knowledge import typical_high
@@ -161,7 +163,8 @@ def test_bad_notes_and_bad_arguments_are_tool_errors(data, tmp_path):
 
 def test_the_server_needs_nothing_outside_its_room(data, tmp_path):
     """Isolation: no answer-key types or paths in the source, and it runs on a room copied away from any keys."""
-    for mod in (server, committer, record):  # the Committer and the Deal Record run inside the server
+    for mod in (server, committer, record, panel, panel_prompts):  # the Committer and the Deal Record run inside the
+        # server; the panel and its prompts hold the record and brief the roles
         source = Path(mod.__file__).read_text()
         assert not any(word in source for word in ("AnswerKey", "DealTruth", "truth")), mod.__name__
     room = shutil.copytree(data / "deals" / "dev-000" / "room", tmp_path / "alone" / "room")
