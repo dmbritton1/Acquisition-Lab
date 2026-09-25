@@ -53,3 +53,20 @@ The other five deals were right for both.
   - **Correction (trace re-check):** those 3 documents were the QoE, the legal letter and the board minutes, none of them where concentration usually shows up, and no contract was read. So holding the chance was reasonable there. debt_like was never read in the audited notes (11 pages). On dev-000 the real limit was budget: the QoE took 9 of about 20 usable pages to settle a $0.6M add-back. The clearer case of a sticky chance is the smoke run (concentration held at 0.45 after contract_1 showed nothing).
 
 **Fix D1 (router fallback), code only:** when no single check scores above 0, the router reads in the Lead's order instead of stopping. Replaying dev-006's recorded first plan offline: every score is 0, and the new `pick()` sends debt_like to the audited notes (10 pages). dev-000's first pick is unchanged (addback). The Lead prompt fix is deferred; see `docs/HANDOFF.md`.
+
+## The page-spend audit and D2 (2026-09-25)
+
+An offline replay of the 10 `c989fb1` traces (`uv run python -m acqlab.bench.audit --data data/cal-r2 --system s4
+--system s1b`): S4 never opened the audited notes (0 of 10; S1b 18 of 30), which held the hidden fact in 5 of the 10
+deals. On dev-003 (28% of S1b's regret on the 30 deals) the answer needed contract_1 and the audited notes, 16 of 25
+pages; S4 read contract_1 and S1b read the audited notes, and both said GO.
+
+**D2, the document router** (spec `docs/superpowers/specs/2026-09-25-doc-router-design.md`): offline, on the recorded
+first Lead plans, the first pick is stable over seeds (80–100%), the audited notes rank 2–7 on every deal, and the
+reading path reaches the evidence on 6 of the 8 deals that have any. A regret-based document score was tried first and
+dropped (spec §8): at the Lead's first plan no single read changes the call.
+
+**Also found (answer keys, read-only):** "not found" is no evidence against an issue (a clean fact states $0.0M), so the
+Lead prompt fix deferred earlier is withdrawn. The map's order is off for `r2` (add-backs sit in the audited notes 43%
+of the time, the QoE 30%), and the board minutes, off the map, hold 13–30% of each issue's evidence. Both concern the
+shared guide, so they are a later fairness question.

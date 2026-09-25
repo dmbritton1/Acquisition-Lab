@@ -34,30 +34,16 @@ for status and next steps.*
 
 ### Next steps
 
-1. **Done (D1): router fallback.** When no single check scores above 0, `panel.pick()` reads in the Deal Lead's order
-   instead of stopping; `VETO` is gone. A test pins dev-006's shape, and an offline replay of dev-006's first plan
-   now sends debt_like to the audited notes.
-2. **Deferred: the Lead prompt fix. Decide after the re-run.**
-   - The idea: tell the Lead that "reading the documents that normally hold an issue and finding nothing is strong
-     evidence against it; lower its chance".
-   - **Why it waits.** The trace re-check weakened the case for it (see the correction in `plan-5-dev-checks.md`). The
-     10-deal run's example read the wrong documents for concentration, so holding the chance was reasonable. The only
-     clean example is the smoke run's contract_1. Do it only if the re-run shows a wrong call from a chance held after
-     reading the *mapped* documents.
-   - **If it's done, prefer the Lead prompt only, logged.**
-     - Log it in `docs/results/plan-5-prompt-log.md`; the format is `plan-4a-prompt-log.md`.
-     - Changing `knowledge.GUIDE` would change S1b's and S0's prompts. It would also break the plan's "S1b byte for
-       byte unchanged" rule. Worst, it moves the baseline that `r2`'s calibration and the 160 test deals were measured
-       on.
-     - Under the parity rule, S1b is offered the same effort. That must be weighed against the calibrated baseline;
-       the user decides.
-3. **Re-run S4 and compare.**
-   - Archive `data/cal-r2/runs/s4` to `data/cal-r2/s4-c989fb1`, because the pilot skips finished runs. Re-run `s4` on
-     dev-000..009. S1b is unchanged, so its runs stand.
-   - Record the results in `plan-5-dev-checks.md` and compare with the table there.
-   - Each real run needs the user's OK. Set `CLAUDE_BIN` as below, and stay on 2.1.280 for parity even though 2.1.281
-     is installed:
-     `export CLAUDE_BIN="$HOME/Library/Application Support/Claude/claude-code/2.1.280/claude.app/Contents/MacOS/claude"`
+1. **Done: D1 (router fallback), then D2 (the document router)**, which supersedes it. Spec
+   `docs/superpowers/specs/2026-09-25-doc-router-design.md`, plan `docs/superpowers/plans/2026-09-25-plan-5-d2-doc-router.md`.
+   Offline checks and the audit are in `plan-5-dev-checks.md`.
+   D1 and D2 are on branch `claude/plan-4b-freeze-preregistration-0908fa` (worktree
+   `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, which also holds a copy of `data/cal-r2`); `plan-5` is
+   behind it and fast-forwards to it.
+2. **Withdrawn: the Lead prompt fix.** "Not found" is no evidence against an issue, because a clean fact states
+   $0.0M; the Lead holding its chance was correct. The map's order (off for `r2`) and the board minutes (off the map)
+   are a later fairness question for the shared guide, which S1b also gets.
+3. **Next: the paid re-run** (D2 plan, Task 5; needs the user's OK).
 4. **Then the rest of Task 6:**
    - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
    - the prompt tuning loop, confirmed on `cal-r1`;
