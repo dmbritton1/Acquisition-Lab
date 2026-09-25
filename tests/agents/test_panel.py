@@ -6,6 +6,7 @@ import pytest
 
 import acqlab.agents.panel as panel
 from acqlab.agents.panel import STAGES, Config, Panel, solve
+from acqlab.agents.record import on_map
 from acqlab.agents.server import ROLES, Session
 from acqlab.agents.solver import RunTimeout
 from acqlab.generator.batch import AnswerKey
@@ -171,7 +172,8 @@ def test_with_the_router_an_objected_issue_the_lead_leaves_out_still_gets_its_ex
     assert after == ["debt_like", "nwc"]  # the Lead dropped nwc after debt_like's look; its objection stands
 
 
-def test_the_sweep_reads_untouched_domains_first_with_what_is_left(data, tmp_path):
+def test_the_sweep_reads_map_documents_in_untouched_domains_first_with_what_is_left(data, tmp_path):
+    """S2: the sweep used to spend its pages on filler (it_policy, environmental) that never holds an issue."""
     s = scripted(lead=lead_says(([_issue("debt_like", docs=["legal"])], True)), investigator=finds_nothing)
     p = Panel(_room(data), 20, tmp_path / "t.jsonl", Config(challenger=False, router=False), s)
     p.run()
@@ -182,6 +184,18 @@ def test_the_sweep_reads_untouched_domains_first_with_what_is_left(data, tmp_pat
     assert "legal" not in picked and sum(p.pages[d] for d in picked) <= budget
     assert domains[picked[0]] != "legal"
     assert budget >= 0.1 * 20
+    assert all(on_map(d) for d in picked) and not all(on_map(d) for d in p.pages)
+    p.read = lambda: {d for d in p.pages if on_map(d)}  # the map is all read: no sweep turn
+    n = len(s.turns)
+    p.sweep()
+    assert len(s.turns) == n
+
+
+def test_an_objection_on_an_issue_nobody_proposed_is_due_its_look(data, tmp_path):
+    p = Panel(_room(data), 20, tmp_path / "t.jsonl", STAGES["s4"], scripted())
+    p.record.challenge([{"type": "capex", "kind": "elsewhere", "chance": 0.3, "low": 0, "high": 9, "docs": [],
+                         "reason": "r"}])
+    assert p.candidates() == ["capex"]
 
 
 def test_a_timed_out_turn_is_skipped_and_a_usage_limit_stops_the_run(data, tmp_path):

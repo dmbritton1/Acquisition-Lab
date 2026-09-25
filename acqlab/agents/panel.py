@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from acqlab.agents import panel_prompts as prompts
-from acqlab.agents.record import Record, load_face, next_doc
+from acqlab.agents.record import Record, load_face, next_doc, on_map
 from acqlab.agents.server import ROLES
 from acqlab.agents.solver import RunTimeout, run_session
 from acqlab.generator.traps import TRAPS
@@ -97,8 +97,8 @@ class Panel:
 
     def candidates(self) -> list[str]:
         """Issues due an investigation: open ones not yet tried, and any with an unanswered objection."""
-        return [t for t, e in self.record.entries.items() if e.proposed and e.tries < MAX_TRIES and (
-            e.objections or (e.known is None and e.chance > 0 and e.tries == 0))]
+        return [t for t, e in self.record.entries.items() if e.tries < MAX_TRIES and (
+            e.objections or (e.open and e.chance > 0 and e.tries == 0))]
 
     def where(self, t: str) -> list[str]:
         e = self.record.entries[t]
@@ -160,11 +160,12 @@ class Panel:
             self.directed()
 
     def sweep(self) -> None:
-        """Undirected reads by coverage: documents in untouched domains first, then the shortest."""
+        """Undirected reads by coverage, of documents on the diligence map: untouched domains first, then the
+        shortest."""
         left, read = self.budget - self.spent(), self.read()
         touched = {d["domain"] for d in self.docs if d["id"] in read}
         picked: list[str] = []
-        for d in sorted((d for d in self.docs if d["id"] not in read),
+        for d in sorted((d for d in self.docs if d["id"] not in read and on_map(d["id"])),
                         key=lambda d: (d["domain"] in touched, d["pages"], d["id"])):
             if sum(self.pages[p] for p in picked) + d["pages"] <= left:
                 picked.append(d["id"])

@@ -78,19 +78,38 @@ def test_an_open_issue_the_lead_leaves_out_is_dropped(data):
 
 def test_a_pending_objection_outlasts_a_re_plan_until_it_is_investigated(data):
     """R1: a re-plan that leaves out an objected issue used to drop it to chance 0, so the router never checked the
-    objection. R2: a re-plan that re-lists it used to overwrite the Challenger's widening."""
+    objection. R2: a re-plan that re-lists it used to overwrite the Challenger's widening. S1: both now hold through
+    how the issue is priced while the objection is pending, not through the Lead's belief."""
     r = _record(data)
     r.plan([_issue("debt_like", 0.5, 0, 1.0), _issue("nwc", 0.2, 0, 1.0)])
     r.challenge([{"type": "nwc", "kind": "bigger", "chance": 0.7, "low": 0, "high": 40, "docs": [], "reason": "r"},
-                 {"type": "debt_like", "kind": "bigger", "chance": 0.6, "low": 0, "high": 30, "docs": [],
+                 {"type": "debt_like", "kind": "bigger", "chance": 0.6, "low": 0, "high": 60, "docs": [],
                   "reason": "r"}])
     r.plan([_issue("debt_like", 0.1, 0, 2.0)])
     nwc, debt = r.entries["nwc"], r.entries["debt_like"]
-    assert (nwc.chance, nwc.high) == (0.7, 40) and r.rank(["nwc"], {"nwc": 5.0})["nwc"] > 0  # R1: not dropped
-    assert (debt.chance, debt.high) == (0.6, 30)  # R2: the Lead can't lower it below the objection
+    assert (nwc.chance, debt.chance, debt.high) == (0.0, 0.1, 2.0)  # the Lead's belief is the Lead's
+    assert r.issue("nwc") == (0.7, 40, None, True) and r.rank(["nwc"], {"nwc": 5.0})["nwc"] > 0  # R1: not dropped
+    assert r.issue("debt_like") == (0.6, 60, None, True)  # R2: priced no lower than the objection
     debt.objections = nwc.objections = []  # answered by the extra look
-    r.plan([_issue("debt_like", 0.1, 0, 2.0)])
-    assert (debt.chance, debt.high) == (0.1, 2.0) and nwc.chance == 0.0  # now the Lead sets it freely
+    assert r.issue("debt_like") == (0.1, max(2.0, typical_high("debt_like", r.face.teaser)), None, True)
+    assert r.issue("nwc").p_real == 0.0  # as the Lead left it
+
+
+def test_an_objection_nobody_checks_changes_nothing_in_the_final_call(data):
+    """S1: an unchecked objection used to stay in the Lead's belief after the run cleared it, and alone forced
+    NO-GO on dev-000 in the smoke run."""
+    plain, r = _record(data), _record(data)
+    for x in (plain, r):
+        x.plan([_issue("debt_like", 0.1, 0, 1.0)])
+    big = 10 * r.size_limit("debt_like")
+    r.challenge([{"type": t, "kind": "bigger", "chance": 0.9, "low": 0, "high": big, "docs": ["legal"], "reason": "r"}
+                 for t in ("debt_like", "capex")])
+    assert r.issue("capex") == (0.9, big, None, True) and not r.entries["capex"].proposed  # priced while pending
+    assert not r.decide()[0] and plain.decide()[0]
+    for e in r.entries.values():
+        e.objections = []
+    assert r.decide() == plain.decide()
+    assert all(r.issue(t) == plain.issue(t) for t in r.entries)
 
 
 def test_a_committed_problem_moves_the_engine_s_call(data):
@@ -122,7 +141,7 @@ def test_a_pair_is_flagged_when_it_flips_the_call_together_but_neither_does_alon
     assert r.flagged_pairs() == []  # debt_like flips alone: its own flip amount covers it
 
 
-def test_an_objection_reopens_an_issue_and_widens_an_open_belief(data):
+def test_an_objection_reopens_an_issue_and_widens_how_an_open_one_is_priced(data):
     r = _record(data)
     r.plan([_issue("nwc", 0.2, 0, 1.0)])
     r.apply([{"type": "debt_like", "kind": "quoted", "low": 0.0, "high": 0.0, "quotes": []}])
@@ -131,7 +150,8 @@ def test_an_objection_reopens_an_issue_and_widens_an_open_belief(data):
                  {"type": "debt_like", "kind": "elsewhere", "chance": 0.3, "low": 0, "high": 9, "docs": ["legal"],
                   "reason": "r"}])
     nwc, debt = r.entries["nwc"], r.entries["debt_like"]
-    assert (nwc.chance, nwc.high, nwc.docs[0]) == (0.4, 50, "audited")
+    assert (nwc.chance, nwc.high, nwc.docs[0]) == (0.2, 1.0, "audited")  # S1: the belief stays the Lead's
+    assert (r.issue("nwc").p_real, r.issue("nwc").hi) == (0.4, 50)
     assert debt.known == (0.0, 0.0) and r.issue("debt_like").known == (0.0, 9)
     debt.objections = []
     assert r.issue("debt_like").known == (0.0, 0.0)

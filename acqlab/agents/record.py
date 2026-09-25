@@ -34,10 +34,19 @@ def load_face(room: Path) -> Face:
     return Face(Teaser(**engine["teaser"]), Deal(**engine["deal"]))
 
 
+def is_kind(doc: str, kind: str) -> bool:
+    return doc == kind or doc.startswith(kind + "_")
+
+
+def on_map(doc: str) -> bool:
+    """True if the diligence map names this document's kind for some issue type."""
+    return any(is_kind(doc, k) for kinds in DILIGENCE_MAP.values() for k in kinds)
+
+
 def next_doc(trap: str, pages: dict[str, float], read: set[str]) -> str | None:
     """The first unread document on the diligence map for this issue type, or None once all are read."""
     for kind in DILIGENCE_MAP[trap]:
-        for d in sorted(x for x in pages if x == kind or x.startswith(kind + "_")):
+        for d in sorted(x for x in pages if is_kind(x, kind)):
             if d not in read:
                 return d
     return None
@@ -74,18 +83,17 @@ class Record:
 
     def plan(self, issues: list[dict]) -> None:
         """A Deal Lead proposal, the whole plan. Committed values stand; beliefs about the rest are replaced, and an
-        open issue left out is dropped (chance 0; what was read about it stays). A pending objection holds its issue:
-        not dropped, and no lower than the objection's chance and size, until it is investigated."""
+        open issue left out is dropped (chance 0; what was read about it stays). A pending objection still prices its
+        issue (see issue())."""
         self.priority = [i["type"] for i in issues]
         for t, e in self.entries.items():
-            if e.open and not e.objections and t not in self.priority:  # an objection holds it until checked
+            if e.open and t not in self.priority:
                 e.chance = 0.0
         for i in issues:
             e = self.entries[i["type"]]
             e.proposed, e.name, e.docs = True, i.get("name", ""), list(i.get("docs", []))
             if e.known is None:
-                e.chance = max([float(i["chance"])] + [o["chance"] for o in e.objections])
-                e.low, e.high = float(i["low"]), max([float(i["high"])] + [o["high"] for o in e.objections])
+                e.chance, e.low, e.high = float(i["chance"]), float(i["low"]), float(i["high"])
 
     def apply(self, commits: list[dict]) -> bool:
         """Committed findings; True if any commit changed a value. A commit that disagrees with what is already known
@@ -109,22 +117,25 @@ class Record:
         return changed
 
     def challenge(self, objections: list[dict]) -> None:
-        """Each objection reopens its issue for one more investigation. For an open issue it also widens the belief:
-        the higher chance and the larger size stand."""
+        """Each objection reopens its issue for one more investigation, and prices it while pending (see issue()); the
+        Deal Lead's belief is untouched, so an objection nobody checks changes nothing once cleared."""
         for o in objections:
             e = self.entries[o["type"]]
-            e.proposed = True
             e.objections.append(o)
             e.docs = list(dict.fromkeys(list(o.get("docs", [])) + e.docs))
-            if e.known is None:
-                e.chance, e.high = max(e.chance, o["chance"]), max(e.high, o["high"])
 
     def issue(self, t: str) -> Issue:
+        """How the engine prices issue t. A pending objection counts where it is higher than the Lead's belief, so the
+        router can rank its check and the Lead can't drop it."""
         e = self.entries[t]
         if e.known is not None and e.objections:  # in doubt until checked: the committed floor stands, the top widens
             return Issue(known=(e.known[0], max([o["high"] for o in e.objections] + [e.known[1]])))
         if e.known is not None:
             return Issue(known=e.known)
+        if e.objections:
+            return Issue(p_real=max([e.chance if e.proposed else 0.0] + [o["chance"] for o in e.objections]),
+                         hi=max([e.high if e.proposed else 0.0, typical_high(t, self.face.teaser)]
+                                + [o["high"] for o in e.objections]))
         if not e.proposed:
             return Issue(proposed=False)
         return Issue(p_real=e.chance, hi=max(e.high, typical_high(t, self.face.teaser)))
