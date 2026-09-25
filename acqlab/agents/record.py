@@ -18,6 +18,8 @@ from acqlab.routers.beliefs import HAIRCUT_CAP, Issue, draw, walk_aways
 from acqlab.routers.routers import decide, score_docs
 
 N_WORLDS = 400
+ROUTE_WORLDS = 4000  # the document router's sample (D2 §2): at N_WORLDS, thin groups overstate low-weight (e.g.
+# filler) documents 2-5x; decide() stays at N_WORLDS
 MAP_WEIGHTS = (0.45, 0.25, 0.15)  # the chance a map document is where an issue is settled, by place on the map.
 # ponytail: hand-set from the map's order (the order S1b's guide states in words), not measured; tune here if the
 # order dominates the router
@@ -162,8 +164,8 @@ class Record:
             return Issue(proposed=False)
         return Issue(p_real=e.chance, hi=max(e.high, typical_high(t, self.face.teaser)))
 
-    def worlds(self, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
-        values = draw({t: self.issue(t) for t in TRAPS}, N_WORLDS, np.random.default_rng(seed))
+    def worlds(self, seed: int = 0, n: int = N_WORLDS) -> tuple[np.ndarray, np.ndarray]:
+        values = draw({t: self.issue(t) for t in TRAPS}, n, np.random.default_rng(seed))
         return values, walk_aways(self.face, values)
 
     def decide(self) -> tuple[bool, float]:
@@ -227,7 +229,7 @@ class Record:
 
     def rank_docs(self, pages: dict[str, float], read: set[str], docs: list[str], seed: int = 0) -> dict[str, float]:
         """The document router (D2 §2): expected $M the mean walk-away moves per page by reading each document."""
-        values, w = self.worlds(seed)
+        values, w = self.worlds(seed, ROUTE_WORLDS)
         u = np.random.default_rng(seed + 1).random(values.shape)
         wts = self.weights(pages, read)
         return score_docs(values, w, {d: wts.get(d, {}) for d in docs}, pages, self.targets(), u)

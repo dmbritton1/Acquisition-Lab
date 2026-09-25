@@ -199,6 +199,7 @@ def test_the_document_router_prices_what_each_document_may_settle_per_page(data)
     scores = r.rank_docs(pages, {"legal"}, ["audited", "travel"])
     assert scores["audited"] > 0 == scores["travel"]  # travel may settle nothing open
     assert scores == r.rank_docs(pages, {"legal"}, ["audited", "travel"])
+    assert len(r.worlds(0, record_mod.ROUTE_WORLDS)[1]) == 4000  # the router scores on more worlds than decide()
 
 
 def test_next_doc_walks_the_diligence_map():

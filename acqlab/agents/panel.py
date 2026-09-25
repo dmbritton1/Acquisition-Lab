@@ -148,14 +148,19 @@ class Panel:
         says nothing about whether an issue is real."""
         wts = self.record.weights(self.pages, self.read())[d]
         self.tried.add(d)
-        prompt = prompts.doc_brief(self.teaser, self.docs, self.record, d, sorted(wts), self.read(), self.pages[d])
-        row = self.turn("investigator", prompt, self.pages[d])
+        # a search first must still leave enough to open the document (the smallest document is 2 pages, so the
+        # spare unit never buys a second one); route() only picks documents whose pages already fit the budget left
+        budget = min(self.pages[d] + 1, self.budget - self.spent())
+        prompt = prompts.doc_brief(self.teaser, self.docs, self.record, d, sorted(wts), self.read(), self.pages[d],
+                                   budget)
+        row = self.turn("investigator", prompt, budget)
         commits = row["result"]["commits"] if row else []
         changed = self.record.apply(commits)
         settled = {c["type"] for c in commits if c["kind"] in ("quoted", "computed", "range")}
+        now_read = d in self.read()
         for t, e in self.record.entries.items():
-            e.objections = [o for o in e.objections if t not in settled and d not in o["docs"]
-                            and (o["docs"] or t not in wts)]
+            e.objections = [o for o in e.objections if t not in settled
+                            and not (now_read and (d in o["docs"] or (not o["docs"] and t in wts)))]
         if changed:
             self.lead()
 

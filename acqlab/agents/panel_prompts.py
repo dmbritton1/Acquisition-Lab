@@ -93,14 +93,15 @@ def brief(teaser: str, docs: list[dict], record: Record, trap: str, where: list[
 
 
 def doc_brief(teaser: str, docs: list[dict], record: Record, doc: str, issues: list[str], read: set[str],
-              pages: float) -> str:
-    """The document brief (D2 §3): one document, the open issues it may settle, and a budget of its pages."""
+              pages: float, budget: float) -> str:
+    """The document brief (D2 §3): one document, the open issues it may settle, and a budget (its pages, plus a
+    spare unit for a search)."""
     lines = [f"Brief: read {doc} ({pages:g} pages). It may settle these open issues:"]
     for t in issues:
         e = record.entries[t]
         lines.append(f"- {t}" + (f" ({e.name})" if e.name else "") + ": " + " ".join(_about(record, t)))
     return (f"{teaser}\n\nDocuments:\n{docs_table(docs, read)}\n\n" + "\n".join(lines)
-            + f"\n\nYour reading budget: {pages:g} units. Report every issue type this document settles, "
+            + f"\n\nYour reading budget: {budget:g} units. Report every issue type this document settles, "
             "including ones not listed.")
 
 

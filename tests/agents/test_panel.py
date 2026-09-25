@@ -118,10 +118,30 @@ def test_the_router_reads_the_document_that_moves_the_walk_away_most_per_page_on
     assert routes[0]["doc"] == first and len(routes) >= 2  # the Lead's stop is ignored
     role, prompt, budget = s.turns[1]
     assert role == "investigator" and f"Brief: read {first} ({p.pages[first]:g} pages)." in prompt
-    assert budget == p.pages[first] and "including ones not listed" in prompt
+    assert budget == p.pages[first] + 1 and "including ones not listed" in prompt  # a spare unit for a search
     assert all(f"- {t} ({t}): Current belief" in prompt for t in routes[0]["issues"])
     assert [r for r, _, _ in s.turns].count("lead") == 1  # nothing was committed, so no re-plan
     assert p.spent() == sum(p.pages[d] for d in p.read())  # route and submit rows are free, and not reads
+
+
+def test_a_search_first_still_leaves_enough_to_open_the_document(data, tmp_path, monkeypatch):
+    """The document budget used to be exactly its pages, so a search first left too little to open it, and the
+    document was lost to `tried` for the rest of the run."""
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: float(d == "qoe" and not read) for d in docs})
+
+    def searches_first(s, prompt):
+        doc = re.search(r"Brief: read (\S+) \(", prompt).group(1)
+        s.call("search", {"query": "customer contract"})
+        s.call("open_document", {"doc_id": doc})
+        s.call("report", {"findings": []})
+
+    s = scripted(investigator=searches_first)
+    p = Panel(_room(data), 40, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s)
+    p.record.plan([_issue("nwc", 0.5)])
+    p.directed()
+    assert "qoe" in p.read()
+    assert f"Your reading budget: {p.pages['qoe'] + 1:g} units." in s.turns[0][1]
 
 
 def test_when_no_document_can_move_the_walk_away_directed_reading_ends(data, tmp_path, monkeypatch):
@@ -264,6 +284,19 @@ def test_a_timed_out_turn_is_skipped_and_a_usage_limit_stops_the_run(data, tmp_p
         Panel(_room(data), 20, tmp_path / "u.jsonl", STAGES["s4"], limit).run()
 
 
+def test_the_tried_guard_holds_when_every_investigator_times_out(data, tmp_path):
+    """Unlike a timed-out Lead (no plan, so nothing to route), a working Lead with every Investigator timing out
+    must still route a different document each time, never the same one twice."""
+    def times_out(s, prompt):
+        raise RunTimeout("slow")
+
+    s = scripted(lead=lead_says(([_issue("nwc", 0.5), _issue("debt_like", 0.5)], False)), investigator=times_out)
+    cli = Panel(_room(data), 20, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s).run()
+    docs = [r["doc"] for r in _routes(tmp_path / "t.jsonl")]
+    assert docs and len(docs) == len(set(docs))
+    assert cli["timeouts"] == len(docs)
+
+
 def test_the_panel_sums_usage_over_its_turns(data, tmp_path):
     s = scripted(lead=lead_says(([_issue("nwc", docs=["qoe"])], True)), investigator=finds_nothing)
     cli = Panel(_room(data), 30, tmp_path / "t.jsonl", STAGES["s4_2"], s).run()
@@ -285,6 +318,24 @@ def test_the_prompts_say_what_code_does_with_inputs_the_lead_s_list_and_stop():
     lead = " ".join(prompts.LEAD.split())
     assert "in the order you give" not in lead and "reorder" in lead and "override" in lead
     assert "left out is dropped" in lead
+
+
+def test_an_objection_clears_only_when_its_document_is_actually_read(data, tmp_path, monkeypatch):
+    """The objection used to clear once the router briefed its document, even if the Investigator never opened it."""
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: float(d == "qoe" and bool(self.entries["nwc"].objections)) for d in docs})
+
+    def opens_nothing(s, prompt):
+        s.call("report", {"findings": []})
+
+    s = scripted(investigator=opens_nothing)
+    p = Panel(_room(data), 40, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s)
+    p.record.challenge([{"type": "nwc", "kind": "elsewhere", "chance": 0.5, "low": 0, "high": 9,
+                         "docs": ["qoe"], "reason": "r"}])
+    p.directed()
+    assert [r for r, _, _ in s.turns] == ["investigator"] and "Brief: read qoe" in s.turns[0][1]
+    assert "qoe" not in p.read()
+    assert p.record.entries["nwc"].objections != []  # unread: still pending, and no free re-check ran
 
 
 def test_with_the_router_a_pair_objection_clears_on_any_read_that_may_settle_its_issue(data, tmp_path, monkeypatch):
