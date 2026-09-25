@@ -20,3 +20,33 @@ Per deal, S4 against S1b: $0.47 against $0.13 (notional), 126k tokens against 76
 - The sweep spent its pages on documents outside the diligence map (it_policy, environmental, code_of_conduct).
 
 This is the "S4 too cautious" risk that the plan named, seen in one thin-margin deal: the asking price was $75.8M, and S4's median walk-away was $73.4M.
+
+## `s4` on dev-000..009 (2026-09-25)
+
+Code at `c989fb1`: an objection nobody could afford to check now changes nothing, and the sweep reads only documents on the diligence map. The smoke-run results are kept in `data/cal-r2/s4-smoke-ef8f418`. There were no timeouts. The Committer refused 0 of 37 reports, and one Investigator used a computed op (a difference, on dev-003).
+
+| | S4 | S1b (same 10 deals) |
+|---|---|---|
+| Correct calls | 7/10 | 7/10 |
+| Regret ÷ ask, paired difference S4 − S1b | −0.0037, 95% CI [−0.024, 0.018] | |
+| Flip deals (3), regret difference | −0.018 | |
+| Pages, decoy pages | 20.0, 1.2 | |
+| Sessions, cost per deal | 9.4, $0.49 | 1, $0.13 |
+| `s3_n` | 2 | |
+
+| Deal | Case | S4 | S1b |
+|---|---|---|---|
+| dev-000 | decoy (truth GO) | NO-GO ✗ | GO ✓ |
+| dev-003 | interaction (truth NO-GO) | GO ✗ | GO ✗ |
+| dev-004 | unresolvable | ✓ | ✗ |
+| dev-006 | clean (truth GO) | NO-GO ✗ | GO ✓ |
+| dev-007 | decoy (truth GO) | GO ✓ | NO-GO ✗ |
+
+The other five deals were right for both.
+
+**S4's two wrong NO-GOs have one pattern: the router is myopic.**
+- On dev-006, the Lead's first plan put every issue at chance 0.35–0.5 over wide ranges.
+- At those chances, no single check can change the call, because ruling out any one issue still leaves NO-GO. Router 6 therefore scores every issue 0 and does no directed reading.
+- The sweep then spent the budget by coverage, and debt_like (chance 0.5, up to $46M) was never settled.
+- dev-000 shows the same thing. After the first checks, only addback could still flip the call.
+- The Lead also barely lowers a chance after reading without settling it: concentration went 0.4 → 0.4 → 0.35 across 3 documents.
