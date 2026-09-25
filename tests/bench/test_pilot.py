@@ -2,8 +2,10 @@ import json
 import shutil
 from functools import partial
 
+import numpy as np
 import pytest
 
+import acqlab.agents.panel as panel
 import acqlab.bench.pilot as pilot
 from acqlab.agents.server import MAX_CALLS
 from acqlab.agents.solver import RunTimeout, solve
@@ -248,3 +250,31 @@ def test_a_summary_with_only_s1b_has_floors_but_no_checkpoint():
     s = summarize([_fake_row(f"d{i}", "s1b", 0.05, True) for i in range(3)])
     assert s["n_deals"] == 3 and set(s["systems"]) == {"s1b"} and "checkpoint" not in s
     assert s["floors"]["b0"] == pytest.approx(0.1) and not s["b0_warning"]
+
+
+def test_s4_runs_as_a_panel_and_is_checked_against_s1b_on_the_same_deals(fresh, fake_claude, monkeypatch):
+    monkeypatch.setenv("FAKE_CLAUDE", "ok")
+    rows = run(fresh, 2, ["s1b", "s4"], solver=partial(solve, claude=fake_claude),
+               panel_solver=partial(panel.solve, claude=fake_claude))
+    s4 = [r for r in rows if r["system"] == "s4"]
+    assert len(s4) == 2 and all(r["answered"] and r["sessions"] > 1 for r in s4)
+    assert (fresh / "runs" / "s4" / "dev-000.json").exists()
+    out = summarize(rows)
+    assert out["systems"]["s4"]["vs_s1b"]["n"] == 2 and out["systems"]["s4"]["sessions"] > 1
+    assert out["systems"]["s4"]["vs_s1b"]["regret_diff"] == pytest.approx(
+        np.mean([r["regret"] for r in s4]) - np.mean([r["regret"] for r in rows if r["system"] == "s1b"]))
+    assert "vs_s1b" not in out["systems"]["s1b"]
+    tokens = {s: sum(out["systems"][s]["tokens"].values()) for s in ("s1b", "s4")}
+    assert out["s3_n"] == round(tokens["s4"] / tokens["s1b"]) > 1  # the fake: 180 tokens per session
+    assert pilot.main(["--data", str(fresh), "--report"]) == 0
+    assert "s4" in json.loads((fresh / "runs" / "summary.json").read_text())["systems"]
+
+
+def test_the_lead_s_first_plan_is_s4_s_prior(data):
+    key = _key(data)  # dev-000: debt_like is unresolvable, realized 18.3
+    plan = lambda high: _row("propose", {"issues": [{"type": "debt_like", "name": "n", "chance": 0.5, "low": 0,
+                                                     "high": high, "docs": []}], "stop": False, "reason": "r"})
+    t = key.truth
+    submit = _row("submit", {"go": t.face_go, "walk_away": t.face_walk_away, "reason": "engine"})
+    assert score(key, "s4", [plan(100), plan(1), submit], None, "ok")["prior_inside"] == 1.0
+    assert score(key, "s4", [plan(1), plan(100), submit], None, "ok")["prior_inside"] == 0.0
