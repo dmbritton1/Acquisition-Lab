@@ -1,10 +1,13 @@
 """Tool server for one solver run (Plan 4a design §2): the data room, search, the engine, issue notes and, for the
-router system, router 6. Search came back in Plan 4b, once a real problem and a clean fact share every reveal word
-(validate.word_leaks is empty); it returns document ids, never text. Speaks MCP over stdio (one JSON-RPC message per
+router system, router 6. With --role it serves one S4 panel role instead (Plan 5): the Deal Lead proposes, an
+Investigator reads and reports through the Committer, the Challenger objects. Search came back in Plan 4b, once a
+real problem and a clean fact share every reveal word (validate.word_leaks is empty); it returns document ids, never
+text. Speaks MCP over stdio (one JSON-RPC message per
 line) with the standard library only. It reads only
 its room folder, never an answer key, and writes every call to a trace file (one JSON object per line).
 
   python -m acqlab.agents.server --room <room> --budget 22 --trace <file.jsonl> [--router]
+  python -m acqlab.agents.server --room <room> --budget 9 --trace <file.jsonl> --role investigator --paid qoe,cim
 """
 import argparse
 import json
@@ -14,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
+from acqlab.agents.committer import check
 from acqlab.agents.knowledge import typical_high
 from acqlab.agents.record import load_face, next_doc
 from acqlab.dataroom.tools import BudgetExceeded, DataRoom
@@ -60,10 +64,62 @@ TOOLS = {
                {**_OBJ, "properties": {"go": {"type": "boolean"}, "walk_away": {"type": "number"},
                                        "reason": {"type": "string"}}, "required": ["go", "walk_away", "reason"]}),
 }
+_TYPE = {"type": "string", "enum": list(TRAPS)}
+_DOCS = {"type": "array", "items": {"type": "string"}}
+_QUOTES = {"type": "array", "items": {**_OBJ, "properties": {"doc_id": {"type": "string"}, "text": {"type": "string"}},
+                                      "required": ["doc_id", "text"]}}
+_ISSUE = {**_OBJ, "properties": {"type": _TYPE, "name": {"type": "string"},
+                                 "chance": {"type": "number", "minimum": 0, "maximum": 1},
+                                 "low": {"type": "number", "minimum": 0}, "high": {"type": "number", "minimum": 0},
+                                 "docs": _DOCS}, "required": ["type", "name", "chance", "low", "high", "docs"]}
+PANEL_TOOLS = {
+    "propose": ("Free. Your issue list, most important first; ends your turn. One entry per issue type: the chance "
+                "it is real (0 to 1), its size range in $M if real, and the documents that would settle it. Set "
+                "stop to true when nothing left is worth reading.",
+                {**_OBJ, "properties": {"issues": {"type": "array", "items": _ISSUE}, "stop": {"type": "boolean"},
+                                        "reason": {"type": "string"}}, "required": ["issues", "stop", "reason"]}),
+    "report": ("Free. Your findings; ends your turn once every finding passes the Committer's checks (a refused "
+               "report says why; fix it and call report again). One finding per issue type. status: value (an "
+               "amount: quote the sentence or table row stating it; if it must be calculated from two or more "
+               "quoted numbers, give op and the two inputs and code does the arithmetic), range (low and high, each "
+               "0 or a number in your quotes), not_found (docs: what you read that doesn't settle it), or open "
+               "(chance, low, high: a belief without evidence). Quotes must be copied word for word from documents "
+               "you have read.",
+               {**_OBJ, "properties": {"findings": {"type": "array", "items": {**_OBJ, "properties": {
+                   "type": _TYPE, "status": {"type": "string", "enum": ["value", "range", "not_found", "open"]},
+                   "value": {"type": "number", "minimum": 0},
+                   "op": {"type": "string", "enum": ["none", "difference", "product", "divide"]},
+                   "inputs": {"type": "array", "items": {"type": "number"}},
+                   "low": {"type": "number", "minimum": 0}, "high": {"type": "number", "minimum": 0},
+                   "chance": {"type": "number", "minimum": 0, "maximum": 1},
+                   "quotes": _QUOTES, "docs": _DOCS}, "required": ["type", "status"]}}}, "required": ["findings"]}),
+    "challenge": ("Free. Your objections; ends your turn. kind: bigger (it could be larger than the record says), "
+                  "elsewhere (the evidence could be in another document) or evidence (a committed value's quote "
+                  "may not show what it claims). Each gives the chance you'd put on it, a size range in $M and the "
+                  "documents to check. Answer every flagged pair: check (investigate both) or ruled_out (say why).",
+                  {**_OBJ, "properties": {
+                      "objections": {"type": "array", "items": {**_OBJ, "properties": {
+                          "type": _TYPE, "kind": {"type": "string", "enum": ["bigger", "elsewhere", "evidence"]},
+                          "chance": {"type": "number", "minimum": 0, "maximum": 1},
+                          "low": {"type": "number", "minimum": 0}, "high": {"type": "number", "minimum": 0},
+                          "docs": _DOCS, "reason": {"type": "string"}},
+                          "required": ["type", "kind", "chance", "low", "high", "docs", "reason"]}},
+                      "pairs": {"type": "array", "items": {**_OBJ, "properties": {
+                          "a": _TYPE, "b": _TYPE, "answer": {"type": "string", "enum": ["check", "ruled_out"]},
+                          "reason": {"type": "string"}}, "required": ["a", "b", "answer", "reason"]}}},
+                   "required": ["objections", "pairs"]}),
+}
+ROLES = {"lead": ["propose"], "investigator": ["list_documents", "search", "open_document", "report"],
+         "challenger": ["evaluate", "challenge"]}
+ENDS_TURN = {"submit", "propose", "report", "challenge"}
 
 
-def tool_names(router: bool) -> list[str]:
-    return [t for t in TOOLS if router or t != "rank_issues"]
+def tool_names(router: bool, role: str | None = None) -> list[str]:
+    return ROLES[role] if role else [t for t in TOOLS if router or t != "rank_issues"]
+
+
+def tool_spec(name: str) -> tuple[str, dict]:
+    return TOOLS.get(name) or PANEL_TOOLS[name]
 
 
 class ToolError(Exception):
@@ -71,11 +127,14 @@ class ToolError(Exception):
 
 
 class Session:
-    def __init__(self, room: Path, budget: float, trace: Path, router: bool):
+    def __init__(self, room: Path, budget: float, trace: Path, router: bool, role: str | None = None,
+                 paid: tuple[str, ...] = (), pairs: tuple[tuple[str, str], ...] = ()):
         self.room = DataRoom(room, budget)
         self.face = load_face(room)
         self.pages = {d["id"]: d["pages"] for d in json.loads((room / "index.json").read_text())["documents"]}
-        self.trace, self.router = trace, router
+        self.trace, self.router, self.role = trace, router, role
+        self.paid = set(paid) & set(self.pages)  # read earlier in this panel run: free to read again
+        self.pairs = [tuple(p) for p in pairs]  # the pair screen's flagged pairs, which the Challenger must answer
         self.opened: set[str] = set()
         self.notes: dict[str, dict] = {}
         self.calls = 0
@@ -86,13 +145,15 @@ class Session:
         self.calls += 1
         spent = self.room.spent
         try:
-            if name not in tool_names(self.router):
+            if name not in tool_names(self.router, self.role):
                 raise ToolError(f"unknown tool {name!r}")
             if self.submitted:
                 raise ToolError("the run is over: you already submitted")
-            if self.calls > MAX_CALLS and name != "submit":
-                raise ToolError(f"tool-call limit ({MAX_CALLS}) reached: call submit now")
+            closing = ROLES[self.role][-1] if self.role else "submit"
+            if self.calls > MAX_CALLS and name != closing:
+                raise ToolError(f"tool-call limit ({MAX_CALLS}) reached: call {closing} now")
             result, error = getattr(self, "_" + name)(**args), None
+            self.submitted = name in ENDS_TURN
         except (ToolError, BudgetExceeded, KeyError, TypeError, ValueError) as e:
             result, error = None, str(e).strip("'\"")
         except Exception as e:  # a malformed argument the specific handlers above don't catch (e.g. wrong type
@@ -128,7 +189,10 @@ class Session:
         if self.router and not any(n["chance"] < 1 for n in self.notes.values()):
             raise ToolError("record at least one open suspicion with note_issue (chance below 1) before opening a "
                             "document, so the router can price it")
-        text = self.room.open_document(doc_id)
+        if doc_id in self.paid:  # already paid for in this panel run
+            text = self.room._text(doc_id)
+        else:
+            text = self.room.open_document(doc_id)
         self.opened.add(doc_id)
         return text + "\n\n---\nRouter ranking now: " + json.dumps(self._rank_issues()) if self.router else text
 
@@ -178,8 +242,54 @@ class Session:
     def _submit(self, go: bool, walk_away: float, reason: str) -> dict:
         if not isinstance(go, bool) or not isinstance(walk_away, (int, float)) or not math.isfinite(walk_away):
             raise ToolError("go must be true/false and walk_away a number")
-        self.submitted = True
         return {"submitted": True}
+
+    def _propose(self, issues: list, stop: bool, reason: str) -> dict:
+        if not isinstance(issues, list) or not isinstance(stop, bool):
+            raise ToolError("issues must be a list and stop true/false")
+        types = [i.get("type") if isinstance(i, dict) else None for i in issues]
+        if len(set(types)) != len(types):
+            raise ToolError("one entry per issue type")
+        for i in issues:
+            ok = isinstance(i, dict) and i.get("type") in TRAPS and isinstance(i.get("docs"), list) and all(
+                isinstance(i.get(k), (int, float)) and math.isfinite(i[k]) for k in ("chance", "low", "high"))
+            if not ok or not (0 <= i["chance"] <= 1 and 0 <= i["low"] <= i["high"]):
+                raise ToolError(f"bad issue {i!r}: need a type from {', '.join(TRAPS)}, 0 <= chance <= 1, "
+                                "0 <= low <= high and a list of document ids")
+        return {"planned": len(issues)}
+
+    def _report(self, findings: list) -> dict:
+        if not isinstance(findings, list):
+            raise ToolError("findings must be a list")
+        types = [f.get("type") if isinstance(f, dict) else None for f in findings]
+        if len(set(types)) != len(types):
+            raise ToolError("one finding per issue type")
+        texts = {d: self.room._text(d) for d in self.opened | self.paid}
+        commits, errors = [], []
+        for f in findings:
+            commit, errs = check(f, texts) if isinstance(f, dict) else (None, [f"bad finding {f!r}"])
+            commits.append(commit)
+            errors += errs
+        if errors:
+            raise ToolError("Committer refused the report (nothing was committed):\n- " + "\n- ".join(errors))
+        return {"commits": commits}
+
+    def _challenge(self, objections: list, pairs: list) -> dict:
+        if not isinstance(objections, list) or not isinstance(pairs, list):
+            raise ToolError("objections and pairs must be lists")
+        for o in objections:
+            ok = isinstance(o, dict) and o.get("type") in TRAPS and o.get("kind") in ("bigger", "elsewhere",
+                                                                                     "evidence") and all(
+                isinstance(o.get(k), (int, float)) and math.isfinite(o[k]) for k in ("chance", "low", "high"))
+            if not ok or not (0 <= o["chance"] <= 1 and 0 <= o["low"] <= o["high"]) or not isinstance(
+                    o.get("docs"), list):
+                raise ToolError(f"bad objection {o!r}")
+        answered = {frozenset((p.get("a"), p.get("b"))) for p in pairs if isinstance(p, dict)
+                    and p.get("answer") in ("check", "ruled_out")}
+        missing = [f"{a}+{b}" for a, b in self.pairs if frozenset((a, b)) not in answered]
+        if missing:
+            raise ToolError(f"answer every flagged pair (check or ruled_out): {', '.join(missing)}")
+        return {"objections": len(objections), "checks": sum(p.get("answer") == "check" for p in pairs)}
 
 
 def serve(session: Session, inp=sys.stdin, out=sys.stdout) -> None:
@@ -204,8 +314,8 @@ def serve(session: Session, inp=sys.stdin, out=sys.stdout) -> None:
                                    "capabilities": {"tools": {}}, "serverInfo": {"name": "room", "version": "1"}}
                 session.log_initialize()
             elif method == "tools/list":
-                reply["result"] = {"tools": [{"name": n, "description": TOOLS[n][0], "inputSchema": TOOLS[n][1]}
-                                             for n in tool_names(session.router)]}
+                reply["result"] = {"tools": [{"name": n, "description": tool_spec(n)[0], "inputSchema": tool_spec(n)[1]}
+                                             for n in tool_names(session.router, session.role)]}
             elif method == "tools/call":
                 reply["result"] = session.call(params.get("name", ""), params.get("arguments") or {})
             elif method == "ping":
@@ -225,8 +335,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--budget", type=float, required=True)
     ap.add_argument("--trace", type=Path, required=True)
     ap.add_argument("--router", action="store_true", help="offer rank_issues (the S1b + router system)")
+    ap.add_argument("--role", choices=list(ROLES), help="serve one S4 panel role instead")
+    ap.add_argument("--paid", default="", help="comma-separated documents already paid for in this panel run")
+    ap.add_argument("--pairs", default="[]", help="JSON list of [a, b] pairs the Challenger must answer")
     args = ap.parse_args(argv)
-    serve(Session(args.room, args.budget, args.trace, args.router))
+    serve(Session(args.room, args.budget, args.trace, args.router, args.role,
+                  tuple(d for d in args.paid.split(",") if d), tuple(map(tuple, json.loads(args.pairs)))))
     return 0
 
 

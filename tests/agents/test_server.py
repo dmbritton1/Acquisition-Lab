@@ -8,11 +8,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import acqlab.agents.committer as committer
+import acqlab.agents.record as record
 import acqlab.agents.server as server
 from acqlab.agents.knowledge import typical_high
-from acqlab.agents.server import MAX_CALLS, Session, tool_names
+from acqlab.agents.server import MAX_CALLS, ROLES, Session, tool_names
 from acqlab.engine import walk_away
 from acqlab.generator.batch import AnswerKey
+from acqlab.generator.render import span
 from acqlab.generator.traps import params_for
 from acqlab.routers.beliefs import Issue, draw, walk_aways
 from acqlab.routers.routers import score_regret
@@ -158,8 +161,9 @@ def test_bad_notes_and_bad_arguments_are_tool_errors(data, tmp_path):
 
 def test_the_server_needs_nothing_outside_its_room(data, tmp_path):
     """Isolation: no answer-key types or paths in the source, and it runs on a room copied away from any keys."""
-    source = Path(server.__file__).read_text()
-    assert not any(word in source for word in ("AnswerKey", "DealTruth", "truth"))
+    for mod in (server, committer, record):  # the Committer and the Deal Record run inside the server
+        source = Path(mod.__file__).read_text()
+        assert not any(word in source for word in ("AnswerKey", "DealTruth", "truth")), mod.__name__
     room = shutil.copytree(data / "deals" / "dev-000" / "room", tmp_path / "alone" / "room")
     s = Session(room, 10, tmp_path / "t.jsonl", router=True)
     assert not s.call("evaluate", {"adjustments": {"capex": 1}})["isError"]
@@ -218,3 +222,82 @@ def test_the_router_system_reads_only_with_an_open_note_and_sees_the_ranking(dat
     assert "router" not in _out(plain.call("note_issue", {"name": "a", "type": "addback", "chance": 0.4, "low": 0,
                                                           "high": 8, "docs": ["qoe"]}))
     assert "Router" not in plain.call("open_document", {"doc_id": "legal"})["content"][0]["text"]
+
+
+def _role(data, tmp_path, role, budget=10, paid=(), pairs=()):
+    return Session(data / "deals" / "dev-000" / "room", budget, tmp_path / "t.jsonl", False, role, paid, pairs)
+
+
+def test_each_panel_role_is_offered_only_its_own_tools(data, tmp_path):
+    room, trace = data / "deals" / "dev-000" / "room", tmp_path / "t.jsonl"
+    for role, tools in ROLES.items():
+        msgs = [{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}]
+        proc = subprocess.run([sys.executable, "-m", "acqlab.agents.server", "--room", str(room), "--budget", "0",
+                               "--trace", str(trace), "--role", role], input=json.dumps(msgs[0]) + "\n",
+                              capture_output=True, text=True, timeout=60)
+        assert [t["name"] for t in json.loads(proc.stdout)["result"]["tools"]] == tools
+    assert tool_names(False, "lead") == ["propose"] and "submit" not in tool_names(False, "investigator")
+    assert _session(data, tmp_path, router=False).call("report", {"findings": []})["isError"]  # not an S1b tool
+    assert _role(data, tmp_path, "lead").call("open_document", {"doc_id": "legal"})["isError"]
+
+
+def test_a_document_already_paid_for_in_the_panel_run_is_free(data, tmp_path):
+    s = _role(data, tmp_path, "investigator", budget=1, paid=("legal", "no_such_doc"))
+    assert "Litigation" in s.call("open_document", {"doc_id": "legal"})["content"][0]["text"]
+    assert _trace(tmp_path)[-1]["cost"] == 0 and s.room.remaining == 1
+    assert s.call("open_document", {"doc_id": "cim"})["isError"]  # not paid for, and over this budget
+
+
+def test_report_goes_through_the_committer_and_ends_the_turn_only_when_accepted(data, tmp_path):
+    ev = next(e for e in _key(data).evidence if e.trap == "debt_like")  # dev-000: an unresolvable range
+    assert ev.formula == "range"
+    s = _role(data, tmp_path, "investigator", budget=40)
+    for d in ev.docs:  # contradicted: one document states the range, the other claims there is nothing
+        s.call("open_document", {"doc_id": d})
+    stated = span(ev.values["low"], ev.values["high"])
+    doc, line = next((d, x.strip()) for d in ev.docs for x in s.room._text(d).splitlines() if stated in x)
+    bad = s.call("report", {"findings": [{"type": "debt_like", "status": "value", "value": 1.0,
+                                          "quotes": [{"doc_id": doc, "text": "a sentence that is not there"}]}]})
+    assert bad["isError"] and "Committer refused" in _out(bad) and not s.submitted
+    assert s.call("report", {"findings": [{"type": "nwc", "status": "open", "chance": 0.1, "low": 0, "high": 1},
+                                          {"type": "nwc", "status": "open", "chance": 0.1, "low": 0, "high": 1}]})[
+        "isError"]  # one finding per type
+    good = _out(s.call("report", {"findings": [
+        {"type": "debt_like", "status": "range", "low": ev.values["low"], "high": ev.values["high"],
+         "quotes": [{"doc_id": doc, "text": line}]},
+        {"type": "nwc", "status": "not_found", "docs": [doc]}]}))
+    assert [c["kind"] for c in good["commits"]] == ["range", "not_found"]
+    assert (good["commits"][0]["low"], good["commits"][0]["high"]) == (ev.values["low"], ev.values["high"])
+    assert s.submitted and "over" in _out(s.call("list_documents", {}))
+    assert _trace(tmp_path)[-2]["result"]["commits"] == good["commits"]
+
+
+def test_propose_checks_the_issue_list(data, tmp_path):
+    s = _role(data, tmp_path, "lead")
+    issue = {"type": "nwc", "name": "peg", "chance": 0.3, "low": 0, "high": 4, "docs": ["qoe"]}
+    assert s.call("propose", {"issues": [issue, issue], "stop": False, "reason": "r"})["isError"]
+    assert s.call("propose", {"issues": [issue | {"low": 5}], "stop": False, "reason": "r"})["isError"]
+    assert s.call("propose", {"issues": [issue | {"type": "fraud"}], "stop": False, "reason": "r"})["isError"]
+    assert _out(s.call("propose", {"issues": [issue], "stop": True, "reason": "r"})) == {"planned": 1}
+    assert s.submitted
+
+
+def test_the_challenger_must_answer_every_flagged_pair(data, tmp_path):
+    s = _role(data, tmp_path, "challenger", pairs=(("debt_like", "nwc"),))
+    objection = {"type": "nwc", "kind": "bigger", "chance": 0.3, "low": 0, "high": 9, "docs": ["audited"],
+                 "reason": "r"}
+    missing = s.call("challenge", {"objections": [objection], "pairs": []})
+    assert missing["isError"] and "debt_like+nwc" in _out(missing)
+    assert s.call("challenge", {"objections": [objection | {"kind": "vibes"}], "pairs": []})["isError"]
+    assert not s.call("evaluate", {"adjustments": {"nwc": 9}})["isError"]  # the engine, to test what flips
+    got = _out(s.call("challenge", {"objections": [objection], "pairs": [
+        {"a": "nwc", "b": "debt_like", "answer": "check", "reason": "r"}]}))
+    assert got == {"objections": 1, "checks": 1} and s.submitted
+
+
+def test_after_the_call_limit_a_panel_role_can_still_make_its_closing_call(data, tmp_path):
+    s = _role(data, tmp_path, "investigator")
+    for _ in range(MAX_CALLS):
+        s.call("list_documents", {})
+    assert "call report now" in _out(s.call("list_documents", {}))
+    assert not s.call("report", {"findings": []})["isError"]
