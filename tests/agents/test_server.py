@@ -278,6 +278,8 @@ def test_propose_checks_the_issue_list(data, tmp_path):
     assert s.call("propose", {"issues": [issue, issue], "stop": False, "reason": "r"})["isError"]
     assert s.call("propose", {"issues": [issue | {"low": 5}], "stop": False, "reason": "r"})["isError"]
     assert s.call("propose", {"issues": [issue | {"type": "fraud"}], "stop": False, "reason": "r"})["isError"]
+    assert s.call("propose", {"issues": [issue | {"docs": ["qoe", 1]}], "stop": False, "reason": "r"})[
+        "isError"]  # a non-string document id
     assert _out(s.call("propose", {"issues": [issue], "stop": True, "reason": "r"})) == {"planned": 1}
     assert s.submitted
 
@@ -286,12 +288,20 @@ def test_the_challenger_must_answer_every_flagged_pair(data, tmp_path):
     s = _role(data, tmp_path, "challenger", pairs=(("debt_like", "nwc"),))
     objection = {"type": "nwc", "kind": "bigger", "chance": 0.3, "low": 0, "high": 9, "docs": ["audited"],
                  "reason": "r"}
+    good_pair = {"a": "nwc", "b": "debt_like", "answer": "check", "reason": "r"}
     missing = s.call("challenge", {"objections": [objection], "pairs": []})
     assert missing["isError"] and "debt_like+nwc" in _out(missing)
     assert s.call("challenge", {"objections": [objection | {"kind": "vibes"}], "pairs": []})["isError"]
+    assert s.call("challenge", {"objections": [objection], "pairs": [
+        good_pair, {"a": "foo", "b": "bar", "answer": "check", "reason": "r"}]})["isError"]  # unknown a/b
+    assert s.call("challenge", {"objections": [{k: v for k, v in objection.items() if k != "reason"}],
+                                "pairs": [good_pair]})["isError"]  # objection missing reason
+    assert s.call("challenge", {"objections": [objection], "pairs": [
+        {"a": "nwc", "b": "debt_like", "answer": "check"}]})["isError"]  # check pair missing reason
+    assert s.call("challenge", {"objections": [objection | {"docs": ["audited", 1]}], "pairs": [good_pair]})[
+        "isError"]  # objection docs with a non-string
     assert not s.call("evaluate", {"adjustments": {"nwc": 9}})["isError"]  # the engine, to test what flips
-    got = _out(s.call("challenge", {"objections": [objection], "pairs": [
-        {"a": "nwc", "b": "debt_like", "answer": "check", "reason": "r"}]}))
+    got = _out(s.call("challenge", {"objections": [objection], "pairs": [good_pair]}))
     assert got == {"objections": 1, "checks": 1} and s.submitted
 
 

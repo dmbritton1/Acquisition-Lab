@@ -251,11 +251,13 @@ class Session:
         if len(set(types)) != len(types):
             raise ToolError("one entry per issue type")
         for i in issues:
-            ok = isinstance(i, dict) and i.get("type") in TRAPS and isinstance(i.get("docs"), list) and all(
-                isinstance(i.get(k), (int, float)) and math.isfinite(i[k]) for k in ("chance", "low", "high"))
+            ok = (isinstance(i, dict) and i.get("type") in TRAPS and isinstance(i.get("name"), str)
+                  and isinstance(i.get("docs"), list) and all(isinstance(d, str) for d in i.get("docs", []))
+                  and all(isinstance(i.get(k), (int, float)) and math.isfinite(i[k])
+                          for k in ("chance", "low", "high")))
             if not ok or not (0 <= i["chance"] <= 1 and 0 <= i["low"] <= i["high"]):
-                raise ToolError(f"bad issue {i!r}: need a type from {', '.join(TRAPS)}, 0 <= chance <= 1, "
-                                "0 <= low <= high and a list of document ids")
+                raise ToolError(f"bad issue {i!r}: need a type from {', '.join(TRAPS)}, a string name, "
+                                "0 <= chance <= 1, 0 <= low <= high and a list of document ids (strings)")
         return {"planned": len(issues)}
 
     def _report(self, findings: list) -> dict:
@@ -278,18 +280,26 @@ class Session:
         if not isinstance(objections, list) or not isinstance(pairs, list):
             raise ToolError("objections and pairs must be lists")
         for o in objections:
-            ok = isinstance(o, dict) and o.get("type") in TRAPS and o.get("kind") in ("bigger", "elsewhere",
-                                                                                     "evidence") and all(
-                isinstance(o.get(k), (int, float)) and math.isfinite(o[k]) for k in ("chance", "low", "high"))
-            if not ok or not (0 <= o["chance"] <= 1 and 0 <= o["low"] <= o["high"]) or not isinstance(
-                    o.get("docs"), list):
-                raise ToolError(f"bad objection {o!r}")
-        answered = {frozenset((p.get("a"), p.get("b"))) for p in pairs if isinstance(p, dict)
-                    and p.get("answer") in ("check", "ruled_out")}
+            ok = (isinstance(o, dict) and o.get("type") in TRAPS and o.get("kind") in ("bigger", "elsewhere",
+                  "evidence") and isinstance(o.get("reason"), str) and isinstance(o.get("docs"), list)
+                  and all(isinstance(d, str) for d in o.get("docs", []))
+                  and all(isinstance(o.get(k), (int, float)) and math.isfinite(o[k])
+                          for k in ("chance", "low", "high")))
+            if not ok or not (0 <= o["chance"] <= 1 and 0 <= o["low"] <= o["high"]):
+                raise ToolError(f"bad objection {o!r}: need a type from {', '.join(TRAPS)}, a kind of "
+                                "bigger/elsewhere/evidence, a string reason, a list of document ids (strings), "
+                                "0 <= chance <= 1 and 0 <= low <= high")
+        for p in pairs:
+            ok = (isinstance(p, dict) and p.get("a") in TRAPS and p.get("b") in TRAPS and p.get("a") != p.get("b")
+                  and p.get("answer") in ("check", "ruled_out") and isinstance(p.get("reason"), str))
+            if not ok:
+                raise ToolError(f"bad pair {p!r}: need a and b each from {', '.join(TRAPS)} and different, "
+                                "answer check or ruled_out, and a string reason")
+        answered = {frozenset((p["a"], p["b"])) for p in pairs}
         missing = [f"{a}+{b}" for a, b in self.pairs if frozenset((a, b)) not in answered]
         if missing:
             raise ToolError(f"answer every flagged pair (check or ruled_out): {', '.join(missing)}")
-        return {"objections": len(objections), "checks": sum(p.get("answer") == "check" for p in pairs)}
+        return {"objections": len(objections), "checks": sum(p["answer"] == "check" for p in pairs)}
 
 
 def serve(session: Session, inp=sys.stdin, out=sys.stdout) -> None:
