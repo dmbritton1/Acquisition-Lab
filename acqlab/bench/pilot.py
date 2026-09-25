@@ -87,7 +87,8 @@ def score(key: AnswerKey, system: str, trace: list[dict], cli: dict | None, stat
         "flip": t.go != t.face_go, "case_type": t.case_type,
         "pages": sum(c for _, c in reads), "decoy_pages": sum(c for d, c in reads if d in decoys),
         "opened_relevant": bool(relevant & {d for d, _ in reads}) if relevant else None,
-        "tool_calls": sum(r["tool"] != "initialize" for r in trace),  # the initialize row (F7) is not a tool call
+        # the initialize row (F7) and S4's route rows (D2) are not tool calls
+        "tool_calls": sum(r["tool"] not in ("initialize", "route") for r in trace),
         "rank_calls": sum(r["tool"] == "rank_issues" for r in trace),
         "prior_inside": float(np.mean(inside)) if inside else None,
         "tokens": {k: int(usage.get(k, 0)) for k in ("input_tokens", "output_tokens", "cache_read_input_tokens",

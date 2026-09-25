@@ -59,8 +59,9 @@ def lead_says(*plans):
 
 
 def finds_nothing(s, prompt):
-    """An Investigator that reads the first suggested document it can afford and settles nothing."""
-    looked = re.search(r"Look first at: ([^.]*)\.", prompt)
+    """An Investigator that reads the first suggested document it can afford (a document brief's one document) and
+    settles nothing."""
+    looked = re.search(r"Look first at: ([^.]*)\.", prompt) or re.search(r"Brief: read (\S+) \(", prompt)
     for doc in (looked.group(1).split(", ") if looked else []):
         if not s.call("open_document", {"doc_id": doc})["isError"]:
             s.call("report", {"findings": [{"type": "addback", "status": "not_found", "docs": [doc]}]})
@@ -100,22 +101,94 @@ def test_without_the_router_issues_go_in_the_lead_s_order_until_the_lead_says_st
     assert [r for r, _, _ in s.turns] == ["lead", "investigator", "lead", "investigator", "lead"]
 
 
-def test_the_router_ranks_by_regret_per_page_and_falls_back_to_the_lead_s_order_when_nothing_scores(
-        data, tmp_path, monkeypatch):
+def _routes(trace) -> list[dict]:
+    return [r["args"] for r in _rows(trace) if r["tool"] == "route"]
+
+
+def test_the_router_reads_the_document_that_moves_the_walk_away_most_per_page_one_investigator_each(data, tmp_path):
     plan = [_issue("nwc", 0.3), _issue("debt_like", 0.6)]
-    s = scripted(lead=lead_says((plan, True)), investigator=finds_nothing, challenger=no_objections)
+    s = scripted(lead=lead_says((plan, True)), investigator=finds_nothing)
     p = Panel(_room(data), 40, tmp_path / "a.jsonl", Config(challenger=False, sweep=False), s)
     p.record.plan(plan)
-    costs = {t: p.first_cost(t) for t in ("nwc", "debt_like")}
-    scores = p.record.rank(["nwc", "debt_like"], costs)
+    cands = list(p.record.weights(p.pages, set()))
+    scores = p.record.rank_docs(p.pages, set(), cands)
+    first = min(cands, key=lambda d: (-scores[d], p.pages[d], d))
     p.run()
-    assert _briefed(s.turns)[0] == max(scores, key=scores.get)  # the Lead's stop doesn't end a router run
-    # dev-006 (cal-r2): at the Lead's chances no single check flips the call, so every score is 0; the panel still
-    # reads, in the Lead's order, while budget and open issues remain
-    monkeypatch.setattr(panel.Record, "rank", lambda self, cands, costs: dict.fromkeys(cands, 0.0))
-    s2 = scripted(lead=lead_says((plan, True)), investigator=finds_nothing)
-    Panel(_room(data), 40, tmp_path / "b.jsonl", Config(challenger=False, sweep=False), s2).run()
-    assert _briefed(s2.turns) == ["nwc", "debt_like"]
+    routes = _routes(tmp_path / "a.jsonl")
+    assert routes[0]["doc"] == first and len(routes) >= 2  # the Lead's stop is ignored
+    role, prompt, budget = s.turns[1]
+    assert role == "investigator" and f"Brief: read {first} ({p.pages[first]:g} pages)." in prompt
+    assert budget == p.pages[first] and "including ones not listed" in prompt
+    assert all(f"- {t} ({t}): Current belief" in prompt for t in routes[0]["issues"])
+    assert [r for r, _, _ in s.turns].count("lead") == 1  # nothing was committed, so no re-plan
+    assert p.spent() == sum(p.pages[d] for d in p.read())  # route and submit rows are free, and not reads
+
+
+def test_when_no_document_can_move_the_walk_away_directed_reading_ends(data, tmp_path, monkeypatch):
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: dict.fromkeys(docs, 0.0))
+    s = scripted(lead=lead_says(([_issue("nwc", 0.3)], False)), investigator=finds_nothing)
+    Panel(_room(data), 40, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s).run()
+    assert [r for r, _, _ in s.turns] == ["lead"] and _routes(tmp_path / "t.jsonl") == []
+
+
+def test_the_lead_re_plans_only_after_a_read_commits_something(data, tmp_path, monkeypatch):
+    plan = [_issue("nwc", 0.5)]
+    s = scripted(lead=lead_says((plan, False)), investigator=finds_nothing)
+    Panel(_room(data), 30, tmp_path / "a.jsonl", Config(challenger=False, sweep=False), s).run()
+    roles = [r for r, _, _ in s.turns]
+    assert roles[0] == "lead" and roles.count("lead") == 1 and roles.count("investigator") >= 2
+    monkeypatch.setattr(panel.Record, "apply", lambda self, commits: True)  # every read commits something
+    s2 = scripted(lead=lead_says((plan, False)), investigator=finds_nothing)
+    Panel(_room(data), 30, tmp_path / "b.jsonl", Config(challenger=False, sweep=False), s2).run()
+    roles = [r for r, _, _ in s2.turns]
+    assert roles == ["lead"] + ["investigator", "lead"] * roles.count("investigator")
+
+
+def test_the_router_may_spend_the_sweep_s_reserve_on_the_document_it_ranks_first(data, tmp_path, monkeypatch):
+    monkeypatch.setattr(panel.Record, "rank_docs",
+                        lambda self, pages, read, docs, seed=0: {d: float(d == "audited") for d in docs})
+    s = scripted(lead=lead_says(([_issue("debt_like", 0.5)], False)), investigator=finds_nothing)
+    p = Panel(_room(data), 14, tmp_path / "t.jsonl", Config(challenger=False), s)
+    assert p.avail() < p.pages["audited"] == p.budget
+    p.run()
+    role, prompt, budget = s.turns[1]
+    assert role == "investigator" and budget == 14 and "Brief: read audited (14 pages)." in prompt
+
+
+def test_with_the_router_an_objection_is_read_where_it_points_and_then_clears(data, tmp_path, monkeypatch):
+    """Only credit, and only while debt_like's objection points there, moves the walk-away (a stand-in score)."""
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: float(d == "credit" and bool(self.entries["debt_like"].objections)) for d in docs})
+    rounds = [{"objections": [{"type": "debt_like", "kind": "elsewhere", "chance": 0.9, "low": 0, "high": 90,
+                               "docs": ["credit"], "reason": "the credit agreement lists a guarantee"}]},
+              {"objections": []}]
+
+    def challenger(sess, prompt):
+        sess.call("challenge", rounds.pop(0) | {"pairs": [{"a": a, "b": b, "answer": "ruled_out", "reason": "r"}
+                                                          for a, b in sess.pairs]})
+
+    s = scripted(lead=lead_says(([_issue("debt_like", 0.2)], False)), investigator=finds_nothing,
+                 challenger=challenger)
+    Panel(_room(data), 60, tmp_path / "t.jsonl", Config(sweep=False), s).run()
+    # cleared by the read: no free re-check ("Find out") follows, and the second round has nothing to object to
+    assert [r for r, _, _ in s.turns] == ["lead", "challenger", "investigator", "challenger"]
+    assert [r["doc"] for r in _routes(tmp_path / "t.jsonl")] == ["credit"]
+    prompt = s.turns[2][1]
+    assert "Brief: read credit" in prompt and "The Challenger objects (elsewhere): the credit agreement" in prompt
+
+
+def test_an_objection_on_documents_already_read_gets_one_free_look(data, tmp_path, monkeypatch):
+    s = scripted(investigator=finds_nothing)
+    p = Panel(_room(data), 0, tmp_path / "t.jsonl", STAGES["s4"], s)
+    p.record.challenge([{"type": "debt_like", "kind": "elsewhere", "chance": 0.5, "low": 0, "high": 9,
+                         "docs": ["legal"], "reason": "the letter lists a claim"}])
+    monkeypatch.setattr(p, "read", lambda: {"legal"})
+    p.directed()
+    role, prompt, budget = s.turns[0]
+    assert role == "investigator" and budget == 0 and "Find out: debt_like." in prompt
+    assert "The Challenger objects (elsewhere): the letter lists a claim" in prompt
+    assert "Look first at: legal." in prompt
+    assert p.record.entries["debt_like"].objections == [] and len(s.turns) == 1
 
 
 def test_the_brief_carries_the_flip_amount_where_to_look_and_a_sub_budget(data, tmp_path):
@@ -149,30 +222,6 @@ def test_an_objection_buys_one_more_look_and_a_checked_pair_becomes_two(data, tm
     assert "The Challenger objects (elsewhere): the notes list commitments" in second
     assert "Look first at: audited" in second
     assert [r for r, _, _ in s.turns].count("challenger") == 2
-
-
-def test_with_the_router_an_objected_issue_the_lead_leaves_out_still_gets_its_extra_look(data, tmp_path):
-    """R1: once the Challenger has objected, the Lead re-plans without nwc; nwc's objection still gets its look."""
-    both = [_issue("debt_like", 0.5, docs=["legal"]), _issue("nwc", 0.5, docs=["qoe"])]
-    rounds = [{"objections": [{"type": "debt_like", "kind": "bigger", "chance": 0.9, "low": 0, "high": 90, "docs": [],
-                               "reason": "r"},
-                              {"type": "nwc", "kind": "bigger", "chance": 0.7, "low": 0, "high": 60, "docs": [],
-                               "reason": "r"}]},
-              {"objections": []}]
-
-    def challenger(sess, prompt):
-        sess.call("challenge", rounds.pop(0) | {"pairs": [{"a": a, "b": b, "answer": "ruled_out", "reason": "r"}
-                                                          for a, b in sess.pairs]})
-
-    def lead(sess, prompt):
-        issues = both if len(rounds) == 2 else [_issue("debt_like", 0.1, docs=["legal"])]  # nwc left out
-        sess.call("propose", {"issues": issues, "stop": False, "reason": "r"})
-
-    s = scripted(lead=lead, investigator=finds_nothing, challenger=challenger)
-    Panel(_room(data), 80, tmp_path / "t.jsonl", Config(sweep=False), s).run()
-    roles = [r for r, _, _ in s.turns]
-    after = _briefed(s.turns[roles.index("challenger"):])
-    assert after == ["debt_like", "nwc"]  # the Lead dropped nwc after debt_like's look; its objection stands
 
 
 def test_the_sweep_reads_map_documents_in_untouched_domains_first_with_what_is_left(data, tmp_path):

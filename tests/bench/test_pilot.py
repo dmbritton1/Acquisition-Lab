@@ -306,3 +306,13 @@ def test_the_lead_s_first_plan_is_s4_s_prior(data):
     submit = _row("submit", {"go": t.face_go, "walk_away": t.face_walk_away, "reason": "engine"})
     assert score(key, "s4", [plan(100), plan(1), submit], None, "ok")["prior_inside"] == 1.0
     assert score(key, "s4", [plan(1), plan(100), submit], None, "ok")["prior_inside"] == 0.0
+
+
+def test_s4_s_route_rows_are_not_tool_calls(data):
+    key = _key(data)
+    t = key.truth
+    trace = [_row("initialize", {}), _row("route", {"doc": "qoe", "issues": [], "scores": {}}),
+             _row("open_document", {"doc_id": "qoe"}, 8.0),
+             _row("submit", {"go": t.face_go, "walk_away": t.face_walk_away, "reason": "engine"})]
+    r = score(key, "s4", trace, None, "ok")
+    assert r["tool_calls"] == 2 and r["pages"] == 8.0

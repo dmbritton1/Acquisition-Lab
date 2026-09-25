@@ -2,10 +2,12 @@
 role turn is one sandboxed `claude -p` session on the tool server, and the role's closing tool call (propose,
 report, challenge) is read back from the trace. The engine makes the go/no-go call.
 
-The loop: the Deal Lead proposes issues; Investigators check them one at a time with intent briefs, their findings
-going through the Committer; the Lead re-plans after each; the Challenger objects and the pair screen flags issues
-that flip the call together; objections are investigated; a residual sweep reads what nobody opened. Build steps
-(reframe design §5) are configs: STAGES."""
+The loop: the Deal Lead proposes issues; Investigators check them with intent briefs, their findings going through
+the Committer; the Challenger objects and the pair screen flags issues that flip the call together; objections are
+investigated; a residual sweep reads what nobody opened. Without the router, Investigators take one issue at a time in
+the Lead's order and the Lead re-plans after each. With it (D2), code picks the document whose reading moves the
+engine's walk-away most per page, one Investigator reads that one document, and the Lead re-plans after a read that
+commits something. Build steps (reframe design §5) are configs: STAGES."""
 import json
 import math
 from collections.abc import Callable
@@ -30,9 +32,9 @@ USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_crea
 class Config(NamedTuple):
     lead: bool = True  # False: build step 1, one Investigator reads for every issue type
     challenger: bool = True
-    router: bool = True  # True: code picks by decision value per page (the Lead's order when nothing scores) and
-    # the Lead's stop is ignored. False: the Lead's order; the first investigation always runs, and the Lead's stop
-    # ends later rounds
+    router: bool = True  # True: code picks documents by how far they may move the walk-away per page, and the
+    # Lead's stop is ignored. False: issues in the Lead's order; the first investigation always runs, and the Lead's
+    # stop ends later rounds
     sweep: bool = True
 
 
@@ -48,6 +50,7 @@ class Panel:
         self.pages = {d["id"]: d["pages"] for d in self.docs}
         self.record = Record(load_face(room))
         self.reserve = SWEEP_SHARE * budget if cfg.sweep else 0.0
+        self.tried: set[str] = set()  # documents the router has briefed, read or not
         self.cli = {"usage": dict.fromkeys(USAGE, 0), "total_cost_usd": 0.0, "num_turns": 0, "duration_ms": 0,
                     "modelUsage": {}, "sessions": 0, "timeouts": 0, "env_keys": None}
 
@@ -108,19 +111,65 @@ class Panel:
         return float(next((self.pages[d] for d in self.where(t) if d not in read), 1))
 
     def pick(self) -> str | None:
+        """Without the router: the next issue in the Lead's order."""
         cands = self.candidates()
+        order = self.record.priority
+        return min(cands, key=lambda t: (order.index(t) if t in order else len(order), TRAPS.index(t))) \
+            if cands else None
+
+    def note(self, tool: str, args: dict, **extra) -> None:
+        """A row the panel itself writes to the trace (route, submit): free, never a read."""
+        with self.trace.open("a") as f:
+            f.write(json.dumps({"i": 0, "tool": tool, "args": args, "cost": 0.0,
+                                "remaining": self.budget - self.spent(), "refused": False, "error": None}
+                               | extra) + "\n")
+
+    def route(self) -> str | None:
+        """D2 §3: the unread document whose reading moves the engine's walk-away most per page, among those that fit
+        the budget left (the sweep's reserve included: unspent budget earns nothing). None once no document can move
+        it: the sweep takes over."""
+        read, left = self.read(), self.budget - self.spent()
+        wts, skip = self.record.weights(self.pages, read), read | self.tried
+        cands = [d for d in wts if d not in skip and self.pages[d] <= left]
         if not cands:
             return None
-        if self.cfg.router:
-            scores = self.record.rank(cands, {t: self.first_cost(t) for t in cands})
-            best = max(cands, key=lambda t: (scores[t], -TRAPS.index(t)))
-            if scores[best] > 0:
-                return best
-        # No router, or no single check can flip the call (dev-006: every issue at 35-50% over wide ranges). Unspent
-        # budget earns nothing under the regret score, and issues that only matter together score 0 one at a time,
-        # so keep reading in the Lead's order.
-        order = self.record.priority
-        return min(cands, key=lambda t: (order.index(t) if t in order else len(order), TRAPS.index(t)))
+        scores = self.record.rank_docs(self.pages, read, cands)
+        order = sorted(cands, key=lambda d: (-scores[d], self.pages[d], d))
+        if scores[order[0]] <= 0:
+            return None
+        self.note("route", {"doc": order[0], "issues": sorted(wts[order[0]]),
+                            "scores": {d: scores[d] for d in order[:5]}})
+        return order[0]
+
+    def read_doc(self, d: str) -> None:
+        """One Investigator reads one document (budget: its pages) and reports everything it settles. Objections
+        clear when a document they name is read (a pair objection names none: any document that may settle its
+        issue), or when their issue is committed. The Lead re-plans only after a commit: a read that settles nothing
+        says nothing about whether an issue is real."""
+        wts = self.record.weights(self.pages, self.read())[d]
+        self.tried.add(d)
+        prompt = prompts.doc_brief(self.teaser, self.docs, self.record, d, sorted(wts), self.read(), self.pages[d])
+        row = self.turn("investigator", prompt, self.pages[d])
+        commits = row["result"]["commits"] if row else []
+        changed = self.record.apply(commits)
+        settled = {c["type"] for c in commits if c["kind"] in ("quoted", "computed", "range")}
+        for t, e in self.record.entries.items():
+            e.objections = [o for o in e.objections if t not in settled and d not in o["docs"]
+                            and (o["docs"] or t not in wts)]
+        if changed:
+            self.lead()
+
+    def recheck(self) -> None:
+        """An objection whose named documents were all read claims a reader missed something: one free look (budget
+        0; read documents are free) with the Challenger's reason."""
+        read = self.read()
+        for t, e in self.record.entries.items():
+            docs = list(dict.fromkeys(d for o in e.objections for d in o["docs"]))
+            if e.objections and all(o["docs"] for o in e.objections) and set(docs) <= read:
+                row = self.turn("investigator", prompts.brief(self.teaser, self.docs, self.record, t, docs, read, 0),
+                                0)
+                e.objections = []
+                self.record.apply(row["result"]["commits"] if row else [])
 
     def investigate(self, t: str) -> None:
         e = self.record.entries[t]
@@ -134,9 +183,14 @@ class Panel:
             self.record.apply(row["result"]["commits"] if row else [])
 
     def directed(self) -> None:
+        if self.cfg.router:
+            while (d := self.route()) is not None:
+                self.read_doc(d)
+            self.recheck()
+            return
         while self.avail() >= 1 and (t := self.pick()) is not None:
             self.investigate(t)
-            if self.lead() and not self.cfg.router:
+            if self.lead():
                 break
 
     def challenge(self) -> None:
@@ -188,10 +242,7 @@ class Panel:
         for e in self.record.entries.values():  # an objection nobody could afford to check changes nothing
             e.objections = []
         go, wa = self.record.decide()
-        with self.trace.open("a") as f:
-            f.write(json.dumps({"i": 0, "tool": "submit", "args": {"go": go, "walk_away": wa, "reason": "engine"},
-                                "cost": 0.0, "remaining": self.budget - self.spent(), "refused": False,
-                                "error": None, "result": {"submitted": True}}) + "\n")
+        self.note("submit", {"go": go, "walk_away": wa, "reason": "engine"}, result={"submitted": True})
         return self.cli
 
 

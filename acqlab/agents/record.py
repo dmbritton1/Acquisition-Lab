@@ -15,7 +15,7 @@ from acqlab.engine import Deal, is_go
 from acqlab.generator.sample import Teaser
 from acqlab.generator.traps import TRAPS, params_for
 from acqlab.routers.beliefs import HAIRCUT_CAP, Issue, draw, walk_aways
-from acqlab.routers.routers import decide, score_docs, score_regret
+from acqlab.routers.routers import decide, score_docs
 
 N_WORLDS = 400
 MAP_WEIGHTS = (0.45, 0.25, 0.15)  # the chance a map document is where an issue is settled, by place on the map.
@@ -207,11 +207,6 @@ class Record:
         return [(a, b) for i, a in enumerate(open_) for b in open_[i + 1:]
                 if not alone[a] and not alone[b]
                 and self._go(base | {a: self.size_limit(a), b: self.size_limit(b)}) != now]
-
-    def rank(self, candidates: list[str], costs: dict[str, float]) -> dict[str, float]:
-        """Router 6: expected $M of decision regret removed per page, for each candidate issue."""
-        values, w = self.worlds()
-        return score_regret(values, w, self.face.deal.asking_price, costs, candidates)
 
     def targets(self) -> list[str]:
         """Issues a read can still settle: open ones with a chance, and any with a pending objection."""

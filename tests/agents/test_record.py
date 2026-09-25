@@ -90,7 +90,7 @@ def test_a_pending_objection_outlasts_a_re_plan_until_it_is_investigated(data):
     r.plan([_issue("debt_like", 0.1, 0, 2.0)])
     nwc, debt = r.entries["nwc"], r.entries["debt_like"]
     assert (nwc.chance, debt.chance, debt.high) == (0.0, 0.1, 2.0)  # the Lead's belief is the Lead's
-    assert r.issue("nwc") == (0.7, 40, None, True) and r.rank(["nwc"], {"nwc": 5.0})["nwc"] > 0  # R1: not dropped
+    assert r.issue("nwc") == (0.7, 40, None, True) and "nwc" in r.targets()  # R1: not dropped
     assert r.issue("debt_like") == (0.6, 60, None, True)  # R2: priced no lower than the objection
     debt.objections = nwc.objections = []  # answered by the extra look
     assert r.issue("debt_like") == (0.1, max(2.0, typical_high("debt_like", r.face.teaser)), None, True)
@@ -166,13 +166,6 @@ def test_an_objection_reopens_an_issue_and_widens_how_an_open_one_is_priced(data
                    "docs": ["legal"], "reason": "r"}])
     assert not r2.decide()[0]  # a "bigger" objection must not shrink a committed value below its floor
     assert r2.issue("debt_like").known == pytest.approx((1.3 * f, 1.5 * 1.3 * f))
-
-
-def test_the_router_ranks_open_issues_per_page(data):
-    r = _record(data)
-    r.plan([_issue("debt_like", 0.6, 0, 1.0), _issue("capex", 0.0, 0, 0.1)])
-    scores = r.rank(["debt_like", "capex"], {"debt_like": 5.0, "capex": 5.0})
-    assert scores["debt_like"] > 0 == scores["capex"]
 
 
 def test_settle_weights_follow_the_map_split_a_kind_and_move_after_a_miss():

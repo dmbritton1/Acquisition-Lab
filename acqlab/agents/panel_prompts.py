@@ -63,26 +63,45 @@ def lead_prompt(teaser: str, docs: list[dict], record: Record, read: set[str], l
             f"Deal record:\n{record.view()}\n\nCall propose with your issue list.")
 
 
+def _about(record: Record, t: str) -> list[str]:
+    """What a brief says about issue t: the current belief or committed value, the engine's flip amount, any
+    objection, and where it was read without being settled."""
+    e = record.entries[t]
+    flip = record.flip_amount(t)
+    lines = [f"Current belief: chance {e.chance:.2f}, size ${e.low:,.1f}–${e.high:,.1f}M." if e.known is None else
+             f"Committed so far: ${e.known[0]:,.1f}–${e.known[1]:,.1f}M ({e.kind}).",
+             f"The engine's call flips if this issue is at least ${flip:,.1f}M, with everything else as recorded."
+             if flip is not None else
+             f"No size up to ${2 * record.size_limit(t):,.1f}M flips the call alone; it can still matter with "
+             "other issues, so report what the documents say."]
+    lines += [f"The Challenger objects ({o['kind']}): {o['reason']}" for o in e.objections]
+    if e.searched:
+        lines.append(f"Already read without settling it: {', '.join(e.searched)}.")
+    return lines
+
+
 def brief(teaser: str, docs: list[dict], record: Record, trap: str, where: list[str], read: set[str],
           budget: float) -> str:
     """The intent brief (main spec §3): the issue, the current range, the engine's flip amount, where to look, and a
     sub-budget."""
     e = record.entries[trap]
-    flip = record.flip_amount(trap)
-    lines = [f"Find out: {trap}" + (f" ({e.name})" if e.name else "") + ".",
-             f"Current belief: chance {e.chance:.2f}, size ${e.low:,.1f}–${e.high:,.1f}M." if e.known is None else
-             f"Committed so far: ${e.known[0]:,.1f}–${e.known[1]:,.1f}M ({e.kind}).",
-             f"The engine's call flips if this issue is at least ${flip:,.1f}M, with everything else as recorded."
-             if flip is not None else
-             f"No size up to ${2 * record.size_limit(trap):,.1f}M flips the call alone; it can still matter with "
-             "other issues, so report what the documents say."]
-    lines += [f"The Challenger objects ({o['kind']}): {o['reason']}" for o in e.objections]
-    if e.searched:
-        lines.append(f"Already read without settling it: {', '.join(e.searched)}.")
+    lines = [f"Find out: {trap}" + (f" ({e.name})" if e.name else "") + "."] + _about(record, trap)
     lines.append(f"Look first at: {', '.join(where)}." if where else "Choose where to look.")
     return (f"{teaser}\n\nDocuments:\n{docs_table(docs, read)}\n\nBrief:\n" + "\n".join(lines)
             + f"\n\nYour reading budget: {budget:g} units. Report a finding for {trap}; add any other issue type "
             "the documents you read settle.")
+
+
+def doc_brief(teaser: str, docs: list[dict], record: Record, doc: str, issues: list[str], read: set[str],
+              pages: float) -> str:
+    """The document brief (D2 §3): one document, the open issues it may settle, and a budget of its pages."""
+    lines = [f"Brief: read {doc} ({pages:g} pages). It may settle these open issues:"]
+    for t in issues:
+        e = record.entries[t]
+        lines.append(f"- {t}" + (f" ({e.name})" if e.name else "") + ": " + " ".join(_about(record, t)))
+    return (f"{teaser}\n\nDocuments:\n{docs_table(docs, read)}\n\n" + "\n".join(lines)
+            + f"\n\nYour reading budget: {pages:g} units. Report every issue type this document settles, "
+            "including ones not listed.")
 
 
 def reader_prompt(teaser: str, docs: list[dict], budget: float) -> str:
