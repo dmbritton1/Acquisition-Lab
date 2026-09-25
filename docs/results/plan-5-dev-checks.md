@@ -62,8 +62,11 @@ deals. On dev-003 (28% of S1b's regret on the 30 deals) the answer needed contra
 pages; S4 read contract_1 and S1b read the audited notes, and both said GO.
 
 **D2, the document router** (spec `docs/superpowers/specs/2026-09-25-doc-router-design.md`): offline, on the recorded
-first Lead plans, the first pick is stable over seeds (80–100%), the audited notes rank 2–7 on every deal, and the
-reading path reaches the evidence on 6 of the 8 deals that have any. A regret-based document score was tried first and
+first Lead plans, with the router's 4,000 simulated deals, the first pick is the same over 5 seeds on every deal, the
+audited notes rank 2–7, and the reading path (replayed assuming nothing is found) reaches the evidence on 6 of the 8
+deals that have any: dev-000, 003, 004, 007, 008, 009. It reads the audited notes 2nd on dev-000 and dev-008, 3rd on
+dev-003 and 4th on dev-007. It misses dev-002 and dev-005, where the audited notes held only decoys. Expect the
+Challenger and the sweep to get little budget (spec Risks). A regret-based document score was tried first and
 dropped (spec §8): at the Lead's first plan no single read changes the call.
 
 **Also found (answer keys, read-only):** "not found" is no evidence against an issue (a clean fact states $0.0M), so the

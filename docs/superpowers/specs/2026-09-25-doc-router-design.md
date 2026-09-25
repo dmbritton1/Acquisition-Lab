@@ -1,6 +1,7 @@
 # Acquisition Lab: Document Router Design (Plan 5, change D2)
 
-Status: approved in brainstorming on 2026-09-25; §2 revised after pre-verification the same day (§8).
+Status: approved in brainstorming on 2026-09-25; §2 revised after pre-verification the same day (§8), and §2–§3
+amended after the final code review (§9).
 Parent specs: `2026-09-24-reframe-design.md` (§3 fairness, §5 S4) and the Plan 5 plan
 (`docs/superpowers/plans/2026-09-25-plan-5-s4-panel.md`, Decision 4 and change D1). The reframe spec stays the binding
 authority on design; this spec changes only how S4's router chooses what to read.
@@ -91,7 +92,8 @@ the documents the panel's own roles named.
 pure numpy function. `Record.rank_docs(pages, read, docs, seed=0)` wraps it for S4 and replaces router 6's `rank` in
 S4's router mode.
 
-1. **Simulated deals.** The record's simulated deals (`worlds()`, the same 400 the engine's call uses): sampled values
+1. **Simulated deals.** The record's simulated deals, `ROUTE_WORLDS = 4000` of them (the engine's call stays at 400;
+   §9): sampled values
    for every issue, and each deal's engine walk-away. Committed issues are fixed; open issues and issues with a pending
    objection vary, as today (`Record.issue`).
 2. **What reading d would reveal.** For each simulated deal and each open issue t, d settles t if a uniform draw is
@@ -129,8 +131,9 @@ pages), which leaves too little for contract_1 unless an earlier find changes th
 2. **Brief.** One Investigator, one document: `prompts.doc_brief`. It names the document and its pages, and for each
    open issue with weight above 0 in it, the existing brief lines (current belief or committed value, and the flip
    amount). It ends: "Report every issue type this document settles, including ones not listed."
-3. **Budget.** The Investigator's reading budget is exactly the document's pages, so the tool server keeps it to that
-   document (re-opening already-read documents stays free). This also ends the audit's "kept reading after finding
+3. **Budget.** The Investigator's reading budget is the document's pages plus one unit, capped at the budget left, so
+   a search first still leaves enough to open it (§9). The smallest document is 2 pages, so the spare unit never buys a
+   second one; re-opening already-read documents stays free. This also ends the audit's "kept reading after finding
    it" waste.
 4. **Re-plan only after a commit.** The Lead re-plans when the read committed a value or range for some issue. After a
    read that settles nothing, it does not: per finding 1 there is nothing for it to update, and this saves a session.
@@ -144,7 +147,8 @@ when a trap is not on the Lead's list) gets less sweep budget; the −sweep abla
 **Challenger objections:**
 - An objection raises how its issue is priced and adds its documents to the issue's `named` list (`record.challenge`,
   unchanged). They get weight through §1, and directed reading resumes after each Challenger round.
-- An objection **clears when a document it names is read**, or when its issue is settled by a new commit. A pair
+- An objection **clears when a document it names is read** (actually opened, not just briefed; §9), or when its issue
+  is settled by a new commit. A pair
   objection (from the pair screen) names no documents; it clears when any document with weight above 0 for its issue
   is read.
 - If an objection names documents and all of them were already read (the claim is that the reader missed something),
@@ -227,6 +231,12 @@ afford.
   and the call itself stays with the engine; the Challenger's pair screen keeps the "these two flip it together"
   test.
 - **Cheap documents first** (§2, "Not guaranteed").
+- **The Challenger and the sweep get little budget.** Nearly every unread document has some weight on some open issue,
+  so directed reading ends only when nothing more fits: in the no-find replays, 7 of 10 deals had 0 pages left. So a
+  Challenger objection that points at an unread document usually can't be afforded (it is cleared, changing nothing;
+  only the free re-check still works), and the sweep reads little. The −Challenger and −sweep ablations (H3, H6) may
+  show no effect for that reason, not because the roles are useless. Found in the final review; recorded before the
+  paid run, not changed (a design change needs its own check).
 - **The weights are hand-set.** Findings 2 and 3 say the map's order is imperfect for `r2`; the weights inherit that,
   on purpose, for parity.
 
@@ -250,3 +260,16 @@ the replayed paths, without reading filler. Changes from the approved design:
 - The `route` row loses its `fallback` field.
 - Non-myopic planning (scoring whole reading plans) was the alternative; it was not chosen, being riskier and needing
   its own design round.
+
+## 9. Amendments from the final code review (2026-09-25)
+
+- **The router's sample is 4,000 simulated deals** (`ROUTE_WORLDS`), not 400. At 400, groups where a low-weight
+  document settles an issue hold a handful of deals, and the spread of the other issues inflates its score: off-map
+  filler scored 2–5× its value at 20,000 deals, map documents 1.15–1.37×, and the reading paths differed on 6 of 10
+  deals. §8's "400 is stable enough" judged first picks only. At 4,000 the first pick agrees across 5 seeds on every
+  deal, and the audited notes come earlier on the replayed paths (2nd on dev-000 and dev-008, 3rd on dev-003, 4th on
+  dev-007). A pick takes about 2 s.
+- **An Investigator's budget is the document's pages plus one unit.** With exactly its pages, one search first (14 of
+  35 reading sessions searched in the `c989fb1` runs) left too little to open the document, which was then lost for the
+  run.
+- **An objection clears only when its document was actually read,** not when the router briefed it.

@@ -12,6 +12,8 @@ offered to S1b). Format of `plan-4a-prompt-log.md`.
   moved into `_about`).
 - **Why.** The page-spend audit of the `c989fb1` runs: S4 never opened the audited notes (0 of 10), and Investigators
   kept reading after finding their answer. Spec: `docs/superpowers/specs/2026-09-25-doc-router-design.md`.
+- **Budget sentence (final review).** The brief's budget is the document's pages plus one unit (capped at what is
+  left), so a search first still leaves enough to open the document; the brief states that budget.
 - **Parity.** An S4 architecture change, not added knowledge: the brief states only the record and the engine's
   numbers, and the router's weights use only the diligence map's order that S1b's guide already states. S1b's prompt
   is unchanged.
