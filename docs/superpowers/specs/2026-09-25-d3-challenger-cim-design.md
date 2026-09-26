@@ -1,6 +1,6 @@
 # Acquisition Lab: The Challenger at the Midpoint, and CIM Claims (Plan 5, change D3)
 
-Status: approved in brainstorming on 2026-09-25.
+Status: approved in brainstorming on 2026-09-25; §1 made strict after pre-verification the same day (§7).
 Parent specs: `2026-09-24-reframe-design.md` (§3 fairness, §5 S4) and `2026-09-25-doc-router-design.md` (D2). The
 reframe spec stays the binding authority on design; this spec changes when S4's Challenger speaks and what the Committer
 accepts from the seller's CIM.
@@ -36,24 +36,28 @@ re-run on the 30 deals keeps or improves on 26/30 and regret 0.0107.
 
 ## 1. The Challenger at the midpoint
 
-**The rule (router mode, Challenger on).** The first directed pass keeps picking documents while less than half the
-budget is spent (`MID_SHARE = 0.5`). The document that crosses the midpoint is allowed, so a big document (the audited
-notes, 10–14 pages) can still be read early, as under D2. Then the existing `challenge()` loop runs unchanged:
+**The rule (router mode, Challenger on).** The first directed pass reads only documents that fit in the first half of
+the budget (`MID_SHARE = 0.5`); a document that doesn't fit waits for the second half. Then the existing `challenge()`
+loop runs unchanged:
 - round 1 objects at the midpoint; its objections raise how their issue is priced and add weight to the documents they
   name (`Record.challenge`, D2 §1), and directed reading continues with the full remaining budget, so the router weighs
   objection documents against its own picks by the same engine score;
-- round 2 objects at the end, followed by directed reading (whatever is left, and the free re-checks) and the sweep.
+- round 2 objects at the end, followed by directed reading (whatever is left, and the free re-checks).
 
-**Code.** `Panel.directed(until: float | None = None)`: with the router, `route()` keeps picking only while
-`spent() < until` (when given). `Panel.run()` calls `self.directed(MID_SHARE * self.budget if self.cfg.challenger else
-None)` for the first pass. `route()`'s candidates are unchanged (documents that fit `budget − spent`).
+After the Challenger's rounds, directed reading runs once more, so the second half is read even when the Challenger
+raises nothing (or its session fails): `challenge()` returns early in that case. Then the sweep.
+
+**Code.** `Panel.route(until: float | None = None)`: candidates fit what is left before `until` (else the whole budget).
+`Panel.directed(until: float | None = None)` passes it on. `Panel.run()` calls `self.directed(MID_SHARE * self.budget
+if self.cfg.challenger else None)` for the first pass and, with the router, `self.directed()` after `challenge()`.
 
 **Why no separate budget for objections.** A fixed reserve is an arbitrary size (40% of a 22-page budget buys the QoE
 but not the audited notes) and takes reading away from the router's first pass. At the midpoint the engine decides
 whether an objection is worth its pages, which is the project's claim ("code prices every objection").
 
-**Trade-off.** The Challenger's first round sees only about half the evidence, and when a big document crosses the
-midpoint it may have 6–9 pages to work with. The offline check (§4) measures the budget it gets.
+**Trade-off.** The audited notes (10–14 pages) usually don't fit in the first half (10–13.5 pages), so they move to
+the second half, where they compete with the objection documents by engine score. The Challenger's first round sees
+the evidence without them.
 
 ## 2. CIM claims never settle an issue alone
 
@@ -79,16 +83,17 @@ weighs it however it likes.
 - **Panel:**
   - with the Challenger on (router), the first Challenger turn comes once at least half the budget is spent, and a
     document its objection names is read afterwards when it fits;
-  - a document may cross the midpoint;
+  - a document that doesn't fit in the first half waits for the second, and the second half is read even when the
+    Challenger raises nothing;
   - with the Challenger off, directed reading runs to the end with no pause.
 
 ## 4. Offline checks before the paid run (no Claude calls)
 
 - **The Challenger's budget.** Replay the first directed pass of the 30 D2 runs under the midpoint rule (the path is
   exact until the first commit, D2 §5), and report the pages left when the Challenger first speaks. Under D2: 0–1 pages
-  on 25 of 30.
-- **CIM conversions.** Count the D2 commits the new rule would convert (those quoting only the CIM; 5 quote it at
-  all) and list their deals.
+  on 25 of 30. Pre-verification: 10–14 pages on all 30 (13 on dev-003 and dev-022, where the QoE costs 9).
+- **CIM conversions.** Count the D2 commits the new rule would convert (those quoting only the CIM). Pre-verification:
+  5, all on dev-003 (its five $0 commits), none elsewhere.
 
 These are diagnostics, not gates.
 
@@ -106,11 +111,20 @@ case type, how often an objection's document was read, the budget left at each C
 
 ## Risks
 
-- **The Challenger may still get little budget** on deals where a big document crosses the midpoint (§1, trade-off).
-- **Reading may get worse.** Half the first pass's budget goes to the router's picks before the Challenger speaks; the
-  objection documents it then asks for may displace documents the router would have read. The re-run compares with D2.
+- **Reading may get worse.** The audited notes move to the second half on most deals (§1, trade-off), and objection
+  documents may displace documents the router would have read. D2's gain came from reading the audited notes at all
+  (0/10 → 18/30), not first; the re-run compares with D2.
 - **A CIM-only commit sometimes helped.** Where the seller's claim happens to be true (a clean fact), the issue now
   stays open, so the Lead's starting chance stands, which can push the call toward NO-GO on good deals (the caution seen
   on dev-006 and dev-017). The re-run shows the net effect.
 - **The rule is tied to one document id** (`cim`). Generated rooms have exactly one CIM; real data rooms may label the
   seller's material differently.
+
+## 7. Revision from pre-verification (2026-09-25)
+
+The approved §1 let the document that crosses the midpoint be read in the first pass. Replayed on the 30 recorded D2
+plans, the router's big first-pass pick (usually the audited notes) crossed the midpoint and left the Challenger 0–13
+pages (median about 8; enough for the QoE on 11 of 30). On dev-022, the case the rule was built for, it left 6 pages and
+the QoE costs 9. The strict rule leaves 10–14 pages on every deal. Pre-verification also found that `challenge()`
+returns early when the Challenger raises nothing, which under a midpoint stop would leave the second half unread; the
+extra `directed()` call after `challenge()` covers it (router mode only, so `s4_3` is unchanged).
