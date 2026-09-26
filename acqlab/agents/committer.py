@@ -16,6 +16,8 @@ from acqlab.generator.traps import TRAPS
 OPS = ("none", "difference", "product", "divide")
 MIN_QUOTE = 12  # characters, after normalising: shorter quotes prove nothing
 TOL = 0.051  # $M: amounts print with one decimal
+SELLER_DOCS = ("cim",)  # the seller's own marketing: its claims are what diligence checks, never evidence on their own
+# (trust ranking: contracts and audited accounts > QoE > CIM; D3)
 _NUM = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*(%?)")
 _WORDS = {w: float(i) for i, w in enumerate(
     "zero one two three four five six seven eight nine ten eleven twelve".split())}
@@ -48,7 +50,17 @@ def _num(v) -> float | None:
 
 def check(finding: dict, texts: dict[str, str]) -> tuple[dict | None, list[str]]:
     """(commit, errors). `texts` maps each document the session may cite to its text. A commit is
-    {"type", "kind": quoted|computed|range|not_found|open, "low", "high", "chance", "quotes", "docs"}."""
+    {"type", "kind": quoted|computed|range|not_found|open, "low", "high", "chance", "quotes", "docs"}. A value or
+    range quoted only from the seller's documents is the seller's claim: it commits as not_found (read without
+    settling it), keeping its quotes (D3)."""
+    commit, errors = _check(finding, texts)
+    if commit and commit["kind"] in ("quoted", "computed", "range") and set(commit["docs"]) <= set(SELLER_DOCS):
+        return {**commit, "kind": "not_found", "low": None, "high": None}, []
+    return commit, errors
+
+
+def _check(finding: dict, texts: dict[str, str]) -> tuple[dict | None, list[str]]:
+    """Internal implementation of check."""
     t, status = finding.get("type"), finding.get("status")
     if t not in TRAPS:
         return None, [f"type must be one of {', '.join(TRAPS)}"]

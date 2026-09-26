@@ -1,6 +1,6 @@
 import pytest
 
-from acqlab.agents.committer import check, norm, numbers
+from acqlab.agents.committer import SELLER_DOCS, check, norm, numbers
 from acqlab.generator import batch
 from acqlab.generator.batch import AnswerKey
 from acqlab.generator.documents import money, pct
@@ -49,7 +49,7 @@ def test_a_value_must_appear_in_the_quotes_except_zero():
                   "quotes": [q("qoe", "of this, $1.2M recurred in each")]}, TEXTS)[1]
     assert errs == ["addback: 1.5 does not appear in your quotes"]
     c, errs = check({"type": "debt_like", "status": "value", "value": 0,
-                     "quotes": [q("cim", "The business has no earnout.")]}, TEXTS)
+                     "quotes": [q("legal", "We represent the Company in a pending customer lawsuit.")]}, TEXTS)
     assert errs == [] and c["low"] == 0.0
 
 
@@ -133,6 +133,22 @@ def test_not_found_names_documents_that_were_read_and_open_is_a_bare_belief():
     assert check({"type": "fraud", "status": "open"}, TEXTS)[1][0].startswith("type must be one of")
 
 
+def test_the_seller_s_cim_alone_never_settles_an_issue():
+    """D3: a value or range quoted only from the CIM is the seller's claim, committed as read without settling it; the
+    CIM beside any other document is evidence as usual."""
+    c, errs = check({"type": "debt_like", "status": "value", "value": 0,
+                     "quotes": [q("cim", "The business has no earnout.")]}, TEXTS)
+    assert errs == [] and c["kind"] == "not_found" and c["docs"] == ["cim"] and c["low"] is None
+    assert c["quotes"] == [q("cim", "The business has no earnout.")]  # kept for the evidence trail
+    c, errs = check({"type": "addback", "status": "range", "low": 0, "high": 1.8,
+                     "quotes": [q("cim", "Restructuring costs of $1.8M were a one-time cost")]}, TEXTS)
+    assert errs == [] and c["kind"] == "not_found"
+    c, errs = check({"type": "addback", "status": "value", "value": 1.2,
+                     "quotes": [q("cim", "Restructuring costs of $1.8M were a one-time cost"),
+                                q("qoe", "of this, $1.2M recurred in each of the last three years")]}, TEXTS)
+    assert errs == [] and c["kind"] == "quoted" and c["docs"] == ["cim", "qoe"] and c["low"] == 1.2
+
+
 def test_numbers_reads_amounts_percentages_ranges_and_number_words():
     assert numbers("$3.0–$6.2M") == [3.0, 6.2]
     assert numbers("25.0% of $1,200.5M") == [25.0, 0.25, 1200.5]
@@ -140,7 +156,9 @@ def test_numbers_reads_amounts_percentages_ranges_and_number_words():
 
 
 def _line(texts: dict[str, str], docs: list[str], needle: str) -> dict:
-    for d in docs:
+    """The first line holding the needle, from the documents that are evidence before the seller's CIM (a contradicted
+    add-back's amount is in both: the CIM claims it is one-time, the QoE says it recurs)."""
+    for d in sorted(docs, key=lambda d: d in SELLER_DOCS):
         for line in texts[d].splitlines():
             if needle in line:
                 return q(d, line.strip())
