@@ -131,11 +131,12 @@ def test_claude_is_never_called_without_the_confirm_flag(data, monkeypatch):
 
 def _fake_row(deal, system, regret, relevant, flip=True):
     return {"deal": deal, "system": system, "regret": regret, "opened_relevant": relevant, "flip": flip,
-            "answered": True, "correct": regret == 0, "walk_away_error": 0.1, "pages": 10, "decoy_pages": 0,
+            "answered": True, "go": True, "walk_away": 100.0,
+            "correct": regret == 0, "walk_away_error": 0.1, "pages": 10, "decoy_pages": 0,
             "prior_inside": None, "rank_calls": 0, "case_type": "flip", "cost_usd": None, "tokens": dict.fromkeys(
                 ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"), 0),
             "floors": {"always_go": 0.2, "always_no": 0.2, "b0": 0.1, "b0_walk_away_error": 0.1,
-                       "ask_walk_away_error": 0.1, "headroom": 0.05}}
+                       "ask_walk_away_error": 0.1, "headroom": 0.05, "ask": 100.0}}
 
 
 @pytest.mark.parametrize("router_regret, router_relevant, verdict", [
@@ -244,6 +245,28 @@ def test_s3_is_the_majority_decision_of_s1b_runs_with_summed_costs():
     assert pilot.s3_rows(rows, 4) == {}  # not enough runs
     s = summarize(rows, s3_n=3)
     assert s["systems"]["s3"]["regret"] == 0.0 and s["systems"]["s1b"]["regret"] == 0.3  # s1b: its first run only
+
+
+def test_the_pessimism_control_switches_s1b_s_least_confident_go_calls_until_it_says_no_as_often_as_s4():
+    """S1b made as pessimistic as S4 (Plan 5 held-out check): chosen from S4's calls and S1b's own walk-aways only,
+    never the answer key; scored like S3, from each deal's floors."""
+    def row(deal, system, go, wa, good):  # a good deal: passing costs 0.2; a bad one: going costs 0.3
+        f = {"always_go": 0.0 if good else 0.3, "always_no": 0.2 if good else 0.0, "b0": 0.1,
+             "b0_walk_away_error": 0.1, "ask_walk_away_error": 0.1, "headroom": 0.02, "ask": 100.0,
+             "true_walk_away": 120.0 if good else 70.0}
+        return _fake_row(deal, system, f["always_go"] if go else f["always_no"], True) | {
+            "go": go, "walk_away": wa, "floors": f}
+    s1b = [row("d0", "s1b", True, 101.0, False), row("d1", "s1b", True, 130.0, True),
+           row("d2", "s1b", False, 90.0, False)]
+    s4 = [row("d0", "s4", False, 95.0, False), row("d1", "s4", True, 125.0, True), row("d2", "s4", False, 90.0, False)]
+    s = summarize(s1b + s4)
+    m = pilot.s1b_matched({r["deal"]: r for r in s1b}, {r["deal"]: r for r in s4})
+    assert [m[d]["go"] for d in ("d0", "d1", "d2")] == [False, True, False]  # d0, the GO closest to the ask, switched
+    assert s["systems"]["s1b_matched"]["regret"] == 0.0 and s["systems"]["s1b"]["regret"] == pytest.approx(0.1)
+    assert s["systems"]["s4"]["vs_s1b_matched"] == {"n": 3, "regret_diff": 0.0, "ci95": [0.0, 0.0]}
+    optimist = [r | {"go": True} for r in s4]  # S4 no more pessimistic than S1b: nothing switches
+    assert [r["go"] for r in pilot.s1b_matched({r["deal"]: r for r in s1b},
+                                                {r["deal"]: r for r in optimist}).values()] == [True, True, False]
 
 
 def test_a_summary_with_only_s1b_has_floors_but_no_checkpoint():

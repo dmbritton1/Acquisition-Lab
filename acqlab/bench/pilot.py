@@ -171,6 +171,23 @@ def s3_rows(rows: list[dict], n: int) -> dict[str, dict]:
     return out
 
 
+def s1b_matched(s1b: dict[str, dict], s4: dict[str, dict]) -> dict[str, dict]:
+    """The pessimism control (Plan 5 held-out check), deal -> row, on the deals both finished: S1b's calls with its
+    least confident GO calls (walk-away closest above the ask) switched to NO-GO until it says NO-GO as often as S4.
+    Only S4's calls and S1b's own estimates choose them, never the answer key; nothing switches when S4 is the less
+    pessimistic. Scored like S3, from each deal's floors."""
+    deals = sorted(set(s1b) & set(s4))
+    extra = sum(not s4[d]["go"] for d in deals) - sum(not s1b[d]["go"] for d in deals)
+    gos = sorted((d for d in deals if s1b[d]["go"]), key=lambda d: s1b[d]["walk_away"] / s1b[d]["floors"]["ask"])
+    switch = set(gos[:max(0, extra)])
+    out = {}
+    for d in deals:
+        f, go = s1b[d]["floors"], s1b[d]["go"] and d not in switch
+        out[d] = s1b[d] | {"system": "s1b_matched", "go": go, "regret": f["always_go"] if go else f["always_no"],
+                           "correct": go == (f["always_go"] <= f["always_no"])}
+    return out
+
+
 def _mean(rows: list[dict], field: str) -> float | None:
     vals = [r[field] for r in rows if r[field] is not None]
     return float(np.mean(vals)) if vals else None
@@ -184,6 +201,8 @@ def summarize(rows: list[dict], s3_n: int | None = None) -> dict:
     by = {s: {r["deal"]: r for r in first if r["system"] == s} for s in ALL}
     if s3_n:
         by["s3"] = s3_rows(rows, s3_n)
+    if set(by["s1b"]) & set(by["s4"]):
+        by["s1b_matched"] = s1b_matched(by["s1b"], by["s4"])
     out: dict = {"n_deals": len(by["s1b"]), "systems": {}}
     for s in [s for s in by if by[s]]:
         rs = [by[s][d] for d in sorted(by[s])]
@@ -213,6 +232,12 @@ def summarize(rows: list[dict], s3_n: int | None = None) -> dict:
             out["systems"][s]["vs_s1b"] = {"n": len(paired), "regret_diff": float(diff.mean()), "ci95": list(ci),
                                            "n_flip": len(flip), "regret_diff_flip": float(np.mean(flip)) if flip
                                            else None}
+    if "s1b_matched" in by:  # the pessimism control: does S4 beat S1b made just as pessimistic?
+        paired = sorted(by["s1b_matched"])
+        diff = np.array([by["s4"][d]["regret"] - by["s1b_matched"][d]["regret"] for d in paired])
+        ci = bootstrap_ci(diff) if len(diff) > 1 else (float(diff[0]), float(diff[0]))
+        out["systems"]["s4"]["vs_s1b_matched"] = {"n": len(paired), "regret_diff": float(diff.mean()),
+                                                  "ci95": [float(x) for x in ci]}
     base = [by["s1b"][d] for d in sorted(by["s1b"])]
     out["floors"] = {k: float(np.mean([r["floors"][k] for r in base])) if base else None
                      for k in ("always_go", "always_no", "b0", "b0_walk_away_error", "ask_walk_away_error")}
