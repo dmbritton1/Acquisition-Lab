@@ -57,10 +57,11 @@ midpoint it may have 6–9 pages to work with. The offline check (§4) measures 
 
 ## 2. CIM claims never settle an issue alone
 
-**Why.** the CIM only ever carries the seller's
-claims ("There is no …", "at normal levels", "cash-free and debt-free"). This is also ordinary diligence practice: a
-seller's marketing document is a claim to verify, never evidence on its own. The project's trust ranking already puts
-it last (contracts and audited accounts > QoE > CIM).
+**Why.** The CIM only ever carries the seller's claims ("There is no …", "at normal levels", "cash-free and
+debt-free"); wherever the answer keys list it as evidence, it is paired with the document that contradicts it or
+completes a calculation. This is also ordinary diligence practice: a seller's marketing document is a claim to verify,
+never evidence on its own. The project's trust ranking already puts it last (contracts and audited accounts > QoE >
+CIM).
 
 In `committer.check`, a value, range or computed finding whose quotes all come from the seller's documents
 (`SELLER_DOCS = ("cim",)`) becomes a `not_found` commit with `docs: ["cim"]`: no error, no retry. The record then shows
