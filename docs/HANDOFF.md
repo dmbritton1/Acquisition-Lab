@@ -62,8 +62,10 @@ for status and next steps.*
    toward NO-GO); reweighted to `r2`'s mix S4 is 42% below S1b (90%: −73% to −5%). Decided 2026-09-26: don't tune
    the Lead's chances (parity); next, a pessimism control (below).
 6. **Next: a pessimism control.** Every `r2` surprise points to NO-GO, so a system that leans NO-GO is rewarded by
-   design. Compare S4 with S1b made just as pessimistic, so the claim shows S4 finds problems rather than leaning
-   NO-GO. Design in progress (2026-09-26).
+   design. **Done** (`plan-5-dev-checks.md`, `pilot.s1b_matched` in the report): S1b made just as pessimistic as S4
+   barely improves on `cal-r2` (0.0195 → 0.0182) and gets worse on the held-out batch (0.0078 → 0.0174); S4 beats it
+   on both (−0.0106, CI [−0.0222, −0.0018]; −0.0066, CI [−0.0168, +0.0021]). S4's edge is in which deals it
+   rejects, not only how many. Report it beside H1 in the main run.
    **Note to explore later (user, 2026-09-26):** `r2` has no hidden upside (deals that look NO-GO but are GO). Adding
    it would be fairer to systems that don't lean NO-GO, but changes the frozen profile and the pre-registration.
 7. **Then the rest of Task 6:**

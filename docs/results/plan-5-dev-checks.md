@@ -252,3 +252,24 @@ chance of at least 25% lower: 0.79).
 - **To explore later (not decided):** `r2` has no hidden upside (a deal that looks like NO-GO but is GO). Adding it
   would make the benchmark fairer to systems that don't lean NO-GO, but it changes the frozen profile and the
   pre-registration.
+
+## The pessimism control (2026-09-26)
+
+Defined and agreed before it was computed: `s1b_matched` is S1b with its least confident GO calls (walk-away closest
+above the ask) switched to NO-GO until it says NO-GO as often as S4 on the same deals; only S4's calls and S1b's own
+walk-aways choose them, never the answer key (`pilot.s1b_matched`, in the report). It asks whether S4 finds problems
+or only leans NO-GO. A secondary analysis added before the test set exists; H1–H6 are unchanged.
+
+| | `cal-r2` (30) | held-out (29) |
+|---|---|---|
+| S1b | 0.0195 | 0.0078 (30 deals) |
+| S1b, as pessimistic as S4 | 0.0182 | 0.0174 |
+| S4 | 0.0076 | 0.0108 |
+| S4 − pessimistic S1b, 95% CI | −0.0106 [−0.0222, −0.0018] | −0.0066 [−0.0168, +0.0021] |
+| Flip deals: S1b / pessimistic S1b / S4 | 0.0243 / 0.0182 / 0.0096 | 0.0094 / 0.0106 / 0 |
+
+**Reading.** Pessimism alone does not reproduce S4's result: made just as pessimistic, S1b barely improves on
+`cal-r2` (0.0195 → 0.0182) and gets much worse on the held-out batch (0.0078 → 0.0174), and S4 beats it on both,
+with the CI excluding zero on `cal-r2`. S4's NO-GO calls land on better deals than S1b's least confident GO calls,
+so its advantage is in which deals it rejects, not only how many. Caveat: S1b's walk-away is the only ranking the
+control can use; a better-calibrated pessimist might do better.
