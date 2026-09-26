@@ -350,3 +350,45 @@ def test_with_the_router_a_pair_objection_clears_on_any_read_that_may_settle_its
     p.directed()
     assert [r for r, _, _ in s.turns] == ["investigator"] and "Brief: read qoe" in s.turns[0][1]
     assert p.record.entries["nwc"].objections == []
+
+
+def test_with_the_challenger_the_first_pass_reads_only_the_first_half_and_objections_are_read_after(data, tmp_path,
+                                                                                                    monkeypatch):
+    """D3: cheap documents first (a stand-in score), only what fits in half the budget; then the Challenger objects and
+    the document it names is read with the other half."""
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: 5.0 if d == "audited" and self.entries["debt_like"].objections else 1 / pages[d] for d in docs})
+    rounds = [{"objections": [{"type": "debt_like", "kind": "elsewhere", "chance": 0.9, "low": 0, "high": 90,
+                               "docs": ["audited"], "reason": "the notes list a guarantee"}]}, {"objections": []}]
+
+    def challenger(sess, prompt):
+        sess.call("challenge", rounds.pop(0) | {"pairs": [{"a": a, "b": b, "answer": "ruled_out", "reason": "r"}
+                                                          for a, b in sess.pairs]})
+
+    s = scripted(lead=lead_says(([_issue("debt_like", 0.5)], False)), investigator=finds_nothing,
+                 challenger=challenger)
+    Panel(_room(data), 40, tmp_path / "t.jsonl", Config(sweep=False), s).run()
+    rows = _rows(tmp_path / "t.jsonl")
+    first = next(i for i, r in enumerate(rows) if r["tool"] == "challenge")
+    assert 18 <= sum(r["cost"] for r in rows[:first] if r["tool"] == "open_document") <= 20  # the first half, filled
+    after = [r["args"]["doc"] for r in rows[first:] if r["tool"] == "route"]
+    assert after[0] == "audited"  # the objection's document, read with the second half
+
+
+def test_a_document_that_does_not_fit_the_first_half_waits_for_the_second(data, tmp_path, monkeypatch):
+    monkeypatch.setattr(panel.Record, "rank_docs",
+                        lambda self, pages, read, docs, seed=0: {d: float(d == "audited") for d in docs})
+    s = scripted(lead=lead_says(([_issue("debt_like", 0.5)], False)), investigator=finds_nothing,
+                 challenger=no_objections)
+    Panel(_room(data), 20, tmp_path / "t.jsonl", Config(sweep=False), s).run()
+    assert [r for r, _, _ in s.turns][:3] == ["lead", "challenger", "investigator"]  # audited (14) > half of 20
+    assert "Reading budget left: 20 units." in s.turns[1][1] and "Brief: read audited (14 pages)" in s.turns[2][1]
+
+
+def test_without_the_challenger_directed_reading_runs_to_the_end(data, tmp_path, monkeypatch):
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: 1 / pages[d] for d in docs})
+    s = scripted(lead=lead_says(([_issue("debt_like", 0.5)], False)), investigator=finds_nothing)
+    p = Panel(_room(data), 40, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s)
+    p.run()
+    assert p.spent() > 0.5 * 40 and "challenger" not in [r for r, _, _ in s.turns]
