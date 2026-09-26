@@ -164,3 +164,21 @@ with 0–2. It never raised nothing in round 1. 85 of its 265 objections (32%) h
 D2 is within noise (two deals changed, one each way), and both changed calls turn on the Challenger's late objections
 raising chances that no budget remains to settle: caution that helps on flip deals and hurts on good ones. The
 midpoint gives the Challenger pages, but the router seldom spends them on the documents it names (32%).
+
+## Held-out check: set-up and criteria, written before any run (2026-09-26)
+
+D1–D3 were each tuned on the same 30 `cal-r2` deals. This check asks whether S4's lead over S1b holds on deals S4 has
+never seen.
+
+- **Deals:** `data/heldout-r2`, 30 fresh dev deals, `--seed 630000 --profile r2` (seeds 630000–630029; no earlier batch
+  used them; Plan 6's test set must avoid them), generator 4.0.0, 0 batch problems. Case mix: unresolvable 12,
+  decoy 8, interaction 5, clean 5, flip 0; 9 decision flips (`cal-r2` had 17), so fewer chances for either system
+  to err, and less power than the 30-deal dev result.
+- **Systems:** S1b and S4 at `b728999` (D3 plus the addendum; the addendum does not change `s4`), CLI 2.1.280,
+  Opus 5.5. No code or prompt changes between now and the report.
+- **Criteria, fixed now:** the check **holds** if S4's mean regret is at least 25% below S1b's (the headline's size);
+  it is **weak** if S4 is below S1b by less than 25%; it **fails** if S4's regret is at or above S1b's. The paired
+  difference and its 95% CI are reported whatever they show; with 9 flips the CI is expected to include zero, so the
+  check judges direction and size, not significance.
+- **Also reported:** correct calls, regret by case type, and whether D3's parked patterns recur (objections with a
+  named document read, late objections deciding a call, CIM conversions).
