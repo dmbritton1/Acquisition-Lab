@@ -29,7 +29,7 @@ SUB_SHARE = 0.5  # an Investigator's budget: its first document plus 2 units, an
 MAX_TRIES = 2  # investigations per issue: once, and once more after an objection
 CHALLENGE_ROUNDS = 2
 MID_SHARE = 0.5  # with the router, the first directed pass reads only documents that fit in this share of the
-# budget, so the Challenger's objections have the rest to compete for, and without it the reading order is the same (D3)
+# budget, so the Challenger's objections have the rest to compete for; without the Challenger, the order is the same (D3)
 SYSTEM = {"lead": prompts.LEAD, "investigator": prompts.INVESTIGATOR, "challenger": prompts.CHALLENGER}
 USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 
