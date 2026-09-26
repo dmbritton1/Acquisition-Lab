@@ -113,3 +113,10 @@ zero: the difference rests on a few large deals on each side (S1b's dev-012, 025
 
 **Candidate next steps** (not yet decided): give the Challenger a budget of its own (a reserved share for objection
 reads), and stop a CIM claim alone from settling an issue.
+
+## D3 offline checks (2026-09-25)
+
+Spec `docs/superpowers/specs/2026-09-25-d3-challenger-cim-design.md`. Replaying the first directed pass of the 30 D2
+runs under the strict midpoint (exact until the first commit): the Challenger first speaks with 10–14 pages left on
+every deal (under D2: 0–1 on 25 of 30), 13 on dev-003 and dev-022 (where the QoE, holding the $45.8M flipper, costs 9).
+The CIM rule converts 5 of the D2 commits, all dev-003's five $0 claims, and none elsewhere.

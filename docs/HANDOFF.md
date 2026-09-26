@@ -46,8 +46,8 @@ for status and next steps.*
 3. **Done: the D2 re-run on all 30 `cal-r2` dev deals** (`plan-5-dev-checks.md`): S4 26/30 correct vs S1b 22/30; mean
    regret 0.0107 vs 0.0195 (45% lower), paired difference −0.0088, 95% CI [−0.0228, +0.0055]; $0.49 and 10.8 sessions
    per deal; `s3_n` = 2. S4's losses: dev-022 (the Challenger named the QoE but had no budget left), dev-006 and dev-017
-   (caution from unsettled issues), and dev-003 with S1b (CIM claims committed as fact). Candidate next steps: a budget
-   of the Challenger's own, and a CIM claim alone never settling an issue.
+   (caution from unsettled issues), and dev-003 with S1b (CIM claims committed as fact). D3 addresses the Challenger
+   and the CIM (`docs/superpowers/specs/2026-09-25-d3-challenger-cim-design.md`); its re-run is the D3 plan's Task 4.
 4. **Then the rest of Task 6:**
    - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
    - the prompt tuning loop, confirmed on `cal-r1`;
