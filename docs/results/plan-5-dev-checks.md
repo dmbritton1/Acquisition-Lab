@@ -73,3 +73,43 @@ dropped (spec §8): at the Lead's first plan no single read changes the call.
 Lead prompt fix deferred earlier is withdrawn. The map's order is off for `r2` (add-backs sit in the audited notes 43%
 of the time, the QoE 30%), and the board minutes, off the map, hold 13–30% of each issue's evidence. Both concern the
 shared guide, so they are a later fairness question.
+
+## D2 re-run: `s4` on all 30 `cal-r2` dev deals (2026-09-25)
+
+Code at `059a3b4` (document router, 4,000 router worlds, reads survive a search). CLI 2.1.280, Opus 5.5. The `c989fb1`
+runs are kept in `data/cal-r2/s4-c989fb1`. No timeouts; 30 of 30 answered.
+
+| | S4 (D2) | S1b (same 30 deals) |
+|---|---|---|
+| Correct calls | 26/30 | 22/30 |
+| Mean regret ÷ ask | 0.0107 | 0.0195 (S4 45% lower) |
+| Paired difference S4 − S1b | −0.0088, 95% CI [−0.0228, +0.0055] | |
+| Flip deals (17), paired difference | −0.0078 | |
+| Pages, decoy pages | 22.6, 2.17 | 2.63 decoy pages |
+| Sessions, cost per deal | 10.8, $0.49 | 1, about $0.13 |
+| Audited notes read | 18/30 (was 0/10 at `c989fb1`) | 18/30 |
+| `s3_n` | 2 | |
+
+By case type, mean regret S4 / S1b: clean 0.0066 / 0.0368 (3 deals), decoy 0.0027 / 0.0078 (8), flip 0.0392 / 0.0273
+(3), interaction 0.0203 / 0.0331 (8), unresolvable 0 / 0.0083 (8).
+
+Where the calls differ: S4 wins dev-004, 007, 012, 013, 016, 025 and 029 (S1b regret 0.010–0.110); S4 loses dev-006,
+017 and 022; both miss dev-003.
+
+**Reading the result.** S4's regret is 45% below S1b's, above the 25% the headline needs, but the CI on 30 deals includes
+zero: the difference rests on a few large deals on each side (S1b's dev-012, 025, 029; S4's dev-022).
+
+**S4's losses:**
+- **dev-022 (flip, 0.118): the Challenger was starved** (spec Risks). The $45.8M debt-like flipper is in the QoE, third
+  on the map for debt-like items. S4 read the audited notes (first place; nothing there), then spent the rest on cheap
+  documents (credit agreement, contract_1). The Challenger named the QoE for debt-like items in both rounds; nothing
+  was left to read it.
+- **dev-006 (clean) and dev-017 (decoy): caution on good deals.** Issues S4 did not settle keep the Lead's starting
+  chances (0.35–0.5 over wide ranges), and those alone hold the call at NO-GO. On dev-017 the board minutes, which held
+  two issues' clean facts, were never read.
+- **dev-003 (interaction, both systems miss):** S4 read the CIM and committed the seller's claims as $0 for all five
+  issues, including concentration, whose $24.5M loss is in contract_1. The CIM ranks high under D2 (second or third on
+  the map for most issues); the trust ranking puts it last. 5 commits across the 30 runs quote the CIM.
+
+**Candidate next steps** (not yet decided): give the Challenger a budget of its own (a reserved share for objection
+reads), and stop a CIM claim alone from settling an issue.
