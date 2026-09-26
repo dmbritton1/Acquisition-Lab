@@ -71,10 +71,13 @@ for status and next steps.*
 7. **Done (2026-09-26): S4 frozen** at `b728999`'s S4 code (tag `s4-frozen-plan5`); prompt tuning skipped (fitting
    risk); `s3_n` = 2 on both batches; main-run budget about $230 notional and 17 h of runs, about 14 usage windows
    (`plan-5-dev-checks.md`). The user decides subscription or API.
-8. **Next, needing the user's decisions:**
-   - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 `cal-r2` deals (about $10), then the Plan 5 section of this handoff;
-   - the recoverability check for the test set (every test deal as written: about 1,600 Codex calls, not practical on
-     Plus): a sample, the OpenAI API, or another extractor.
+8. **In progress:** build-step checks, `s4_1`/`s4_2`/`s4_3` on 10 `cal-r2` deals (about $10; user OK'd
+   2026-09-26, scheduled after the last held-out deal), then the Plan 5 section of this handoff.
+   **Decided (user, 2026-09-26): recoverability on a sample.** A seeded random sample of 20 test deals (about 200
+   Codex calls, about 4 Plus usage windows), not every test deal: the documents are template prose and the generator
+   has had 0 batch problems on over 500 `r2` deals, so a sample catches a generator bug. Codex stays the extractor
+   (main spec §2: a non-solver family). Any failure stops the main run until it is understood. Before it gates scored
+   deals, close Codex's read access (see "Codex can read files" below).
 9. **Then Plan 6:** the test set generated once (seeds clear of 610000–640499 and the audits), the four ablations,
    the run schedule, and the analysis (H1–H6, with the pessimism control beside H1).
 
@@ -88,8 +91,7 @@ for status and next steps.*
   ```bash
   uv run python -m acqlab.generator.batch --out data/recover-r2 --dev 3 --test 0 --hand 0 --showcase 1 --recover 3
   ```
-  Before the main run every test deal must pass recoverability: 160 × 10 = 1,600 Codex calls, beyond one Plus usage
-  window. Plan 6 needs a way to cover it (several windows, or the API).
+  Before the main run: a sample of 20 test deals (decided 2026-09-26, item 8 above), not all 160.
 - **The Plan 1 Task 9 spreadsheet check** is still deferred by the user.
 
 ## The claim and the hypotheses (reframe design, 2026-09-24)
@@ -546,7 +548,7 @@ Exit codes: 0 clean, 1 batch problems, 2 Codex stopped (rerun to resume), 3 gene
   - The number-word guard rejects "third-party"; drop "third" if Codex fallbacks pile up.
   - One capex claim is ungrammatical for plural labels.
   - Company-name suffixes ignore the industry (the showcase deal is "Marlow Mill Manufacturing", an information services business). Fix this before polishing the showcase deal. Note that it changes every prose prompt, so the cached prose would be paid for again.
-- **Recoverability failures are reported, not regenerated.** Every test deal must pass recoverability before the main benchmark.
+- **Recoverability failures are reported, not regenerated.** A seeded sample of 20 test deals must pass recoverability before the main benchmark (the user changed "every test deal" to a sample on 2026-09-26).
 - **Plan 1's Task 9 spreadsheet check is still deferred by the user.** The spec lists it as required.
 - **Negative `debt_like` / `nwc_adjustment` values are rejected, not modelled.** A favourable surprise can only enter through `ebitda_adjustment`.
 
