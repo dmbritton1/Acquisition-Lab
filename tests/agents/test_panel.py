@@ -392,3 +392,15 @@ def test_without_the_challenger_directed_reading_runs_to_the_end(data, tmp_path,
     p = Panel(_room(data), 40, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s)
     p.run()
     assert p.spent() > 0.5 * 40 and "challenger" not in [r for r, _, _ in s.turns]
+
+
+def test_without_the_challenger_the_router_keeps_the_two_pass_schedule(data, tmp_path, monkeypatch):
+    """D3 addendum: the −Challenger ablation reads in the same order as S4 before the Challenger speaks, so H3
+    compares only the objections: the first pass reads only what fits in half the budget, even with a bigger document
+    scoring higher, and the bigger one is read in the second pass."""
+    monkeypatch.setattr(panel.Record, "rank_docs", lambda self, pages, read, docs, seed=0: {
+        d: {"audited": 5.0, "legal": 1.0}.get(d, 0.0) for d in docs})
+    s = scripted(lead=lead_says(([_issue("debt_like", 0.5)], False)), investigator=finds_nothing)
+    Panel(_room(data), 26, tmp_path / "t.jsonl", Config(challenger=False, sweep=False), s).run()
+    routed = [r["args"]["doc"] for r in _rows(tmp_path / "t.jsonl") if r["tool"] == "route"]
+    assert routed == ["legal", "audited"]  # audited (14) > half of 26: it waits for the second pass

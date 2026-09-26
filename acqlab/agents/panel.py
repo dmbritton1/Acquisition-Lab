@@ -7,9 +7,10 @@ the Committer; the Challenger objects and the pair screen flags issues that flip
 investigated; a residual sweep reads what nobody opened. Without the router, Investigators take one issue at a time in
 the Lead's order and the Lead re-plans after each. With it (D2), code picks the document whose reading moves the
 engine's walk-away most per page, one Investigator reads that one document, and the Lead re-plans after a read that
-commits something; with the Challenger too, a first pass reads only the first half of the budget and the Challenger
-then objects (D3), so its objections compete with the router's own picks for the rest. Build steps (reframe design §5)
-are configs: STAGES."""
+commits something; a first pass reads only the first half of the budget, then the Challenger objects and its
+objections compete with the router's own picks for the rest (D3; without the Challenger the second pass follows
+straight on, so the −Challenger ablation reads in the same order). Build steps (reframe design §5) are configs:
+STAGES."""
 import json
 import math
 from collections.abc import Callable
@@ -27,8 +28,8 @@ SWEEP_SHARE = 0.10  # budget held back for the residual sweep (main spec §3)
 SUB_SHARE = 0.5  # an Investigator's budget: its first document plus 2 units, and at least half the deal budget
 MAX_TRIES = 2  # investigations per issue: once, and once more after an objection
 CHALLENGE_ROUNDS = 2
-MID_SHARE = 0.5  # with the router and the Challenger, the first directed pass reads only documents that fit in this
-# share of the budget, so the Challenger's objections have the rest to compete for (D3)
+MID_SHARE = 0.5  # with the router, the first directed pass reads only documents that fit in this share of the
+# budget, so the Challenger's objections have the rest to compete for, and without it the reading order is the same (D3)
 SYSTEM = {"lead": prompts.LEAD, "investigator": prompts.INVESTIGATOR, "challenger": prompts.CHALLENGER}
 USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 
@@ -244,11 +245,11 @@ class Panel:
             self.record.apply(row["result"]["commits"] if row else [])
         else:
             self.lead()
-            self.directed(MID_SHARE * self.budget if self.cfg.challenger else None)
+            self.directed(MID_SHARE * self.budget)  # `until` is ignored without the router
             if self.cfg.challenger:
                 self.challenge()
-                if self.cfg.router:
-                    self.directed()  # the second half, also when the Challenger raised nothing (D3)
+            if self.cfg.router:
+                self.directed()  # the second half: after the Challenger's objections, or straight on without it (D3)
             if self.cfg.sweep:
                 self.sweep()
         for e in self.record.entries.values():  # an objection nobody could afford to check changes nothing

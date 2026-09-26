@@ -51,9 +51,13 @@ for status and next steps.*
    mean regret 0.0076 vs S1b 0.0195 (61% lower), paired difference −0.0119, 95% CI [−0.0243, −0.0016]; D3 − D2
    −0.0032, CI [−0.0118, +0.0015] (dev-022 won, dev-010 lost). The Challenger now gets 10–14 pages, but only 32% of
    its objections get a named document read; both changed calls turn on late objections that no budget remains to
-   settle. The CIM rule never fired (no run opened the CIM). Open before the ablations: the −Challenger step reads
-   straight through, so H3 would also compare two reading orders (final review of D3); decide whether −Challenger
-   keeps the two-pass schedule, or record the difference in the pre-registration notes.
+   settle. The CIM rule never fired (no run opened the CIM). Then the D3 addendum (D3 spec §8): with the router,
+   reading always runs in two passes, so the −Challenger ablation reads in S4's order and H3 compares only the
+   objections.
+   Next (agreed 2026-09-26): a held-out check on a fresh batch of about 30 `r2` dev deals (S1b and S4, about $20)
+   before the rest of Task 6; parked for a possible D4 if the held-out check shows them too: the router reads a
+   named document for only 32% of objections, late objections raise chances no budget remains to settle, the CIM rule
+   is untested live.
 5. **Then the rest of Task 6:**
    - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
    - the prompt tuning loop, confirmed on `cal-r1`;

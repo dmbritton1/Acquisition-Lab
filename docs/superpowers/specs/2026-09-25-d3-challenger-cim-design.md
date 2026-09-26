@@ -128,3 +128,12 @@ pages (median about 8; enough for the QoE on 11 of 30). On dev-022, the case the
 the QoE costs 9. The strict rule leaves 10–14 pages on every deal. Pre-verification also found that `challenge()`
 returns early when the Challenger raises nothing, which under a midpoint stop would leave the second half unread; the
 extra `directed()` call after `challenge()` covers it (router mode only, so `s4_3` is unchanged).
+
+## 8. Addendum: H3's reading order (2026-09-26)
+
+The D3 final review found that the −Challenger ablation (router on, Challenger off) read straight through while S4
+stopped at the midpoint, so H3 would also compare two reading orders. With the router, reading now always runs in two
+passes (`MID_SHARE`), with or without the Challenger: without it, the second pass follows straight on. The −Challenger
+ablation then reads in S4's order until the Challenger speaks, and H3 compares only what the objections change. The
+ablation is not yet run (Plan 6), so this is a design note, not a deviation from the pre-registration (H3's wording is
+unchanged). Non-router steps (`s4_2`, `s4_3`) and `s4` are unchanged.
