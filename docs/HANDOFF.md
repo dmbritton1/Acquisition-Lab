@@ -68,12 +68,15 @@ for status and next steps.*
    rejects, not only how many. Report it beside H1 in the main run.
    **Note to explore later (user, 2026-09-26):** `r2` has no hidden upside (deals that look NO-GO but are GO). Adding
    it would be fairer to systems that don't lean NO-GO, but changes the frozen profile and the pre-registration.
-7. **Then the rest of Task 6:**
-   - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
-   - the prompt tuning loop, confirmed on `cal-r1`;
-   - `s3_n` and the main-run budget. At the current cost: 160 × (S1b + S3@N=2 + S4 + S0) is about $165 notional and about
-     11 h, plus the ablations.
-   - Then the handoff update, and Plan 6.
+7. **Done (2026-09-26): S4 frozen** at `b728999`'s S4 code (tag `s4-frozen-plan5`); prompt tuning skipped (fitting
+   risk); `s3_n` = 2 on both batches; main-run budget about $230 notional and 17 h of runs, about 14 usage windows
+   (`plan-5-dev-checks.md`). The user decides subscription or API.
+8. **Next, needing the user's decisions:**
+   - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 `cal-r2` deals (about $10), then the Plan 5 section of this handoff;
+   - the recoverability check for the test set (every test deal as written: about 1,600 Codex calls, not practical on
+     Plus): a sample, the OpenAI API, or another extractor.
+9. **Then Plan 6:** the test set generated once (seeds clear of 610000–640499 and the audits), the four ablations,
+   the run schedule, and the analysis (H1–H6, with the pessimism control beside H1).
 
 ### Other outstanding items
 - **Codex recoverability check (waiting on Codex quota, 2026-09-26).** The user OK'd it on the dacuber01 Codex account

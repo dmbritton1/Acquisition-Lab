@@ -18,3 +18,8 @@ offered to S1b). Format of `plan-4a-prompt-log.md`.
   numbers, and the router's weights use only the diligence map's order that S1b's guide already states. S1b's prompt
   is unchanged.
 - **Result.** See `plan-5-dev-checks.md` (the D2 re-run).
+
+## Freeze (2026-09-26)
+
+S4 frozen with its prompts as above (tag `s4-frozen-plan5`). Task 6 Step 3's tuning loop was skipped (see
+`plan-5-dev-checks.md`), so no tuning edits were made, and none were offered to S1b.

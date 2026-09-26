@@ -273,3 +273,33 @@ or only leans NO-GO. A secondary analysis added before the test set exists; H1�
 with the CI excluding zero on `cal-r2`. S4's NO-GO calls land on better deals than S1b's least confident GO calls,
 so its advantage is in which deals it rejects, not only how many. Caveat: S1b's walk-away is the only ranking the
 control can use; a better-calibrated pessimist might do better.
+
+## S4 frozen, `s3_n`, and the main-run budget (2026-09-26)
+
+**S4 is frozen** (user decision, 2026-09-26). S4's code (`acqlab/agents`, `acqlab/routers`) has not changed since
+`b728999` (D3 and its addendum); tag `s4-frozen-plan5`. The main run uses exactly this code. Task 6 Step 3 (prompt
+tuning, confirmed on `cal-r1`) is skipped: after three design changes on `cal-r2` and a held-out check, further tuning
+on seen deals would fit S4 to them. Plan 5's only prompt change is D2's document brief, an architecture change
+logged in `plan-5-prompt-log.md`; no prompt was tuned against results.
+
+**`s3_n` = 2**, per the pre-registration (round(S4 tokens ÷ S1b tokens), measured on dev deals before the test set):
+138k ÷ 72k on `cal-r2` (30 deals) and 148k ÷ 67k on the held-out batch (29), both rounding to 2.
+
+**Measured per run** (notional subscription cost, median time): S1b $0.13, 0.6 min; S4 $0.51, 2.4 min; S0 $0.17,
+0.5 min (flip deals).
+
+**Main-run budget** (reframe design §6; 160 test deals, ablations on 40):
+
+| Runs | Per deal | Deals | Cost | Time |
+|---|---|---|---|---|
+| S1b (also S3's first run) | $0.13 | 160 | $21 | 1.6 h |
+| S3's second S1b run (N = 2) | $0.13 | 160 | $21 | 1.6 h |
+| S4 | $0.51 | 160 | $82 | 6.4 h |
+| S0 | $0.17 | 160 | $27 | 1.3 h |
+| Ablations: −Challenger, −engine, −sweep, LLM decides (about S4's cost each) | $0.50 × 4 | 40 | $80 | 6.4 h |
+| **Total** | | | **about $230** | **about 17 h of runs** |
+
+On the subscription: a usage window held about $17 of runs on 2026-09-26 (27 S1b and 26 S4 runs before the session
+limit), so the main run needs about 14 windows, roughly 4–5 days if each is restarted promptly (the pilot stops cleanly
+at a limit and resumes where it left off); a weekly limit, if one applies, would stretch it. On API credits it is
+about $230 plus any cache differences. The user decides.
