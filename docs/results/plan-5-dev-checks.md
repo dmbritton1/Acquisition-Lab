@@ -120,3 +120,47 @@ Spec `docs/superpowers/specs/2026-09-25-d3-challenger-cim-design.md`. Replaying 
 runs under the strict midpoint (exact until the first commit): the Challenger first speaks with 10–14 pages left on
 every deal (under D2: 0–1 on 25 of 30), 13 on dev-003 and dev-022 (where the QoE, holding the $45.8M flipper, costs 9).
 The CIM rule converts 5 of the D2 commits, all dev-003's five $0 claims, and none elsewhere.
+
+## D3 re-run: `s4` on all 30 `cal-r2` dev deals (2026-09-26)
+
+Code at `5e7640f` (the Challenger at the midpoint, CIM claims). CLI 2.1.280, Opus 5.5. The D2 runs are kept in
+`data/cal-r2/s4-d2-059a3b4`. No timeouts; 30 of 30 answered.
+
+| | S4 (D3) | S4 (D2) | S1b |
+|---|---|---|---|
+| Correct calls | 26/30 | 26/30 | 22/30 |
+| Mean regret ÷ ask | 0.0076 | 0.0107 | 0.0195 (D3 61% lower) |
+| Paired difference vs S1b | −0.0119, 95% CI [−0.0243, −0.0016] | −0.0088, [−0.0228, +0.0055] | |
+| Paired difference D3 − D2 | −0.0032, 95% CI [−0.0118, +0.0015] | | |
+| Flip deals (17), paired difference vs S1b | −0.0147 | −0.0078 | |
+| Pages, decoy pages | 22.8, 2.1 | 22.6, 2.17 | 20.3, 2.63 |
+| Sessions, cost per deal | 10.8, $0.50 | 10.8, $0.49 | 1, about $0.13 |
+| Audited notes read | 18/30 | 18/30 | |
+
+By case type, mean regret S4 (D3) / S1b: clean 0.0066 / 0.0368, decoy 0.0055 / 0.0078, flip 0 / 0.0273, interaction
+0.0203 / 0.0331, unresolvable 0 / 0.0083.
+
+Calls against D2: the same on 28 deals. D3 wins dev-022 (flip, D2 regret 0.118) and loses dev-010 (decoy, 0.023).
+S4's losses: dev-006, dev-010, dev-017 (caution on good deals) and dev-003 (with S1b).
+
+**The Challenger's budget.** Its first round came with 10–14 pages left on every deal (D2: 0–1 on 25 of 30); round 2
+with 0–2. It never raised nothing in round 1. 85 of its 265 objections (32%) had a named document read afterwards.
+
+**What decided the changed deals (traces):**
+- **dev-022 won, but not by reading the QoE.** At the midpoint the Challenger objected on debt-like items (chance 0.4,
+  naming the audited notes and the QoE). The router then preferred cheaper documents per page (credit agreement 0.79
+  vs QoE 0.63–0.67), and after them the QoE (9 pages) no longer fit. The $45.8M flipper was never read; the call went
+  NO-GO because the objection kept debt-like items open at a raised chance. Right call, for a cautious reason.
+- **dev-010 lost: the same caution on a good deal.** D3 read the audited notes in the second half and correctly found
+  the $19.6M NWC fact, but the QoE and board minutes it would have read under D2 went unread, so add-backs and
+  concentration stayed open; the Challenger's round 2 (chances 0.45–0.5, no budget left) held the call at NO-GO.
+- **dev-003 still missed, differently.** S4 never read the CIM; at the midpoint the Challenger named contract_1 (the
+  $24.5M concentration loss), but the router took the audited notes (13 pages, which found the $2.8M add-back) and
+  nothing was left for contract_1 or the asset schedule.
+
+**The CIM rule did not fire.** No D3 run opened the CIM (0/30), so it converted nothing; its live effect is untested.
+
+**Reading the result.** The CI against S1b now excludes zero on 30 deals, and regret is 61% below S1b's. But D3 against
+D2 is within noise (two deals changed, one each way), and both changed calls turn on the Challenger's late objections
+raising chances that no budget remains to settle: caution that helps on flip deals and hurts on good ones. The
+midpoint gives the Challenger pages, but the router seldom spends them on the documents it names (32%).

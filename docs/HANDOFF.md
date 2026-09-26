@@ -46,9 +46,15 @@ for status and next steps.*
 3. **Done: the D2 re-run on all 30 `cal-r2` dev deals** (`plan-5-dev-checks.md`): S4 26/30 correct vs S1b 22/30; mean
    regret 0.0107 vs 0.0195 (45% lower), paired difference −0.0088, 95% CI [−0.0228, +0.0055]; $0.49 and 10.8 sessions
    per deal; `s3_n` = 2. S4's losses: dev-022 (the Challenger named the QoE but had no budget left), dev-006 and dev-017
-   (caution from unsettled issues), and dev-003 with S1b (CIM claims committed as fact). D3 addresses the Challenger
-   and the CIM (`docs/superpowers/specs/2026-09-25-d3-challenger-cim-design.md`); its re-run is the D3 plan's Task 4.
-4. **Then the rest of Task 6:**
+   (caution from unsettled issues), and dev-003 with S1b (CIM claims committed as fact).
+4. **Done: D3 (the Challenger at the midpoint, CIM claims)** and its 30-deal re-run (`plan-5-dev-checks.md`): 26/30,
+   mean regret 0.0076 vs S1b 0.0195 (61% lower), paired difference −0.0119, 95% CI [−0.0243, −0.0016]; D3 − D2
+   −0.0032, CI [−0.0118, +0.0015] (dev-022 won, dev-010 lost). The Challenger now gets 10–14 pages, but only 32% of
+   its objections get a named document read; both changed calls turn on late objections that no budget remains to
+   settle. The CIM rule never fired (no run opened the CIM). Open before the ablations: the −Challenger step reads
+   straight through, so H3 would also compare two reading orders (final review of D3); decide whether −Challenger
+   keeps the two-pass schedule, or record the difference in the pre-registration notes.
+5. **Then the rest of Task 6:**
    - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
    - the prompt tuning loop, confirmed on `cal-r1`;
    - `s3_n` and the main-run budget. At the current cost: 160 × (S1b + S3@N=2 + S4 + S0) is about $165 notional and about

@@ -81,8 +81,8 @@ weighs it however it likes.
 - **Committer:** a CIM-only quoted value becomes `not_found` with `docs == ["cim"]`; a CIM-only range becomes
   `not_found`; a value quoting the CIM and a contract is accepted.
 - **Panel:**
-  - with the Challenger on (router), the first Challenger turn comes once at least half the budget is spent, and a
-    document its objection names is read afterwards when it fits;
+  - with the Challenger on (router), the first Challenger turn comes once the first half is filled (at most half
+    spent), and a document its objection names is read afterwards when it fits;
   - a document that doesn't fit in the first half waits for the second, and the second half is read even when the
     Challenger raises nothing;
   - with the Challenger off, directed reading runs to the end with no pause.
