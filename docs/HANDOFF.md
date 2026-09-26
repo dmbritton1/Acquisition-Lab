@@ -66,11 +66,17 @@ for status and next steps.*
    - Then the handoff update, and Plan 6.
 
 ### Other outstanding items
-- **Codex recoverability rerun.** It needs the user's OK, because it uses their ChatGPT Codex quota. See "Codex status"
-  below:
+- **Codex recoverability check (waiting on Codex quota, 2026-09-26).** The user OK'd it on the dacuber01 Codex account
+  (Plus; the CLI in `/Applications/ChatGPT.app` is signed in to it), which was out of usage on 2026-09-26. A dry run
+  with Codex stubbed found the old `data/poc` cache (in worktree `acqlab-handoff-review-677fc2`) no longer matches: the
+  generator changed since Plan 2, so the old `--llm --recover 3` command is a fresh ~180-call run (120 prose calls,
+  ~200k tokens per deal), and it tests Codex prose, which the benchmark does not use (`cal-r2` is template prose).
+  Recommended instead, 40 extraction calls on template-prose `r2` deals, no test deals:
   ```bash
-  uv run python -m acqlab.generator.batch --out data/poc --dev 3 --test 0 --hand 0 --showcase 1 --llm --recover 3
+  uv run python -m acqlab.generator.batch --out data/recover-r2 --dev 3 --test 0 --hand 0 --showcase 1 --recover 3
   ```
+  Before the main run every test deal must pass recoverability: 160 × 10 = 1,600 Codex calls, beyond one Plus usage
+  window. Plan 6 needs a way to cover it (several windows, or the API).
 - **The Plan 1 Task 9 spreadsheet check** is still deferred by the user.
 
 ## The claim and the hypotheses (reframe design, 2026-09-24)
