@@ -54,11 +54,19 @@ for status and next steps.*
    settle. The CIM rule never fired (no run opened the CIM). Then the D3 addendum (D3 spec §8): with the router,
    reading always runs in two passes, so the −Challenger ablation reads in S4's order and H3 compares only the
    objections.
-   Next (agreed 2026-09-26): a held-out check on a fresh batch of about 30 `r2` dev deals (S1b and S4, about $20)
-   before the rest of Task 6; parked for a possible D4 if the held-out check shows them too: the router reads a
-   named document for only 32% of objections, late objections raise chances no budget remains to settle, the CIM rule
-   is untested live.
-5. **Then the rest of Task 6:**
+5. **Done: the held-out check** (`plan-5-dev-checks.md`, criteria committed before the run): 30 fresh `r2` deals
+   (`data/heldout-r2`, `--seed 630000`). **Fails:** S4 regret 0.0108 vs S1b 0.0081 (29 of 30 S4 runs; the last cannot
+   change the verdict), 22/29 vs 26/29 correct; all 7 of S4's wrong calls are NO-GO on good deals. Replaying the 59
+   final records: the Lead's chance for issues S4 never settles averages 0.38 against 22% real, and that lean, not the
+   Challenger, decides these calls. The batch was a GO-heavy draw (19 of 29; `r2` is 45% GO, 53% flips, all flips
+   toward NO-GO); reweighted to `r2`'s mix S4 is 42% below S1b (90%: −73% to −5%). Decided 2026-09-26: don't tune
+   the Lead's chances (parity); next, a pessimism control (below).
+6. **Next: a pessimism control.** Every `r2` surprise points to NO-GO, so a system that leans NO-GO is rewarded by
+   design. Compare S4 with S1b made just as pessimistic, so the claim shows S4 finds problems rather than leaning
+   NO-GO. Design in progress (2026-09-26).
+   **Note to explore later (user, 2026-09-26):** `r2` has no hidden upside (deals that look NO-GO but are GO). Adding
+   it would be fairer to systems that don't lean NO-GO, but changes the frozen profile and the pre-registration.
+7. **Then the rest of Task 6:**
    - build-step checks: `s4_1`/`s4_2`/`s4_3` on 10 deals, and `s4` on all 30;
    - the prompt tuning loop, confirmed on `cal-r1`;
    - `s3_n` and the main-run budget. At the current cost: 160 × (S1b + S3@N=2 + S4 + S0) is about $165 notional and about

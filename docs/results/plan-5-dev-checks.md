@@ -182,3 +182,73 @@ never seen.
   check judges direction and size, not significance.
 - **Also reported:** correct calls, regret by case type, and whether D3's parked patterns recur (objections with a
   named document read, late objections deciding a call, CIM conversions).
+
+## Held-out check: result (2026-09-26)
+
+Runs on `data/heldout-r2` at `0e3b752` (no code or prompt change since the criteria), CLI 2.1.280, Opus 5.5. The
+Claude session limit stopped the run twice; finished runs were kept and the run resumed. S1b 30/30; S4 29/30 when this
+was written (dev-029 pending). The last deal cannot change the verdict: S1b is right on dev-029, so S4's mean can only
+stay or rise.
+
+| | S4 | S1b |
+|---|---|---|
+| Correct calls | 22/29 | 26/29 on the same deals (27/30 overall) |
+| Mean regret ÷ ask | 0.0108 | 0.0081 (same 29 deals) |
+| Paired difference S4 − S1b | +0.0028, 95% CI [−0.0056, +0.0102] | |
+| Flip deals (8), paired difference | −0.0106 | |
+| Wrong NO-GO on good deals / wrong GO | 7 / 0 | 2 / 1 |
+| Cost per deal, sessions | $0.52, 11.4 | |
+
+Floors on this batch: always GO 0.0497, always NO 0.0782, B0 0.0294, the margin rule 0.0119 (threshold fitted on
+these deals).
+
+**Verdict against the criteria fixed beforehand: fails** (S4's regret above S1b's, by 34%). S4 won dev-006 and lost
+dev-000, 001, 009, 012, 019 and 022; every loss is a NO-GO on a deal where GO was right.
+
+D3's parked patterns: 78 of 238 objections (33%) had a named document read; the Challenger's round 1 raised nothing
+once; the CIM rule converted nothing (S4 never opened the CIM).
+
+### Why: the Lead overrates issues S4 never settles
+
+Replaying each run's final Deal Record from its trace (`docs/results/scripts/plan-5-caution-replay.py`, no Claude
+calls) reproduces all 59 recorded calls (`cal-r2` and held-out). At the end, objections are cleared, so the call rests
+on committed values and the Lead's beliefs about the issues still open. Of 138 issues still open at the end, the Lead
+gave a mean chance of 0.38; 22% were real (chance 0.25–0.40: 15% real; 0.40 and up: 30%).
+
+What-ifs on the final records (regret; wrong NO-GO / wrong GO):
+
+| | `cal-r2` (30) | held-out (29) |
+|---|---|---|
+| As run | 0.0076; 3 / 1 | 0.0108; 7 / 0 |
+| The Lead's beliefs before the Challenger spoke | same | same |
+| Open issues priced over the Lead's range only | same | same |
+| Open chances halved | 0.0145; 3 / 3 | 0.0065; 3 / 1 |
+| Open issues ignored (face value) | 0.0189; 0 / 7 | 0.0047; 0 / 2 |
+| Median walk-away against the ask | 0.0115; 3 / 2 | 0.0088; 5 / 0 |
+
+The Challenger does not cause the lean (the Lead's beliefs are the same before and after it spoke) and nor does the
+usual-size-range floor. Lowering the Lead's chances trades `cal-r2` for held-out: the lean is a bet on the case mix.
+
+### The `r2` mix: the held-out batch was a GO-heavy draw
+
+500 throwaway `r2` dev deals (`--seed 640000`, no test split, 0 batch problems;
+`docs/results/scripts/plan-5-r2-mix.py`): GO is right on 45%; 53% are decision flips, and every flip points to NO-GO
+(the face says GO, the truth says NO; none the other way); 30% of issue facts are real. In a random 30 deals, GO is
+right on 9–18 (5–95%), median 14: `cal-r2`'s 13 is typical, the held-out batch's 19 of 29 is near the top. The
+160-deal test set should hold about 72 GO deals and 84 flips.
+
+On the 59 deals, S4 is far better on flip deals (regret 0.0065 vs S1b 0.0199; 25 deals) and worse on the rest (0.0111
+vs 0.0094; 34 deals). Reweighted to `r2`'s 53% flips, S4's regret is 42% below S1b's (bootstrap 90%: −73% to −5%;
+chance of at least 25% lower: 0.79).
+
+### What this means
+
+- **The held-out verdict stands as fails.** It was a GO-heavy draw, but S4 does lose on good deals.
+- **Don't tune the Lead's chances.** The only data to tune them against is the answer keys' base rates, which parity
+  forbids; it would be fitting the benchmark.
+- **The claim needs a pessimism control.** Every surprise in `r2` points to NO-GO, so a pessimistic system is rewarded
+  by design, and a sceptical judge will ask whether S4 finds problems or just leans NO-GO. Next: compare S4 with a
+  pessimism-matched S1b.
+- **To explore later (not decided):** `r2` has no hidden upside (a deal that looks like NO-GO but is GO). Adding it
+  would make the benchmark fairer to systems that don't lean NO-GO, but it changes the frozen profile and the
+  pre-registration.
