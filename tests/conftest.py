@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -56,15 +57,32 @@ def data(tmp_path_factory):
     return out
 
 
+def _fake_exe(where: Path) -> str:
+    exe = where / "claude"
+    exe.write_text(f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(FAKE)!r}, run_name='__main__')\n")
+    exe.chmod(0o755)
+    return str(exe)
+
+
 @pytest.fixture
 def fake_claude(tmp_path, monkeypatch):
     """Path to an executable fake `claude`; set FAKE_CLAUDE (mode) with monkeypatch.setenv."""
     from acqlab.agents import solver
-    exe = tmp_path / "claude"
-    exe.write_text(f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(FAKE)!r}, run_name='__main__')\n")
-    exe.chmod(0o755)
     monkeypatch.setenv("FAKE_ARGS", str(tmp_path / "args.json"))
     # solver.py scrubs the child env to an allowlist (F1); widen it here only, so the fake still gets its mode
     # and args-file path, without production code ever knowing these test-only names.
     monkeypatch.setattr(solver, "ENV_KEEP", solver.ENV_KEEP + ("FAKE_CLAUDE", "FAKE_ARGS"))
-    return str(exe)
+    return _fake_exe(tmp_path)
+
+
+@pytest.fixture(scope="session")
+def s4_fake_run(data, tmp_path_factory):
+    """One S4 run on dev-000 with the fake claude, shared by the tests that replay it: (room, trace rows)."""
+    from acqlab.agents import panel, solver
+    out = tmp_path_factory.mktemp("s4run")
+    room, trace = data / "deals" / "dev-000" / "room", out / "s4.trace.jsonl"
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("FAKE_CLAUDE", "ok")
+        mp.setattr(solver, "ENV_KEEP", solver.ENV_KEEP + ("FAKE_CLAUDE",))
+        panel.solve(room, 20, trace, panel.Config(), claude=_fake_exe(out))
+    return room, [json.loads(x) for x in trace.read_text().splitlines()]
