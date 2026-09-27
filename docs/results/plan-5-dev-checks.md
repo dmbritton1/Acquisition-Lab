@@ -186,23 +186,23 @@ never seen.
 ## Held-out check: result (2026-09-26)
 
 Runs on `data/heldout-r2` at `0e3b752` (no code or prompt change since the criteria), CLI 2.1.280, Opus 5.5. The
-Claude session limit stopped the run twice; finished runs were kept and the run resumed. S1b 30/30; S4 29/30 when this
-was written (dev-029 pending). The last deal cannot change the verdict: S1b is right on dev-029, so S4's mean can only
-stay or rise.
+Claude session limit stopped the run three times; finished runs were kept and the run resumed. All 30 deals, both
+systems. (The diagnosis and the pessimism control below were first computed on 29 S4 runs, before dev-029 finished;
+S4 was right on dev-029.)
 
 | | S4 | S1b |
 |---|---|---|
-| Correct calls | 22/29 | 26/29 on the same deals (27/30 overall) |
-| Mean regret ÷ ask | 0.0108 | 0.0081 (same 29 deals) |
-| Paired difference S4 − S1b | +0.0028, 95% CI [−0.0056, +0.0102] | |
-| Flip deals (8), paired difference | −0.0106 | |
+| Correct calls | 23/30 | 27/30 |
+| Mean regret ÷ ask | 0.0105 | 0.0078 |
+| Paired difference S4 − S1b | +0.0027, 95% CI [−0.0052, +0.0096] | |
+| Flip deals (9), paired difference | −0.0094 | |
 | Wrong NO-GO on good deals / wrong GO | 7 / 0 | 2 / 1 |
-| Cost per deal, sessions | $0.52, 11.4 | |
+| Cost per deal, sessions | $0.53, 11.5 | |
 
-Floors on this batch: always GO 0.0497, always NO 0.0782, B0 0.0294, the margin rule 0.0119 (threshold fitted on
-these deals).
+Floors on this batch (29 deals when computed): always GO 0.0497, always NO 0.0782, B0 0.0294, the margin rule 0.0119
+(threshold fitted on these deals).
 
-**Verdict against the criteria fixed beforehand: fails** (S4's regret above S1b's, by 34%). S4 won dev-006 and lost
+**Verdict against the criteria fixed beforehand: fails** (S4's regret above S1b's, by 35%). S4 won dev-006 and lost
 dev-000, 001, 009, 012, 019 and 022; every loss is a NO-GO on a deal where GO was right.
 
 D3's parked patterns: 78 of 238 objections (33%) had a named document read; the Challenger's round 1 raised nothing
@@ -260,16 +260,16 @@ above the ask) switched to NO-GO until it says NO-GO as often as S4 on the same 
 walk-aways choose them, never the answer key (`pilot.s1b_matched`, in the report). It asks whether S4 finds problems
 or only leans NO-GO. A secondary analysis added before the test set exists; H1–H6 are unchanged.
 
-| | `cal-r2` (30) | held-out (29) |
+| | `cal-r2` (30) | held-out (30) |
 |---|---|---|
-| S1b | 0.0195 | 0.0078 (30 deals) |
-| S1b, as pessimistic as S4 | 0.0182 | 0.0174 |
-| S4 | 0.0076 | 0.0108 |
-| S4 − pessimistic S1b, 95% CI | −0.0106 [−0.0222, −0.0018] | −0.0066 [−0.0168, +0.0021] |
-| Flip deals: S1b / pessimistic S1b / S4 | 0.0243 / 0.0182 / 0.0096 | 0.0094 / 0.0106 / 0 |
+| S1b | 0.0195 | 0.0078 |
+| S1b, as pessimistic as S4 | 0.0182 | 0.0168 |
+| S4 | 0.0076 | 0.0105 |
+| S4 − pessimistic S1b, 95% CI | −0.0106 [−0.0222, −0.0018] | −0.0064 [−0.0165, +0.0010] |
+| Flip deals: S1b / pessimistic S1b / S4 | 0.0243 / 0.0182 / 0.0096 | 0.0094 / 0.0094 / 0 |
 
 **Reading.** Pessimism alone does not reproduce S4's result: made just as pessimistic, S1b barely improves on
-`cal-r2` (0.0195 → 0.0182) and gets much worse on the held-out batch (0.0078 → 0.0174), and S4 beats it on both,
+`cal-r2` (0.0195 → 0.0182) and gets much worse on the held-out batch (0.0078 → 0.0168), and S4 beats it on both,
 with the CI excluding zero on `cal-r2`. S4's NO-GO calls land on better deals than S1b's least confident GO calls,
 so its advantage is in which deals it rejects, not only how many. Caveat: S1b's walk-away is the only ranking the
 control can use; a better-calibrated pessimist might do better.

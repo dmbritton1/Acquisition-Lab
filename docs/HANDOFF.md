@@ -55,16 +55,16 @@ for status and next steps.*
    reading always runs in two passes, so the −Challenger ablation reads in S4's order and H3 compares only the
    objections.
 5. **Done: the held-out check** (`plan-5-dev-checks.md`, criteria committed before the run): 30 fresh `r2` deals
-   (`data/heldout-r2`, `--seed 630000`). **Fails:** S4 regret 0.0108 vs S1b 0.0081 (29 of 30 S4 runs; the last cannot
-   change the verdict), 22/29 vs 26/29 correct; all 7 of S4's wrong calls are NO-GO on good deals. Replaying the 59
+   (`data/heldout-r2`, `--seed 630000`). **Fails:** S4 regret 0.0105 vs S1b 0.0078 (all 30), 23/30 vs 27/30
+   correct; all 7 of S4's wrong calls are NO-GO on good deals. Replaying the 59
    final records: the Lead's chance for issues S4 never settles averages 0.38 against 22% real, and that lean, not the
    Challenger, decides these calls. The batch was a GO-heavy draw (19 of 29; `r2` is 45% GO, 53% flips, all flips
    toward NO-GO); reweighted to `r2`'s mix S4 is 42% below S1b (90%: −73% to −5%). Decided 2026-09-26: don't tune
    the Lead's chances (parity); next, a pessimism control (below).
 6. **Next: a pessimism control.** Every `r2` surprise points to NO-GO, so a system that leans NO-GO is rewarded by
    design. **Done** (`plan-5-dev-checks.md`, `pilot.s1b_matched` in the report): S1b made just as pessimistic as S4
-   barely improves on `cal-r2` (0.0195 → 0.0182) and gets worse on the held-out batch (0.0078 → 0.0174); S4 beats it
-   on both (−0.0106, CI [−0.0222, −0.0018]; −0.0066, CI [−0.0168, +0.0021]). S4's edge is in which deals it
+   barely improves on `cal-r2` (0.0195 → 0.0182) and gets worse on the held-out batch (0.0078 → 0.0168); S4 beats it
+   on both (−0.0106, CI [−0.0222, −0.0018]; −0.0064, CI [−0.0165, +0.0010]). S4's edge is in which deals it
    rejects, not only how many. Report it beside H1 in the main run.
    **Note to explore later (user, 2026-09-26):** `r2` has no hidden upside (deals that look NO-GO but are GO). Adding
    it would be fairer to systems that don't lean NO-GO, but changes the frozen profile and the pre-registration.
