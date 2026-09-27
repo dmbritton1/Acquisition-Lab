@@ -102,9 +102,13 @@ nohup caffeinate -i uv run python -m acqlab.bench.campaign --data data/test-r2 -
 ```
 
 **Phases, in order** (finished runs are skipped, so a restart resumes):
-1. **H1 core:** S1b, S4 and S3's second S1b run (`rep` 1), deal by deal over the 160 so results stay paired.
+1. **H1 core:** S1b and S4 deal by deal over the 160, so results stay paired; then S3's second S1b run (`rep` 1)
+   on each deal.
 2. **Ablations:** −Challenger and −sweep on the first 40; −engine and LLM decides on the 160.
 3. **S0** on the 160.
+
+**The Claude binary:** a private copy of Claude Code 2.1.280 (the version every S1b and S4 run so far used) in
+`data/`, named by `CLAUDE_BIN`, so a Claude app update cannot remove it mid-campaign.
 
 **Before each phase:** the freeze check (`git diff --quiet s4-frozen-plan5 -- acqlab/agents acqlab/routers`) and the
 fingerprint check. Either failing stops the runner with the reason.
