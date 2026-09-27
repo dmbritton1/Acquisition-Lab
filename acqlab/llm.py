@@ -12,16 +12,24 @@ from pathlib import Path
 
 Runner = Callable[[str, dict | None], tuple[str, int]]
 CACHE_DIR = Path("data/llm_cache")
-# The ChatGPT desktop app bundles the Codex CLI without putting it on PATH.
-APP_CODEX = "/Applications/ChatGPT.app/Contents/Resources/codex"
-# Flags checked against `codex exec --help` (codex-cli 0.155.0-alpha.9.2). --ephemeral keeps thousands of
+# The ChatGPT desktop app bundles the Codex CLI without putting it on PATH (under codex-cli/ since the app update
+# found on 2026-09-27).
+APP_CODEX = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex"
+# Flags checked against `codex exec --help` (codex-cli 0.158.0-alpha.2.1). --ephemeral keeps thousands of
 # generator calls out of the user's Codex session history.
 CODEX_ARGS = ["exec", "--json", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only"]
 ERROR_EVENTS = {"error", "turn.failed"}  # JSONL event types that mean the call did not complete
+TEXT_ITEMS = {"agent_message", "reasoning"}  # the only item types a text-only call produces; any other (a command, a
+# file change, a tool call, a web search) means Codex reached outside its prompt (Plan 6 spec §2)
 
 
 class LLMUnavailable(RuntimeError):
     """A call failed (usage limit, auth, network). Nothing was cached, so rerunning the same command resumes."""
+
+
+class ToolUsed(RuntimeError):
+    """Codex used a tool (ran a command, touched a file, called a tool, searched), so its answer may not come from the
+    prompt alone. Nothing is cached; the recoverability check counts it as a failure (Plan 6 spec §2)."""
 
 
 def codex_bin() -> str:
@@ -38,6 +46,13 @@ def _events(jsonl: str) -> list[dict]:
         if isinstance(event, dict):
             out.append(event)
     return out
+
+
+def _tool_items(jsonl: str) -> list[str]:
+    """The item types in Codex's event stream beyond plain text and reasoning."""
+    return sorted({e["item"].get("type", "?") for e in _events(jsonl)
+                   if str(e.get("type", "")).startswith("item.") and isinstance(e.get("item"), dict)
+                   and e["item"].get("type") not in TEXT_ITEMS})
 
 
 def _usage_tokens(jsonl: str) -> int:
@@ -75,6 +90,9 @@ def run_codex(prompt: str, schema: dict | None = None) -> tuple[str, int]:
         if proc.returncode != 0 or failed or not text:
             detail = (failed and json.dumps(failed[-1])) or proc.stderr.strip()[-500:] or "empty reply"
             raise LLMUnavailable(f"codex exec failed (exit {proc.returncode}): {detail}")
+        used = _tool_items(proc.stdout)
+        if used:
+            raise ToolUsed(f"codex exec used {', '.join(used)}")
         return text, _usage_tokens(proc.stdout)
 
 

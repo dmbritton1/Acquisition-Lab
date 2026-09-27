@@ -73,6 +73,18 @@ def test_run_codex_raises_on_any_sign_of_failure(monkeypatch):
             llm.run_codex("the prompt")
 
 
+def test_run_codex_refuses_an_answer_that_used_a_tool(monkeypatch):
+    """Plan 6 spec §2: an extractor that ran a command, changed or read a file, called a tool or searched may not have
+    answered from its prompt alone."""
+    for item in ("command_execution", "file_change", "mcp_tool_call", "web_search"):
+        _fake_codex(monkeypatch, events=[{"type": "item.started", "item": {"id": "i0", "type": item}}])
+        with pytest.raises(llm.ToolUsed, match=item):
+            llm.run_codex("the prompt")
+    _fake_codex(monkeypatch, events=[{"type": "item.completed", "item": {"id": "i0", "type": "reasoning"}},
+                                     {"type": "item.completed", "item": {"id": "i1", "type": "agent_message"}}])
+    assert llm.run_codex("the prompt")[0] == "answer"
+
+
 def test_codex_bin_falls_back_to_the_chatgpt_app_copy(monkeypatch):
     monkeypatch.delenv("CODEX_BIN", raising=False)
     monkeypatch.setattr(llm.shutil, "which", lambda name: None)
