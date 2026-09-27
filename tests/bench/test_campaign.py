@@ -148,3 +148,15 @@ def test_the_cli_refuses_without_the_flag_and_reports_status(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "not running; s1b 0/160" in out and "phase h1: running" in out
     assert campaign.main(["--data", str(tmp_path), "--stop"]) == 0 and "no campaign" in capsys.readouterr().out
+
+
+def test_the_cli_refuses_without_the_pinned_claude(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("CLAUDE_BIN", raising=False)
+    assert campaign.main(["--data", str(tmp_path), "--confirm-claude"]) == 3
+    assert not (tmp_path / "campaign.pid").exists()
+    wrong_version = tmp_path / "claude_wrong"
+    wrong_version.write_text('#!/bin/sh\necho "2.1.281 (Claude Code)"\n')
+    wrong_version.chmod(0o755)
+    monkeypatch.setenv("CLAUDE_BIN", str(wrong_version))
+    assert campaign.main(["--data", str(tmp_path), "--confirm-claude"]) == 3
+    assert not (tmp_path / "campaign.pid").exists()

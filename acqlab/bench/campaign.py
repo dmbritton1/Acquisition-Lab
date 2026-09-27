@@ -2,13 +2,14 @@
 frozen S4 and the committed test-set fingerprint first; usage limits are waited out; the log shows progress counts,
 never results.
 
+  export CLAUDE_BIN="$PWD/data/claude-2.1.280.app/Contents/MacOS/claude"
   nohup caffeinate -i uv run python -m acqlab.bench.campaign --data data/test-r2 --confirm-claude \\
     > data/test-r2/campaign.out 2>&1 &
   uv run python -m acqlab.bench.campaign --data data/test-r2 --status
   uv run python -m acqlab.bench.campaign --data data/test-r2 --stop
 
 Exit codes: 0 every phase done; 1 stopped (a failed check, or an error that survived one retry; see the log); 3
-refused (no --confirm-claude, or already running)."""
+refused (no --confirm-claude, missing or wrong CLAUDE_BIN, or already running)."""
 import argparse
 import contextlib
 import io
@@ -30,6 +31,7 @@ from acqlab.llm import LLMUnavailable
 N_TEST, N_ABLATION = 160, 40
 FROZEN_TAG, FROZEN = "s4-frozen-plan5", ("acqlab/agents", "acqlab/routers")
 EXPECTED = Path("docs/results/plan-6-test-set.json")  # the committed fingerprint, relative to the repo
+CLAUDE_VERSION = "2.1.280"  # spec §4: every S1b and S4 run so far used it
 AFTER_RESET = timedelta(minutes=5)
 UNREADABLE_WAIT = timedelta(minutes=30)  # a usage limit whose message names no time
 RETRY_WAIT = timedelta(minutes=10)  # any other error: one retry, then stop
@@ -155,6 +157,20 @@ def _alive(pid: int) -> bool:
     return True
 
 
+def _pinned() -> str | None:
+    """Why CLAUDE_BIN is not properly pinned, or None if it is."""
+    claude_bin = os.environ.get("CLAUDE_BIN")
+    if not claude_bin:
+        return "CLAUDE_BIN environment variable is not set"
+    try:
+        result = subprocess.run([claude_bin, "--version"], capture_output=True, text=True, timeout=30)
+        if not result.stdout.startswith(CLAUDE_VERSION):
+            return f"CLAUDE_BIN points to {result.stdout.strip()}, not {CLAUDE_VERSION}"
+    except (OSError, subprocess.TimeoutExpired):
+        return f"CLAUDE_BIN={claude_bin} is not executable or timed out"
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data", type=Path, required=True)
@@ -179,6 +195,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not args.confirm_claude:
         print("Refusing to run: this uses your Claude subscription for days. Add --confirm-claude to proceed.")
+        return 3
+    pinned_problem = _pinned()
+    if pinned_problem:
+        print(f"Refusing to run: {pinned_problem}")
         return 3
     if running:
         print(f"Refusing to run: a campaign is already running (pid {pid}).")
