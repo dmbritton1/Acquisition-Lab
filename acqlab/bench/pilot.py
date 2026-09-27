@@ -1,11 +1,14 @@
 """Pilot runner: single-agent systems on dev deals, scored against the answer keys (Plan 4a design §3; Plan 4b adds
-S0 and S3, reframe design §4; Plan 5 adds S4 and its build steps, s4_1 to s4_3, reframe design §5).
+S0 and S3, reframe design §4; Plan 5 adds S4 and its build steps, s4_1 to s4_3, reframe design §5; Plan 6 adds the
+test split and the ablations: s4_nochal and s4_nosweep as panels, s4_noengine and s4_llmdecides as replays of S4's
+runs, Plan 6 spec §3).
 
   uv run python -m acqlab.bench.pilot --data data/v3 --n 3 --confirm-claude     # runs (uses the Claude subscription)
   uv run python -m acqlab.bench.pilot --data D --n 30 --systems s0 --flip-only --confirm-claude   # S0 on flip deals
   uv run python -m acqlab.bench.pilot --data D --n 30 --reps 3 --systems s1b --confirm-claude     # runs for S3
   uv run python -m acqlab.bench.pilot --data D --n 3 --systems s4 --confirm-claude   # S4 (a panel: many sessions)
   uv run python -m acqlab.bench.pilot --data data/v3 --report [--s3 3]           # summary, no Claude
+  uv run python -m acqlab.bench.pilot --data D --split test --n 40 --systems s4_noengine --confirm-claude  # replays
 
 Each run goes to <data>/runs/<system>/<deal>.json (repeat k>0: <deal>.r<k>.json; its tool trace beside it); reruns
 skip finished runs.
@@ -20,16 +23,19 @@ from pathlib import Path
 import numpy as np
 
 from acqlab.agents import panel
-from acqlab.agents.panel import STAGES
+from acqlab.agents.panel import STAGES, Config
 from acqlab.agents.server import MAX_CALLS
 from acqlab.agents.solver import RunTimeout, solve
+from acqlab.bench import valuer
 from acqlab.generator.batch import AnswerKey
 from acqlab.llm import LLMUnavailable
 from acqlab.routers.track_a import bootstrap_ci, regret
 
 SYSTEMS = {"s1b": False, "s1b_router": True, "s0": False}  # name -> offered the router
 UNBUDGETED = {"s0"}  # the reading ceiling: its budget is the whole room (main spec §4)
-ALL = [*SYSTEMS, *STAGES]  # S4's build steps and S4 itself run as panels (acqlab.agents.panel)
+ABLATIONS = {"s4_nochal": Config(challenger=False), "s4_nosweep": Config(sweep=False)}  # Plan 6 spec §3
+PANELS = STAGES | ABLATIONS  # S4's build steps, S4 itself and its reading ablations run as panels
+ALL = [*SYSTEMS, *PANELS, *valuer.MODES]  # the engine ablations replay S4's runs (run_replays)
 
 
 def relevant_docs(key: AnswerKey) -> set[str]:
@@ -102,10 +108,10 @@ def score(key: AnswerKey, system: str, trace: list[dict], cli: dict | None, stat
 
 
 def run(data: Path, n: int, systems: list[str], solver: Callable = solve, reps: int = 1,
-        flip_only: bool = False, panel_solver: Callable = panel.solve) -> list[dict]:
-    """Run each system `reps` times on the first n dev deals (only the decision-flip ones if flip_only), skipping
-    finished runs. Raises LLMUnavailable to stop the batch."""
-    deals = json.loads((data / "splits.json").read_text())["dev"][:n]
+        flip_only: bool = False, panel_solver: Callable = panel.solve, split: str = "dev") -> list[dict]:
+    """Run each system `reps` times on the first n deals of the split (only the decision-flip ones if flip_only),
+    skipping finished runs. Raises LLMUnavailable to stop the batch."""
+    deals = json.loads((data / "splits.json").read_text())[split][:n]
     rows = []
     for deal in deals:
         key = AnswerKey.model_validate_json((data / "truth" / f"{deal}.json").read_text())
@@ -127,7 +133,7 @@ def run(data: Path, n: int, systems: list[str], solver: Callable = solve, reps: 
                 budget = whole + MAX_CALLS if unbudgeted else key.budget
                 kwargs = {"unbudgeted": True} if unbudgeted else {}
                 try:
-                    cli = (panel_solver(room, budget, trace_path, STAGES[system]) if system in STAGES else
+                    cli = (panel_solver(room, budget, trace_path, PANELS[system]) if system in PANELS else
                            solver(room, budget, trace_path, SYSTEMS[system], **kwargs))
                     status = "ok"
                 except RunTimeout:
@@ -140,6 +146,50 @@ def run(data: Path, n: int, systems: list[str], solver: Callable = solve, reps: 
                 rows.append(row)
                 print(f"{system:10s} {deal} r{rep}: regret {row['regret']:.3f} answered={row['answered']} "
                       f"pages={row['pages']}")
+    return rows
+
+
+def run_replays(data: Path, n: int, systems: list[str], value: Callable = valuer.value,
+                split: str = "dev") -> list[dict]:
+    """The engine ablations (Plan 6 spec §3) on the first n deals of the split: S4's final record rebuilt from its
+    trace, then one valuer turn. S4's run must exist and the rebuilt record must give its recorded call (else
+    valuer.ReplayMismatch). Pages and decoy pages are S4's (the reading is S4's); cost is the valuer turn's alone.
+    LLM decides keeps the engine's walk-away. Skips finished runs; raises LLMUnavailable to stop the batch."""
+    deals = json.loads((data / "splits.json").read_text())[split][:n]
+    rows = []
+    for deal in deals:
+        key = AnswerKey.model_validate_json((data / "truth" / f"{deal}.json").read_text())
+        room = data / "deals" / deal / "room"
+        s4 = data / "runs" / "s4" / f"{deal}.json"
+        for system in systems:
+            out = data / "runs" / system / f"{deal}.json"
+            if out.exists():
+                continue
+            if not s4.exists():
+                raise RuntimeError(f"{system}/{deal}: S4's run is missing, so there is nothing to replay")
+            s4_trace = [json.loads(x) for x in s4.with_suffix(".trace.jsonl").read_text().splitlines()]
+            rec = valuer.replay(room, s4_trace)
+            go, wa = rec.decide()
+            if go != next(r for r in s4_trace if r["tool"] == "submit")["args"]["go"]:
+                raise valuer.ReplayMismatch(f"{system}/{deal}: the rebuilt record does not give S4's call")
+            out.parent.mkdir(parents=True, exist_ok=True)
+            trace_path = out.with_suffix(".trace.jsonl")
+            trace_path.unlink(missing_ok=True)
+            try:
+                cli, status = value(room, rec, system, trace_path), "ok"
+            except RunTimeout:
+                cli, status = None, "timeout"
+            trace = [json.loads(x) for x in trace_path.read_text().splitlines()] if trace_path.exists() else []
+            if status == "ok" and not trace:
+                raise LLMUnavailable(f"{system}/{deal}: the tool server never ran (no trace)")
+            row = score(key, system, trace, cli, status) | {"rep": 0}
+            s4_row = json.loads(s4.read_text())
+            row |= {"pages": s4_row["pages"], "decoy_pages": s4_row["decoy_pages"]}
+            if system == "s4_llmdecides":
+                row |= {"walk_away": wa, "walk_away_error": abs(wa - key.truth.walk_away) / key.truth.deal.asking_price}
+            out.write_text(json.dumps(row, indent=2))
+            rows.append(row)
+            print(f"{system:10s} {deal} r0: regret {row['regret']:.3f} answered={row['answered']}")
     return rows
 
 
@@ -270,7 +320,8 @@ def summarize(rows: list[dict], s3_n: int | None = None) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data", type=Path, required=True)
-    ap.add_argument("--n", type=int, default=3, help="first n dev deals")
+    ap.add_argument("--n", type=int, default=3, help="first n deals of the split")
+    ap.add_argument("--split", default="dev", help="dev, or test for the main run (Plan 6)")
     ap.add_argument("--systems", default="s1b,s1b_router", help=f"comma-separated, from {', '.join(ALL)}")
     ap.add_argument("--reps", type=int, default=1, help="runs per system and deal (S3 combines S1b's)")
     ap.add_argument("--flip-only", action="store_true", help="only the decision-flip deals (S0's calibration use)")
@@ -290,8 +341,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.confirm_claude:
         print("Refusing to run: this uses your Claude subscription. Add --confirm-claude to proceed.")
         return 3
+    systems = [s for s in args.systems.split(",") if s]
     try:
-        run(args.data, args.n, [s for s in args.systems.split(",") if s], reps=args.reps, flip_only=args.flip_only)
+        run(args.data, args.n, [s for s in systems if s not in valuer.MODES], reps=args.reps,
+            flip_only=args.flip_only, split=args.split)
+        run_replays(args.data, args.n, [s for s in systems if s in valuer.MODES], split=args.split)
     except LLMUnavailable as e:
         print(f"Claude stopped: {e}\nFinished runs are saved. Run the same command again (after any usage limit "
               "resets) to continue where it left off.")

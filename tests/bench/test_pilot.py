@@ -339,3 +339,82 @@ def test_s4_s_route_rows_are_not_tool_calls(data):
              _row("submit", {"go": t.face_go, "walk_away": t.face_walk_away, "reason": "engine"})]
     r = score(key, "s4", trace, None, "ok")
     assert r["tool_calls"] == 2 and r["pages"] == 8.0
+
+
+def test_a_split_other_than_dev_runs_only_its_own_deals(fresh):
+    """Plan 6: the main run reads the test split."""
+    splits = json.loads((fresh / "splits.json").read_text())
+    (fresh / "splits.json").write_text(json.dumps(splits | {"test": ["dev-001"]}))
+
+    def solver(room, budget, trace, router):
+        trace.write_text(json.dumps(_row("submit", {"go": True, "walk_away": 1.0, "reason": "r"})) + "\n")
+        return {"usage": {}}
+
+    rows = run(fresh, 5, ["s1b"], solver=solver, split="test")
+    assert [r["deal"] for r in rows] == ["dev-001"]
+
+
+def test_the_reading_ablations_run_as_panels_with_one_switch_off(fresh):
+    """Plan 6 spec §3: −Challenger keeps the two-pass reading (the router stays on); −sweep drops only the sweep."""
+    assert pilot.ABLATIONS == {"s4_nochal": panel.Config(challenger=False), "s4_nosweep": panel.Config(sweep=False)}
+    assert {"s4_nochal", "s4_nosweep", "s4_noengine", "s4_llmdecides"} <= set(pilot.ALL)
+    seen = []
+
+    def panel_solver(room, budget, trace, cfg):
+        seen.append(cfg)
+        trace.write_text(json.dumps(_row("submit", {"go": True, "walk_away": 1.0, "reason": "engine"})) + "\n")
+        return {"usage": {}, "sessions": 3}
+
+    run(fresh, 1, ["s4_nochal", "s4_nosweep"], panel_solver=panel_solver)
+    assert seen == [panel.Config(challenger=False), panel.Config(sweep=False)]
+
+
+def _replay_ready(fresh, s4_fake_run):
+    """S4's fake run on dev-000, filed where run_replays looks for it."""
+    room, trace = s4_fake_run
+    out = fresh / "runs" / "s4" / "dev-000.json"
+    out.parent.mkdir(parents=True)
+    out.with_suffix(".trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in trace))
+    out.write_text(json.dumps({"deal": "dev-000", "system": "s4", "pages": 7.0, "decoy_pages": 2.0}))
+    return trace
+
+
+def test_the_engine_ablations_replay_s4_and_llm_decides_keeps_the_engine_s_walk_away(fresh, s4_fake_run):
+    _replay_ready(fresh, s4_fake_run)
+    seen = []
+
+    def value(room, rec, mode, trace):
+        seen.append(mode)
+        trace.write_text(json.dumps(_row("submit", {"go": True, "walk_away": 123.0, "reason": "r"})) + "\n")
+        return {"usage": {}, "total_cost_usd": 0.05}
+
+    rows = {r["system"]: r for r in pilot.run_replays(fresh, 1, ["s4_noengine", "s4_llmdecides"], value=value)}
+    assert seen == ["s4_noengine", "s4_llmdecides"]
+    engine = pilot.valuer.replay(fresh / "deals" / "dev-000" / "room", s4_fake_run[1]).decide()[1]
+    assert rows["s4_noengine"]["walk_away"] == 123.0 and rows["s4_llmdecides"]["walk_away"] == engine
+    assert rows["s4_noengine"]["go"] is True and rows["s4_noengine"]["pages"] == 7.0  # S4's reading
+    assert pilot.run_replays(fresh, 1, ["s4_noengine"], value=value) == []  # resumed
+
+
+def test_a_replay_that_does_not_give_s4_s_call_stops_the_batch(fresh, s4_fake_run):
+    trace = _replay_ready(fresh, s4_fake_run)
+    flipped = [r | {"args": r["args"] | {"go": not r["args"]["go"]}} if r["tool"] == "submit" else r for r in trace]
+    (fresh / "runs" / "s4" / "dev-000.trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in flipped))
+    with pytest.raises(pilot.valuer.ReplayMismatch):
+        pilot.run_replays(fresh, 1, ["s4_noengine"], value=lambda *a: pytest.fail("no valuer turn"))
+    splits = json.loads((fresh / "splits.json").read_text())
+    (fresh / "splits.json").write_text(json.dumps(splits | {"test": ["dev-001"]}))  # S4 never ran dev-001
+    with pytest.raises(RuntimeError, match="missing"):
+        pilot.run_replays(fresh, 1, ["s4_noengine"], value=lambda *a: pytest.fail("no valuer turn"), split="test")
+
+
+def test_a_valuer_turn_that_never_submits_is_scored_as_unanswered(fresh, s4_fake_run):
+    """Plan 6 spec, Risks: an unanswered valuer turn gets B0's call, like any unanswered run."""
+    _replay_ready(fresh, s4_fake_run)
+
+    def value(room, rec, mode, trace):
+        trace.write_text(json.dumps(_row("initialize", {})) + "\n")  # the server ran; no submit
+        return {"usage": {}}
+
+    (row,) = pilot.run_replays(fresh, 1, ["s4_noengine"], value=value)
+    assert row["answered"] is False and row["go"] == _key(fresh).truth.face_go
