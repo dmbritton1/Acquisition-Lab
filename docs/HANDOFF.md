@@ -1,8 +1,31 @@
 # Acquisition Lab: Session Handoff
 
-*Last updated 2026-09-25, after Plan 5 Tasks 1–5 were built and reviewed, and the first real S4 runs (Task 6) were done.
-Read this first, then the reframe spec. The specs are the binding authority on design; this file is the source of truth
-for status and next steps.*
+*Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
+specs are the binding authority on design; this file is the source of truth for status and next steps.*
+
+## Resume here (2026-09-27)
+
+A new session (possibly on the user's other Claude account) continues from this point.
+- **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
+  `claude/plan-4b-freeze-preregistration-0908fa`; `plan-5` (worktree `plan-4b-calibration-round-1-5f0549`) is
+  fast-forwarded to it after each finished step (`git -C <that worktree> merge --ff-only <branch>`). The data
+  (`data/cal-r2`, `data/heldout-r2`) is in this worktree, git-ignored.
+- **Plan 5 is done:** S4 frozen (tag `s4-frozen-plan5`); the results are in `docs/results/plan-5-dev-checks.md` and
+  the Next steps below.
+- **Plan 6 (the main run): the design is written and awaits the user's review:**
+  `docs/superpowers/specs/2026-09-27-plan-6-main-run-design.md` (`e411e81`). User decisions so far: the Claude
+  subscription with automatic restart; scope without the budget sweep, repeat seeds or hand-reviewed deals (showcase
+  to Plan 7); H2's belief-error deals are the `flip` case type; the engine ablations are final-step replays on all 160
+  deals; recoverability on a seeded 20-deal sample with Codex.
+- **Next:** once the user approves the spec (or asks for changes), write the implementation plan with the
+  superpowers writing-plans skill, pre-verified in a scratch copy as in Plan 5; the user has used subagent-driven
+  execution for every plan so far.
+- **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
+  before any real Claude or Codex call; commits end with the Co-Authored-By trailer the session's attribution names.
+- **Codex:** the dacuber01 account, out of usage on 2026-09-26.
+- **Two accounts:** development can move between the user's accounts through this file. The runner's `claude -p`
+  calls use whichever account the Claude app is signed in to; switching accounts to get past usage limits may conflict
+  with Anthropic's terms (the user checks); the runner does no account switching.
 
 ## Start here
 
