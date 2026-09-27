@@ -307,7 +307,7 @@ about $230 plus any cache differences. The user decides.
 ## Build-step checks (2026-09-26)
 
 Reframe design §5: each step on the first 10 `cal-r2` deals, at the frozen code (`s4-frozen-plan5`), CLI 2.1.280,
-Opus 5.5 ($9.47 in all). `s4_1`: one Investigator reads for every issue, the engine decides. `s4_2`: + the Deal Lead,
+Opus 5.5 ($11.65 notional in all). `s4_1`: one Investigator reads for every issue, the engine decides. `s4_2`: + the Deal Lead,
 issues investigated in its order. `s4_3`: + the Challenger. `s4`: + the document router (D2, D3). S1b and `s4` are
 their existing runs on the same 10 deals.
 

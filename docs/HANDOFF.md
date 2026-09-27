@@ -71,7 +71,7 @@ for status and next steps.*
 7. **Done (2026-09-26): S4 frozen** at `b728999`'s S4 code (tag `s4-frozen-plan5`); prompt tuning skipped (fitting
    risk); `s3_n` = 2 on both batches; main-run budget about $230 notional and 17 h of runs, about 14 usage windows
    (`plan-5-dev-checks.md`). The user decides subscription or API.
-8. **Done: build-step checks** (`plan-5-dev-checks.md`), 10 `cal-r2` deals, $9.47: regret S1b 0.0280, `s4_1`
+8. **Done: build-step checks** (`plan-5-dev-checks.md`), 10 `cal-r2` deals, $11.65: regret S1b 0.0280, `s4_1`
    0.0263, `s4_2` 0.0080, `s4_3` 0.0134, `s4` 0.0183. The gain appears with the Deal Lead's issue-by-issue
    investigation (`s4_2`); the Challenger and the router show no regret gain over it on 10 deals (the router cuts cost
    from $0.80 to $0.50). Their tests are the ablations (H3); S4 stays frozen.
