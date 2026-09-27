@@ -12,14 +12,18 @@ A new session (possibly on the user's other Claude account) continues from this 
   (`data/cal-r2`, `data/heldout-r2`) is in this worktree, git-ignored.
 - **Plan 5 is done:** S4 frozen (tag `s4-frozen-plan5`); the results are in `docs/results/plan-5-dev-checks.md` and
   the Next steps below.
-- **Plan 6 (the main run): the design is written and awaits the user's review:**
-  `docs/superpowers/specs/2026-09-27-plan-6-main-run-design.md` (`e411e81`). User decisions so far: the Claude
-  subscription with automatic restart; scope without the budget sweep, repeat seeds or hand-reviewed deals (showcase
-  to Plan 7); H2's belief-error deals are the `flip` case type; the engine ablations are final-step replays on all 160
-  deals; recoverability on a seeded 20-deal sample with Codex.
-- **Next:** once the user approves the spec (or asks for changes), write the implementation plan with the
-  superpowers writing-plans skill, pre-verified in a scratch copy as in Plan 5; the user has used subagent-driven
-  execution for every plan so far.
+- **Plan 6 (the main run): Tasks 1–7 are done** (plan `docs/superpowers/plans/2026-09-27-plan-6-main-run.md`,
+  spec `docs/superpowers/specs/2026-09-27-plan-6-main-run-design.md`). Built subagent-driven with a review per task
+  and a final whole-branch review; 335 tests pass. The addendum (`docs/results/plan-6-preregistration-addendum.md`)
+  is committed; the free rehearsal passed (every phase, no regret in the log). Changes beyond the plan: the campaign
+  refuses to start unless `CLAUDE_BIN` is Claude Code 2.1.280; a reset time that just passed waits 30 minutes, not a
+  day; only real usage-limit wording is waited out (the message is logged); waits follow the wall clock (Mac sleep);
+  the analysis refuses an existing `--out` and re-checks the S4 freeze.
+- **Next:** Task 8 (the valuer on real Claude, 2 `cal-r2` deals, a few cents) needs the user's OK; then Task 9
+  (generate the test set); Task 10 (Codex recoverability, needs OK and Codex usage); Task 11 (the campaign, needs the
+  user's go; run it from this worktree at a fixed commit and don't edit or switch it meanwhile; after a hard kill,
+  `pgrep -f "claude -p"` before restarting); Task 12 (before `analysis.main`, a run-health check per system: statuses,
+  unanswered, timeouts, models, no regret). Open for the user: the spec's "one retry, then stop" vs about 3 retries.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
   before any real Claude or Codex call; commits end with the Co-Authored-By trailer the session's attribution names.
 - **Codex:** the dacuber01 account, out of usage on 2026-09-26.
