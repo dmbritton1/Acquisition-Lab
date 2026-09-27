@@ -20,7 +20,7 @@ from acqlab.generator.render import Evidence, render, teaser_text
 from acqlab.generator.truth import PROFILES, DealTruth, generate
 from acqlab.generator.validate import (check_batch, check_consistency, check_engine, check_leaks, doc_words,
                                       word_leaks)
-from acqlab.llm import LLMUnavailable
+from acqlab.llm import LLMUnavailable, ToolUsed
 
 SEED_OFFSET = {"dev": 0, "test": 10_000, "hand": 20_000, "showcase": 30_000}
 RETRY_SEED = 1_000_000
@@ -98,22 +98,26 @@ def run(out: Path, counts: dict[str, int], *, seed: int = 0, mc: int = 400, llm=
 
 def _recoverability(out: Path, keys: list[AnswerKey], splits: dict, n_dev: int, extract) -> list[str]:
     """Phase-in (design §7): hand-reviewed, showcase and a random sample of dev deals."""
-    from acqlab.generator.recover import check
     rng = np.random.default_rng(0)
     dev = splits.get("dev", [])
     chosen = set(splits.get("hand", []) + splits.get("showcase", [])) | set(
         rng.choice(dev, min(n_dev, len(dev)), replace=False).tolist() if dev else [])
-    problems = []
-    for key in keys:
-        if key.truth.id not in chosen:
-            continue
-        room = out / "deals" / key.truth.id / "room"
-        texts = {p.stem: p.read_text() for p in room.glob("*.md")}
-        filler = next(d["id"] for d in json.loads((room / "index.json").read_text())["documents"]
-                      if d["domain"] == "filler")
+    return [p for key in keys if key.truth.id in chosen for p in recover_deal(out, key, extract)]
+
+
+def recover_deal(out: Path, key: AnswerKey, extract) -> list[str]:
+    """One deal's recoverability problems, each prefixed with its id. An extractor that used a tool fails the deal:
+    its answer may not come from the documents it was shown (Plan 6 spec §2)."""
+    from acqlab.generator.recover import check
+    room = out / "deals" / key.truth.id / "room"
+    texts = {p.stem: p.read_text() for p in room.glob("*.md")}
+    filler = next(d["id"] for d in json.loads((room / "index.json").read_text())["documents"]
+                  if d["domain"] == "filler")
+    try:
         found, _ = check(key.truth, key.evidence, texts, extract, filler)
-        problems += [f"{key.truth.id}: {p}" for p in found]
-    return problems
+    except ToolUsed as e:
+        found = [f"the extractor used a tool ({e})"]
+    return [f"{key.truth.id}: {p}" for p in found]
 
 
 def main(argv: list[str] | None = None) -> int:
