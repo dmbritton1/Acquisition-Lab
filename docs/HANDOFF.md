@@ -71,8 +71,10 @@ for status and next steps.*
 7. **Done (2026-09-26): S4 frozen** at `b728999`'s S4 code (tag `s4-frozen-plan5`); prompt tuning skipped (fitting
    risk); `s3_n` = 2 on both batches; main-run budget about $230 notional and 17 h of runs, about 14 usage windows
    (`plan-5-dev-checks.md`). The user decides subscription or API.
-8. **In progress:** build-step checks, `s4_1`/`s4_2`/`s4_3` on 10 `cal-r2` deals (about $10; user OK'd
-   2026-09-26, scheduled after the last held-out deal), then the Plan 5 section of this handoff.
+8. **Done: build-step checks** (`plan-5-dev-checks.md`), 10 `cal-r2` deals, $9.47: regret S1b 0.0280, `s4_1`
+   0.0263, `s4_2` 0.0080, `s4_3` 0.0134, `s4` 0.0183. The gain appears with the Deal Lead's issue-by-issue
+   investigation (`s4_2`); the Challenger and the router show no regret gain over it on 10 deals (the router cuts cost
+   from $0.80 to $0.50). Their tests are the ablations (H3); S4 stays frozen.
    **Decided (user, 2026-09-26): recoverability on a sample.** A seeded random sample of 20 test deals (about 200
    Codex calls, about 4 Plus usage windows), not every test deal: the documents are template prose and the generator
    has had 0 batch problems on over 500 `r2` deals, so a sample catches a generator bug. Codex stays the extractor

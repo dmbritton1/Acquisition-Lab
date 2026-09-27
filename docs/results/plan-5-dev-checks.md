@@ -303,3 +303,32 @@ On the subscription: a usage window held about $17 of runs on 2026-09-26 (27 S1b
 limit), so the main run needs about 14 windows, roughly 4–5 days if each is restarted promptly (the pilot stops cleanly
 at a limit and resumes where it left off); a weekly limit, if one applies, would stretch it. On API credits it is
 about $230 plus any cache differences. The user decides.
+
+## Build-step checks (2026-09-26)
+
+Reframe design §5: each step on the first 10 `cal-r2` deals, at the frozen code (`s4-frozen-plan5`), CLI 2.1.280,
+Opus 5.5 ($9.47 in all). `s4_1`: one Investigator reads for every issue, the engine decides. `s4_2`: + the Deal Lead,
+issues investigated in its order. `s4_3`: + the Challenger. `s4`: + the document router (D2, D3). S1b and `s4` are
+their existing runs on the same 10 deals.
+
+| | S1b | `s4_1` | `s4_2` | `s4_3` | `s4` |
+|---|---|---|---|---|---|
+| Correct (of 10) | 7 | 7 | 8 | 9 | 8 |
+| Mean regret ÷ ask | 0.0280 | 0.0263 | 0.0080 | 0.0134 | 0.0183 |
+| Flip deals (3), difference from S1b | | +0.0151 | −0.0725 | −0.0725 | |
+| Pages, decoy pages | 20.3, 2.63 (30 deals) | 21.3, 2.10 | 16.9, 1.20 | 18.6, 1.20 | 22.8, 2.10 (30) |
+| Sessions, cost per deal | 1, $0.13 | 1, $0.10 | 5.2, $0.27 | 15.2, $0.80 | 10.8, $0.50 (30) |
+
+Per deal (✓/✗ and regret) where the steps differ: dev-000 (GO) `s4_2` ✗ 0.060; dev-001 (GO) `s4_3` ✗ 0.134;
+dev-003 (NO) S1b, `s4_1` and `s4` ✗ 0.163, `s4_2` and `s4_3` ✓; dev-004 (NO) S1b and `s4_1` ✗ 0.055; dev-006 (GO)
+`s4_2` and `s4` ✗ 0.020; dev-007 (GO) S1b ✗ 0.062; dev-008 (NO) `s4_1` ✗ 0.045.
+
+**Reading** (10 deals: one deal moves a mean by up to 0.016, so only large steps are visible):
+- **The engine deciding alone (`s4_1`) does not help:** it matches S1b (0.0263 vs 0.0280).
+- **The Deal Lead with issue-by-issue investigation (`s4_2`) is where the gain appears:** 0.0080, and −0.0725 on
+  the flip deals. It is also the only step besides `s4_3` to catch dev-003's $24.5M concentration loss.
+- **The Challenger (`s4_3`) and the router (`s4`) do not show a regret gain over `s4_2` on these 10 deals.** `s4_3`
+  gets the most calls right (9) but one costly miss on a good deal (dev-001, 0.134) and costs $0.80 over 15 sessions;
+  the router brings the cost down to $0.50 and misses dev-003. Their own tests are the pre-registered ablations on 40
+  test deals (H3 for the Challenger), not these 10 deals; S4 stays frozen (choosing a step from 10 seen deals would be
+  fitting too).
