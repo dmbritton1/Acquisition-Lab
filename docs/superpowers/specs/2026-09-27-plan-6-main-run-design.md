@@ -118,7 +118,8 @@ reset, then continue. Times such as "9:20pm", "4am" or "12:05am", later today or
 zone; a message with no readable time waits 30 minutes and tries again. A long wait (a weekly limit) is logged, not
 treated as an error.
 
-**Any other error:** one retry after 10 minutes, then stop with the error in the log.
+**Any other error:** up to three retries, after 10, 30 and 90 minutes (the user's decision, 2026-09-27, after the
+final code review), then stop with the error in the log.
 
 **Visibility:** `data/test-r2/campaign.log` gets one line per phase change, wait and finished run, with counts only
 ("s4 83/160"), never regret. `--status` prints the counts per phase and system and, when waiting, the resume time.
@@ -148,7 +149,7 @@ reported as "not shown", not as evidence against.
 
 **Unit tests (no Claude or Codex calls):**
 - runner: reset-time parsing (evening, early morning, after midnight, unreadable), waiting with a fake clock, phase
-  order and resume, one retry then stop, the freeze and fingerprint checks refusing to run;
+  order and resume, three retries then stop, the freeze and fingerprint checks refusing to run;
 - replay and valuer: the replay reproduces a fake S4 run's call; the −engine prompt holds no engine numbers and no
   answer-key words; the LLM-decides prompt holds the engine's walk-away;
 - the Codex guard: a fake event stream with a command event fails the call;

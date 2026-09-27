@@ -8,7 +8,7 @@ never results.
   uv run python -m acqlab.bench.campaign --data data/test-r2 --status
   uv run python -m acqlab.bench.campaign --data data/test-r2 --stop
 
-Exit codes: 0 every phase done; 1 stopped (a failed check, or an error that survived one retry; see the log); 3
+Exit codes: 0 every phase done; 1 stopped (a failed check, or an error that survived three retries; see the log); 3
 refused (no --confirm-claude, missing or wrong CLAUDE_BIN, or already running)."""
 import argparse
 import contextlib
@@ -34,7 +34,8 @@ EXPECTED = Path("docs/results/plan-6-test-set.json")  # the committed fingerprin
 CLAUDE_VERSION = "2.1.280"  # spec §4: every S1b and S4 run so far used it
 AFTER_RESET = timedelta(minutes=5)
 UNREADABLE_WAIT = timedelta(minutes=30)  # a usage limit whose message names no time
-RETRY_WAIT = timedelta(minutes=10)  # any other error: one retry, then stop
+RETRY_WAITS = (timedelta(minutes=10), timedelta(minutes=30), timedelta(minutes=90))  # any other error: three
+# retries (user, 2026-09-27), then stop
 RESET = re.compile(r"resets\s+(\d{1,2})(?::(\d{2}))?\s*([ap]m)\b(?:\s*\(([^)]+)\))?", re.I)
 LIMIT = re.compile(r"usage limit|hit your .*limit|limit reached", re.I)  # a real usage limit, not a per-deal error
 # (system, rep, deals): the runs the campaign owes, for progress and completeness
@@ -110,11 +111,12 @@ def preflight(data: Path, repo: Path, expected: Path = EXPECTED) -> str | None:
 def campaign(data: Path, repo: Path, *, steps: list | None = None, check: Callable = preflight,
              now: Callable[[], datetime] = lambda: datetime.now().astimezone(), sleep: Callable = time.sleep,
              log: Callable[[str], None] | None = None) -> int:
-    """Run every phase to the end. A usage limit is waited out; any other error gets one retry after RETRY_WAIT
-    (again after progress resumes), then the campaign stops. Runs' own output (it carries regret) is never logged."""
+    """Run every phase to the end. A usage limit is waited out; any other error gets up to three retries after
+    RETRY_WAITS (again after progress resumes), then the campaign stops. Runs' own output (it carries regret) is
+    never logged."""
     log = log or logger(data)
     for name, step in (phases(data) if steps is None else steps):
-        retried, at_error = False, None
+        count, at_error = 0, None
         while True:
             problem = check(data, repo)
             if problem:
@@ -125,7 +127,7 @@ def campaign(data: Path, repo: Path, *, steps: list | None = None, check: Callab
                 with contextlib.redirect_stdout(io.StringIO()):
                     step()
                 break
-            except Exception as e:  # every failure is either waited out, retried once or reported
+            except Exception as e:  # every failure is either waited out, retried up to three times or reported
                 text = f"{type(e).__name__}: {e}"
                 wake = resume_at(str(e), now()) if isinstance(e, LLMUnavailable) else None
                 if isinstance(e, LLMUnavailable) and (wake or LIMIT.search(str(e))):
@@ -133,13 +135,16 @@ def campaign(data: Path, repo: Path, *, steps: list | None = None, check: Callab
                     log(f"usage limit in phase {name} ({progress(data)}): {text[:200]}; "
                         f"waiting until {wake:%Y-%m-%d %H:%M %Z}")
                 else:
-                    if progress(data) != at_error:  # progress since the last error: it gets its own retry
-                        retried = False
-                    if retried:
+                    if progress(data) != at_error:  # progress since the last error: it gets its own three retries
+                        count = 0
+                    if count == len(RETRY_WAITS):
                         log(f"stopped in phase {name}: {text}")
                         return 1
-                    retried, at_error, wake = True, progress(data), now() + RETRY_WAIT
-                    log(f"error in phase {name}: {text}; one retry at {wake:%Y-%m-%d %H:%M %Z}")
+                    wake = now() + RETRY_WAITS[count]
+                    count += 1
+                    at_error = progress(data)
+                    log(f"error in phase {name}: {text}; retry {count} of {len(RETRY_WAITS)} at "
+                        f"{wake:%Y-%m-%d %H:%M %Z}")
                 while (left := (wake - now()).total_seconds()) > 0:  # macOS sleep() ignores lid-close time
                     sleep(min(left, 60))
         log(f"phase {name}: done ({progress(data)})")

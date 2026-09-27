@@ -90,11 +90,11 @@ def test_a_per_deal_limit_message_is_not_a_usage_limit_and_gets_the_retry_path(t
         raise LLMUnavailable("input length and max_tokens exceed context limit")
 
     code, lines = _run(tmp_path, [("h1", h1), ("s0", lambda: calls.append("s0"))], clock)
-    assert code == 1 and calls == ["h1", "h1"] and sum(clock.slept) == 600
+    assert code == 1 and calls == ["h1"] * 4 and sum(clock.slept) == (10 + 30 + 90) * 60
     assert not any("usage limit" in x for x in lines)
 
 
-def test_any_other_error_gets_one_retry_then_the_campaign_stops(tmp_path):
+def test_any_other_error_gets_three_retries_then_the_campaign_stops(tmp_path):
     clock, calls = Clock(_at(26, 14, 0)), []
 
     def h1():
@@ -102,18 +102,47 @@ def test_any_other_error_gets_one_retry_then_the_campaign_stops(tmp_path):
         raise LLMUnavailable("claude -p failed (exit 1): invalid API key")
 
     code, lines = _run(tmp_path, [("h1", h1), ("s0", lambda: calls.append("s0"))], clock)
-    assert code == 1 and calls == ["h1", "h1"] and sum(clock.slept) == 600
-    assert "stopped in phase h1: LLMUnavailable: claude -p failed (exit 1): invalid API key" in lines[-1]
+    assert code == 1 and calls == ["h1"] * 4 and sum(clock.slept) == (10 + 30 + 90) * 60
+    assert lines[-1].startswith("stopped in phase h1: LLMUnavailable: claude -p failed (exit 1): invalid API key")
 
 
-def test_a_crash_is_retried_once_too_and_a_failed_check_stops_before_any_run(tmp_path):
+def test_two_failures_then_success_completes_after_the_first_two_waits(tmp_path):
+    clock, calls = Clock(_at(26, 14, 0)), []
+
+    def h1():
+        calls.append("h1")
+        if len(calls) <= 2:
+            raise RuntimeError("boom")
+
+    code, lines = _run(tmp_path, [("h1", h1)], clock)
+    assert code == 0 and len(calls) == 3 and sum(clock.slept) == 40 * 60
+
+
+def test_progress_between_errors_resets_the_retry_count(tmp_path):
+    clock, calls = Clock(_at(26, 14, 0)), []
+    runs_dir = tmp_path / "runs" / "s1b"
+    runs_dir.mkdir(parents=True)
+
+    def h1():
+        calls.append("h1")
+        n = len(calls)
+        if n == 4:  # progress right before this failure resets the retry count
+            (runs_dir / "test-001.json").write_text("{}")
+        if n < 7:
+            raise RuntimeError("boom")
+
+    code, lines = _run(tmp_path, [("h1", h1)], clock)
+    assert code == 0 and len(calls) == 7
+
+
+def test_a_crash_is_retried_three_times_too_and_a_failed_check_stops_before_any_run(tmp_path):
     clock = Clock(_at(26, 14, 0))
 
     def boom():
         raise RuntimeError("s4_noengine/test-003: S4's run is missing, so there is nothing to replay")
 
     code, _ = _run(tmp_path, [("ablations", boom)], clock)
-    assert code == 1 and sum(clock.slept) == 600
+    assert code == 1 and sum(clock.slept) == (10 + 30 + 90) * 60
     lines = []
     code = campaign.campaign(tmp_path, tmp_path, steps=[("h1", lambda: pytest.fail("ran"))],
                              check=lambda data, repo: "the test set does not match its committed fingerprint",
