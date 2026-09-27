@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from acqlab.bench import campaign, pilot, testset
+from acqlab.bench import campaign, pilot
 from acqlab.generator.batch import AnswerKey
 from acqlab.routers.track_a import bootstrap_ci
 
@@ -116,11 +116,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", type=Path, default=Path("."))
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args(argv)
+    if args.out.exists():  # the verdicts are one-shot: never overwrite a result already written
+        print(f"Refusing to analyse: {args.out} already exists")
+        return 1
     if not campaign.complete(args.data):
         print(f"Refusing to analyse: the campaign is not complete ({campaign.progress(args.data)})")
         return 1
-    if testset.fingerprint(args.data) != json.loads((args.repo / campaign.EXPECTED).read_text()):
-        print("Refusing to analyse: the test set does not match its committed fingerprint")
+    problem = campaign.preflight(args.data, args.repo)
+    if problem:
+        print(f"Refusing to analyse: {problem}")
         return 1
     by, real, first_plan, rows = load(args.data)
     result = analyse(by, real, first_plan) | {"systems": pilot.summarize(rows, s3_n=2)}

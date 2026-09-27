@@ -18,10 +18,11 @@ def _at(day, hour, minute):
 @pytest.mark.parametrize("message, now, expected", [
     ("You've hit your session limit · resets 4:20pm (America/New_York)", _at(26, 14, 6), _at(26, 16, 25)),
     ("claude -p failed (exit 1): You've hit your session limit · resets 9:20pm (America/New_York)", _at(26, 22, 0),
-     _at(27, 21, 25)),  # already past today: tomorrow
+     _at(26, 22, 30)),  # 40 minutes past: not reset yet, wait the unreadable-time default instead of a day
     ("resets 12:05am (America/New_York)", _at(26, 23, 50), _at(27, 0, 10)),
     ("resets 9pm (Europe/London)", _at(26, 14, 0), datetime(2026, 9, 26, 21, 5, tzinfo=ZoneInfo("Europe/London"))),
     ("Claude AI usage limit reached", _at(26, 14, 0), None),
+    ("resets 4:20pm (America/New_York)", _at(26, 23, 0), _at(27, 16, 25)),  # 6h40m past: still rolls to tomorrow
 ])
 def test_the_resume_time_is_five_minutes_after_the_next_reset_the_message_names(message, now, expected):
     assert campaign.resume_at(message, now) == expected
@@ -62,8 +63,10 @@ def test_a_usage_limit_is_waited_out_and_the_phase_resumes(tmp_path):
                                  "(America/New_York)")
 
     code, lines = _run(tmp_path, [("h1", h1), ("s0", lambda: calls.append("s0"))], clock)
-    assert code == 0 and calls == ["h1", "h1", "s0"] and clock.slept == [(_at(26, 16, 25) - _at(26, 14, 6)).seconds]
+    assert code == 0 and calls == ["h1", "h1", "s0"]
+    assert sum(clock.slept) == (_at(26, 16, 25) - _at(26, 14, 6)).seconds and all(s <= 60 for s in clock.slept)
     assert any("waiting until 2026-09-26 16:25" in x for x in lines) and lines[-1] == "campaign complete"
+    assert any("You've hit your session limit" in x for x in lines)  # the message, not just "waiting until"
     assert not any("regret" in x for x in lines)
 
 
@@ -75,7 +78,20 @@ def test_a_limit_with_no_readable_time_waits_thirty_minutes(tmp_path):
         if len(calls) == 1:
             raise LLMUnavailable("Claude AI usage limit reached")
 
-    assert _run(tmp_path, [("h1", h1)], clock)[0] == 0 and clock.slept == [30 * 60]
+    code, lines = _run(tmp_path, [("h1", h1)], clock)
+    assert code == 0 and sum(clock.slept) == 30 * 60 and all(s <= 60 for s in clock.slept)
+
+
+def test_a_per_deal_limit_message_is_not_a_usage_limit_and_gets_the_retry_path(tmp_path):
+    clock, calls = Clock(_at(26, 14, 0)), []
+
+    def h1():
+        calls.append("h1")
+        raise LLMUnavailable("input length and max_tokens exceed context limit")
+
+    code, lines = _run(tmp_path, [("h1", h1), ("s0", lambda: calls.append("s0"))], clock)
+    assert code == 1 and calls == ["h1", "h1"] and sum(clock.slept) == 600
+    assert not any("usage limit" in x for x in lines)
 
 
 def test_any_other_error_gets_one_retry_then_the_campaign_stops(tmp_path):
@@ -86,7 +102,7 @@ def test_any_other_error_gets_one_retry_then_the_campaign_stops(tmp_path):
         raise LLMUnavailable("claude -p failed (exit 1): invalid API key")
 
     code, lines = _run(tmp_path, [("h1", h1), ("s0", lambda: calls.append("s0"))], clock)
-    assert code == 1 and calls == ["h1", "h1"] and clock.slept == [600]
+    assert code == 1 and calls == ["h1", "h1"] and sum(clock.slept) == 600
     assert "stopped in phase h1: LLMUnavailable: claude -p failed (exit 1): invalid API key" in lines[-1]
 
 
@@ -96,7 +112,8 @@ def test_a_crash_is_retried_once_too_and_a_failed_check_stops_before_any_run(tmp
     def boom():
         raise RuntimeError("s4_noengine/test-003: S4's run is missing, so there is nothing to replay")
 
-    assert _run(tmp_path, [("ablations", boom)], clock)[0] == 1 and clock.slept == [600]
+    code, _ = _run(tmp_path, [("ablations", boom)], clock)
+    assert code == 1 and sum(clock.slept) == 600
     lines = []
     code = campaign.campaign(tmp_path, tmp_path, steps=[("h1", lambda: pytest.fail("ran"))],
                              check=lambda data, repo: "the test set does not match its committed fingerprint",

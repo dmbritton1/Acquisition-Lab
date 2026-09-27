@@ -73,3 +73,10 @@ def test_the_pessimism_control_and_llm_decides_are_reported_beside_the_hypothese
 def test_the_analysis_refuses_to_run_before_the_campaign_is_complete(tmp_path, capsys):
     assert analysis.main(["--data", str(tmp_path), "--out", str(tmp_path / "r.json")]) == 1
     assert "not complete (s1b 0/160" in capsys.readouterr().out and not (tmp_path / "r.json").exists()
+
+
+def test_the_analysis_refuses_to_overwrite_an_existing_out_file(tmp_path, capsys):
+    out = tmp_path / "r.json"
+    out.write_text("already here")
+    assert analysis.main(["--data", str(tmp_path), "--out", str(out)]) == 1
+    assert "already exists" in capsys.readouterr().out and out.read_text() == "already here"

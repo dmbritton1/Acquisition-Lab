@@ -36,6 +36,7 @@ AFTER_RESET = timedelta(minutes=5)
 UNREADABLE_WAIT = timedelta(minutes=30)  # a usage limit whose message names no time
 RETRY_WAIT = timedelta(minutes=10)  # any other error: one retry, then stop
 RESET = re.compile(r"resets\s+(\d{1,2})(?::(\d{2}))?\s*([ap]m)\b(?:\s*\(([^)]+)\))?", re.I)
+LIMIT = re.compile(r"usage limit|hit your .*limit|limit reached", re.I)  # a real usage limit, not a per-deal error
 # (system, rep, deals): the runs the campaign owes, for progress and completeness
 EXPECTED_RUNS = [("s1b", 0, N_TEST), ("s4", 0, N_TEST), ("s1b", 1, N_TEST), ("s4_nochal", 0, N_ABLATION),
                  ("s4_nosweep", 0, N_ABLATION), ("s4_noengine", 0, N_TEST), ("s4_llmdecides", 0, N_TEST),
@@ -86,6 +87,8 @@ def resume_at(message: str, now: datetime) -> datetime | None:
     local = now.astimezone(tz)
     at = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if at <= local:
+        if local - at < timedelta(hours=6):  # a reset time this recent hasn't actually reset yet
+            return local + UNREADABLE_WAIT
         at += timedelta(days=1)
     return at + AFTER_RESET
 
@@ -125,9 +128,10 @@ def campaign(data: Path, repo: Path, *, steps: list | None = None, check: Callab
             except Exception as e:  # every failure is either waited out, retried once or reported
                 text = f"{type(e).__name__}: {e}"
                 wake = resume_at(str(e), now()) if isinstance(e, LLMUnavailable) else None
-                if isinstance(e, LLMUnavailable) and (wake or "limit" in str(e).lower()):
+                if isinstance(e, LLMUnavailable) and (wake or LIMIT.search(str(e))):
                     wake = wake or now() + UNREADABLE_WAIT
-                    log(f"usage limit in phase {name} ({progress(data)}); waiting until {wake:%Y-%m-%d %H:%M %Z}")
+                    log(f"usage limit in phase {name} ({progress(data)}): {text[:200]}; "
+                        f"waiting until {wake:%Y-%m-%d %H:%M %Z}")
                 else:
                     if progress(data) != at_error:  # progress since the last error: it gets its own retry
                         retried = False
@@ -136,7 +140,8 @@ def campaign(data: Path, repo: Path, *, steps: list | None = None, check: Callab
                         return 1
                     retried, at_error, wake = True, progress(data), now() + RETRY_WAIT
                     log(f"error in phase {name}: {text}; one retry at {wake:%Y-%m-%d %H:%M %Z}")
-                sleep(max(0.0, (wake - now()).total_seconds()))
+                while (left := (wake - now()).total_seconds()) > 0:  # macOS sleep() ignores lid-close time
+                    sleep(min(left, 60))
         log(f"phase {name}: done ({progress(data)})")
     log("campaign complete")
     return 0
