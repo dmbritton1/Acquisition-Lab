@@ -23,10 +23,19 @@ A new session (possibly on the user's other Claude account) continues from this 
   `docs/results/plan-6-prompt-log.md`). Task 9, the test set `data/test-r2` generated once (160 deals, 0 problems),
   fingerprint committed in `docs/results/plan-6-test-set.json`/`.md`; no system has run on it. The user chose three
   retries (10, 30, 90 minutes) on non-usage-limit errors; the spec says so. 337 tests pass.
-- **Next:** Task 10 (Codex recoverability on 20 test deals; needs the user's OK and Codex usage on dacuber01); Task 11
-  (the campaign, needs the user's go; run it from this worktree at a fixed commit and don't edit or switch it
-  meanwhile; after a hard kill, `pgrep -f "claude -p"` before restarting); Task 12 (before `analysis.main`, a
-  run-health check per system: statuses, unanswered, timeouts, models, no regret).
+- **Task 10 done:** recoverability on 20 test deals found 8 problems, all zero-amount facts stated in awkward
+  template wording ("$0.0M below normal levels"); understood, reported in `docs/results/plan-6-test-set.md`, and the
+  user decided to proceed without regenerating (2026-09-28).
+- **The campaign is running (Task 11), started 2026-09-28 10:51 EDT** from this worktree (pid in
+  `data/test-r2/campaign.pid`), using the private Claude Code 2.1.280 copy in `data/claude-2.1.280.app`. About 4–5
+  days. Don't edit code or switch branches in this worktree while it runs.
+  - Check it: `uv run python -m acqlab.bench.campaign --data data/test-r2 --status` (counts only, never results).
+  - If the log's last line is `stopped …`: tell the user first. No fix may touch `acqlab/agents` or `acqlab/routers`.
+    After a hard kill, check `pgrep -f "claude -p"` for leftovers. Restart (it resumes):
+    `export CLAUDE_BIN="$PWD/data/claude-2.1.280.app/Contents/MacOS/claude"` then
+    `nohup caffeinate -i uv run python -m acqlab.bench.campaign --data data/test-r2 --confirm-claude > data/test-r2/campaign.out 2>&1 &`
+  - Next, only after the log says `campaign complete`: Task 12 — first a run-health check per system (statuses,
+    unanswered, timeouts, models; no regret shown), then `analysis.main` once, then the write-up.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
   before any real Claude or Codex call; commits end with the Co-Authored-By trailer the session's attribution names.
 - **Codex:** the dacuber01 account, out of usage on 2026-09-26.
