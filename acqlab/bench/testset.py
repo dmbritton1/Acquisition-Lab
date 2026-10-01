@@ -34,10 +34,10 @@ def used_seeds(roots: list[Path]) -> set[int]:
     return seeds
 
 
-def clashes(base: int, n: int, used: set[int]) -> list[int]:
-    """Used seeds equal to one of the n test deals' seeds or to one of its retries (retries add multiples of
-    RETRY_SEED, so a clash is a match modulo RETRY_SEED)."""
-    mine = {(base + SEED_OFFSET["test"] + i) % RETRY_SEED for i in range(n)}
+def clashes(base: int, n: int, used: set[int], split: str = "test") -> list[int]:
+    """Used seeds equal to one of the n deals' seeds in this split or to one of its retries (retries add multiples
+    of RETRY_SEED, so a clash is a match modulo RETRY_SEED)."""
+    mine = {(base + SEED_OFFSET[split] + i) % RETRY_SEED for i in range(n)}
     return sorted(s for s in used if s % RETRY_SEED in mine)
 
 
