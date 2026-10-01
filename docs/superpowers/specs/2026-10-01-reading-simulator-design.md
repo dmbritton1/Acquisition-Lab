@@ -101,10 +101,13 @@ The 3-value cap counts every value, the baseline's included: `page_power` gets 0
   - It always returns `stop=False`. With the router on, the real loop ignores the stop anyway.
 - **`read_doc(d)`:**
   - Writes an `open_document` row charging `pages[d]`.
-  - Writes a `report` row whose commits are every fact newly revealed. A fact is revealed when all the documents in
-    its answer-key evidence have been read; it is committed as `quoted` at (realized, realized).
-  - An `unresolvable` fact is committed as `range` over its documented severity range times its `worst` amount ($M).
-  - Then it runs the real objection-clearing and re-plan logic, and applies `absence_cut`.
+  - Writes a `report` row whose commits are every fact newly revealed. A fact is revealed when the last document in
+    its answer-key evidence has been read: on the 220 real S4 runs, every one of the 173 two-document commits came
+    from that document alone. It is committed as `quoted` at (realized, realized).
+  - An `unresolvable` fact is committed as `range` over its documented range (`Fact.documented`, already in $M).
+  - Issues the read could settle but didn't get a `not_found` commit, as the real Committer writes.
+  - Then it applies `absence_cut` and, if anything was committed, re-plans. There is no objection-clearing: without
+    the Challenger, no objections exist.
 - **`sweep()`:** reads the same documents the real sweep would pick, revealing facts as `read_doc` does.
 - **`route()`:** the real candidate filter and budget logic, with the strategy's scorer.
 
@@ -145,6 +148,9 @@ addendum changes only the no-Challenger order, and `b728999` is byte-identical t
 1. Calls agree on at least 85% of the deals with a real S4 run (up to 220).
 2. |mean regret sim − real| < 0.003, and the CI of the paired difference includes zero.
 3. Calls agree on at least 85% of the 40 `s4_nochal` deals.
+
+Bars 1 and 2 are applied separately to the 60 practice deals and the 160 test deals, and all three to the 40
+`s4_nochal` deals: stricter than pooling the 220.
 
 **On failure:**
 
@@ -211,16 +217,17 @@ mean regret is no higher than the baseline's. Sixty deals cannot show a small ga
 - `acqlab/bench/simrun.py`, a CLI with three subcommands:
   - `deals`: generates the template deals, with the seed check.
   - `run --data D --strategies ... [--opening logged|model]`: the process pool, resumable.
-  - `report`: the faithfulness check, the comparison, the combination, the confirmation and the sizing; writes §3's
-    outputs.
-- Tests: `tests/test_sim.py` and `tests/test_simrun.py`.
+  - `combine`: the greedy combination (§3). It runs each candidate combination on the template deals as it goes.
+  - `report`: the faithfulness check, the comparison, the combination, the confirmation and the sizing. It writes
+    `docs/results/reading-simulator.json`; the plain-language page is written by hand from it.
+- Tests: `tests/bench/test_sim.py` and `tests/bench/test_simrun.py`.
 
 **Tests** (offline, written first):
 
 - **The reader:**
   - On a hand-made answer key, opening a document reveals exactly the facts whose evidence it completes, and charges
     its pages.
-  - A two-document fact needs both.
+  - A two-document fact is revealed by its last document, not by its first.
   - An `unresolvable` fact commits its documented range.
 - **The baseline routes like the real panel:** on a fixed record, `SimPanel.route()` with the baseline strategy picks
   the same document as `Panel.route()`.
