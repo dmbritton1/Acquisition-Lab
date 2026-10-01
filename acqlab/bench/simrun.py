@@ -22,7 +22,6 @@ import numpy as np
 from acqlab.agents.record import load_face
 from acqlab.bench import sim, testset
 from acqlab.generator import batch
-from acqlab.generator.batch import AnswerKey
 from acqlab.routers.track_a import bootstrap_ci
 
 RUNS = Path("data/sim-r2/runs")
@@ -215,7 +214,7 @@ def report(runs: Path = RUNS, sim_data: Path = Path("data/sim-r2")) -> dict:
     out["faithfulness"] = faith
     out["passes"] = all(f["passes"] for f in faith.values())
     by = {n: load(runs, sim_data, n) for n in SINGLES}
-    if not all(by.values()):  # spec §2: the strategies are compared only after the faithfulness check
+    if not out["passes"] or not all(by.values()):  # spec §2: no strategy comparison until faithfulness passes
         return out
     out["strategies"] = table(by)
     comb = runs / sim_data.name / "combination.json"
