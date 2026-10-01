@@ -26,16 +26,13 @@ A new session (possibly on the user's other Claude account) continues from this 
 - **Task 10 done:** recoverability on 20 test deals found 8 problems, all zero-amount facts stated in awkward
   template wording ("$0.0M below normal levels"); understood, reported in `docs/results/plan-6-test-set.md`, and the
   user decided to proceed without regenerating (2026-09-28).
-- **The campaign is running (Task 11), started 2026-09-28 10:51 EDT** from this worktree (pid in
-  `data/test-r2/campaign.pid`), using the private Claude Code 2.1.280 copy in `data/claude-2.1.280.app`. About 4–5
-  days. Don't edit code or switch branches in this worktree while it runs.
-  - Check it: `uv run python -m acqlab.bench.campaign --data data/test-r2 --status` (counts only, never results).
-  - If the log's last line is `stopped …`: tell the user first. No fix may touch `acqlab/agents` or `acqlab/routers`.
-    After a hard kill, check `pgrep -f "claude -p"` for leftovers. Restart (it resumes):
-    `export CLAUDE_BIN="$PWD/data/claude-2.1.280.app/Contents/MacOS/claude"` then
-    `nohup caffeinate -i uv run python -m acqlab.bench.campaign --data data/test-r2 --confirm-claude > data/test-r2/campaign.out 2>&1 &`
-  - Next, only after the log says `campaign complete`: Task 12 — first a run-health check per system (statuses,
-    unanswered, timeouts, models; no regret shown), then `analysis.main` once, then the write-up.
+- **Plan 6 is done (2026-10-01).** The campaign ran 2026-09-28 10:51 to 2026-10-01 00:34 with no errors; the
+  analysis ran once. Results: `docs/results/plan-6-main-run.md` (numbers in `plan-6-main-run.json`). Headline: the
+  Team's regret is 30% below Solo's and below best-of-2 Solo, but the CI includes zero, so **H1 fails as
+  pre-registered**; **H2 holds** (the gain is on interaction and flip deals); H3 not shown; H4 fails (S4 reads more
+  decoy pages); H5 fails on the ratio (1.54×, not 2×, though the engine clearly helps); H6 too few to test (0 deals).
+- **Next:** Plan 7, the demo and slides (the showcase deal moved there), reporting Plan 6 as it came out. Still
+  open: the "hidden upside" note (Plan 5 dev checks), and the deferred minors in the Plan 6 ledger.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
   before any real Claude or Codex call; commits end with the Co-Authored-By trailer the session's attribution names.
 - **Codex:** the dacuber01 account, out of usage on 2026-09-26.
