@@ -7,8 +7,9 @@ specs are the binding authority on design; this file is the source of truth for 
 
 A new session (possibly on the user's other Claude account) continues from this point.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
-  `claude/plan-4b-freeze-preregistration-0908fa`; `plan-5` (worktree `plan-4b-calibration-round-1-5f0549`) is
-  fast-forwarded to it after each finished step (`git -C <that worktree> merge --ff-only <branch>`). The data
+  `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
+  2026-09-26 (at `4896dbb`): its worktree `plan-4b-calibration-round-1-5f0549` was detached by something else, so
+  the fast-forwards after that moved only a detached HEAD there; moving `plan-5` up is left to the user. The data
   (`data/cal-r2`, `data/heldout-r2`) is in this worktree, git-ignored.
 - **Plan 5 is done:** S4 frozen (tag `s4-frozen-plan5`); the results are in `docs/results/plan-5-dev-checks.md` and
   the Next steps below.
