@@ -1,0 +1,468 @@
+{
+  "scope": "Exploratory audit, no new model runs; test data must not select a new policy",
+  "main_comparison": {
+    "n": 160,
+    "diff": -0.003817664281055204,
+    "ci95": [
+      -0.009970794694308348,
+      0.0016061117794011488
+    ],
+    "by_case": {
+      "clean": {
+        "n": 26,
+        "diff": 0.004352533986284151,
+        "ci95": [
+          -0.008891874273806083,
+          0.015879437941204985
+        ]
+      },
+      "decoy": {
+        "n": 37,
+        "diff": 0.008836049148070714,
+        "ci95": [
+          0.0020094389769139747,
+          0.016798961241226658
+        ]
+      },
+      "flip": {
+        "n": 12,
+        "diff": -0.0012491197961447113,
+        "ci95": [
+          -0.003747359388434134,
+          0.0
+        ]
+      },
+      "interaction": {
+        "n": 43,
+        "diff": -0.017389620669482717,
+        "ci95": [
+          -0.03333711399478073,
+          -0.004126984826791679
+        ]
+      },
+      "unresolvable": {
+        "n": 42,
+        "diff": -0.006861496684508183,
+        "ci95": [
+          -0.01715182175844342,
+          0.0018840860380267062
+        ]
+      }
+    }
+  },
+  "systems": {
+    "s1b": {
+      "n": 160,
+      "regret": 0.01259515005759489,
+      "accuracy": 0.76875,
+      "cost": 0.13046362125,
+      "tokens": {
+        "input_tokens": 18.4125,
+        "output_tokens": 2477.24375,
+        "cache_read_input_tokens": 59966.8875,
+        "cache_creation_input_tokens": 8597.85
+      }
+    },
+    "s3": {
+      "n": 160,
+      "regret": 0.01048752741157272,
+      "accuracy": 0.7875,
+      "cost": 0.26316497875,
+      "tokens": {
+        "input_tokens": 36.7,
+        "output_tokens": 5054.49375,
+        "cache_read_input_tokens": 119643.175,
+        "cache_creation_input_tokens": 17241.34375
+      }
+    },
+    "s4": {
+      "n": 160,
+      "regret": 0.008777485776539687,
+      "accuracy": 0.78125,
+      "cost": 0.5253974975,
+      "tokens": {
+        "input_tokens": 62.225,
+        "output_tokens": 11905.2875,
+        "cache_read_input_tokens": 102813.2,
+        "cache_creation_input_tokens": 33305.825
+      }
+    },
+    "s0": {
+      "n": 160,
+      "regret": 0.0,
+      "accuracy": 1.0,
+      "cost": 0.17439663875,
+      "tokens": {
+        "input_tokens": 16.0625,
+        "output_tokens": 2261.49375,
+        "cache_read_input_tokens": 73418.56875,
+        "cache_creation_input_tokens": 14302.35
+      }
+    }
+  },
+  "complementarity": {
+    "team_wins": 25,
+    "team_losses": 23,
+    "ties": 112,
+    "both_wrong": 12,
+    "oracle_selector_accuracy": 0.925,
+    "oracle_selector_regret": 0.0031366324814947498,
+    "warning": "Oracle selection uses truth: a ceiling, not a runnable system; separate reading budgets."
+  },
+  "trace_counts": {
+    "final_open": 357,
+    "final_committed": 443,
+    "final_open_positive_low": 357,
+    "lead_turns": 495,
+    "challenge_turns": 318,
+    "flagged_pair_answers": 120,
+    "objections": 1359,
+    "objection_elsewhere": 1144,
+    "objection_evidence": 95,
+    "objection_bigger": 120
+  },
+  "committed_endpoint_mismatches": [
+    {
+      "deal": "test-068",
+      "type": "capex",
+      "committed": [
+        0.0,
+        2.1
+      ],
+      "documented": [
+        1.2,
+        2.1
+      ],
+      "team_correct": true
+    }
+  ],
+  "challenger_unread_obligations": {
+    "n": 1354,
+    "any_named_doc_read_later": 425,
+    "affordable_at_objection": 706,
+    "affordable_but_no_named_doc_read_later": 281,
+    "note": "Counts objections, not unique issues; not all objections merit investigation."
+  },
+  "midpoint_barriers": {
+    "long_document_candidates": 221,
+    "unaffordable_after_first_pass": 136,
+    "documents_with_still_open_evidence_now_unaffordable": 56,
+    "deals_with_such_open_evidence": 54,
+    "wrong_deals_with_such_open_evidence": 22,
+    "by_document": {
+      "audited": {
+        "candidates": 91,
+        "unaffordable": 56
+      },
+      "cim": {
+        "candidates": 103,
+        "unaffordable": 73
+      },
+      "qoe": {
+        "candidates": 27,
+        "unaffordable": 7
+      }
+    },
+    "note": "Structural opportunity only. A long document need not be optimal; no counterfactual run."
+  },
+  "practice_source_locations": {
+    "addback": {
+      "n": 60,
+      "observed": {
+        "qoe": 20,
+        "board_minutes": 11,
+        "audited": 29
+      },
+      "router_mean_weight_without_named_hints": {
+        "cim": 0.1500000000000002,
+        "qoe": 0.4499999999999995,
+        "audited": 0.25,
+        "credit": 0.00934464318790945,
+        "contract": 0.04125088586379203,
+        "assets": 0.00934464318790945,
+        "legal": 0.00934464318790945,
+        "board_minutes": 0.00934464318790945,
+        "environmental": 0.00808389327390876,
+        "hr_policy": 0.008401978622083119,
+        "it_policy": 0.008415108874183959,
+        "marketing": 0.005018109943032545,
+        "org_chart": 0.0044060273232099855,
+        "whistleblowing": 0.004452662930894355,
+        "continuity": 0.0040039528969482525,
+        "quality": 0.0039231841859550835,
+        "insurance": 0.008350252162268423,
+        "procurement": 0.0043986676485708994,
+        "code_of_conduct": 0.005194688621062462,
+        "data_protection": 0.00415093800678166,
+        "travel": 0.0025710768956705493
+      },
+      "router_board_minutes_weight_with_logged_opening_hints": 0.009344643187909445
+    },
+    "debt_like": {
+      "n": 60,
+      "observed": {
+        "audited": 23,
+        "board_minutes": 12,
+        "legal": 20,
+        "qoe": 5
+      },
+      "router_mean_weight_without_named_hints": {
+        "cim": 0.00934464318790945,
+        "qoe": 0.1500000000000002,
+        "audited": 0.4499999999999995,
+        "credit": 0.00934464318790945,
+        "contract": 0.04125088586379203,
+        "assets": 0.00934464318790945,
+        "legal": 0.25,
+        "board_minutes": 0.00934464318790945,
+        "environmental": 0.00808389327390876,
+        "hr_policy": 0.008401978622083119,
+        "it_policy": 0.008415108874183959,
+        "marketing": 0.005018109943032545,
+        "org_chart": 0.0044060273232099855,
+        "whistleblowing": 0.004452662930894355,
+        "continuity": 0.0040039528969482525,
+        "quality": 0.0039231841859550835,
+        "insurance": 0.008350252162268423,
+        "procurement": 0.0043986676485708994,
+        "code_of_conduct": 0.005194688621062462,
+        "data_protection": 0.00415093800678166,
+        "travel": 0.0025710768956705493
+      },
+      "router_board_minutes_weight_with_logged_opening_hints": 0.10547249864858226
+    },
+    "concentration": {
+      "n": 60,
+      "observed": {
+        "audited": 14,
+        "contract": 37,
+        "board_minutes": 9
+      },
+      "router_mean_weight_without_named_hints": {
+        "cim": 0.25,
+        "qoe": 0.011893939393939392,
+        "audited": 0.1500000000000002,
+        "credit": 0.011893939393939392,
+        "contract": 0.44999999999999907,
+        "assets": 0.011893939393939392,
+        "legal": 0.011893939393939392,
+        "board_minutes": 0.011893939393939392,
+        "environmental": 0.010245587745587747,
+        "hr_policy": 0.010665584415584415,
+        "it_policy": 0.01071657509157509,
+        "marketing": 0.006365301365301367,
+        "org_chart": 0.005569014319014322,
+        "whistleblowing": 0.005656218781218783,
+        "continuity": 0.004982933732933734,
+        "quality": 0.005001248751248753,
+        "insurance": 0.010651848151848149,
+        "procurement": 0.0055994005994005995,
+        "code_of_conduct": 0.006600482850482853,
+        "data_protection": 0.0052749333999334005,
+        "travel": 0.003201173826173826
+      },
+      "router_board_minutes_weight_with_logged_opening_hints": 0.03492382617382619
+    },
+    "nwc": {
+      "n": 60,
+      "observed": {
+        "qoe": 30,
+        "board_minutes": 15,
+        "audited": 15
+      },
+      "router_mean_weight_without_named_hints": {
+        "cim": 0.017584288539977413,
+        "qoe": 0.4499999999999995,
+        "audited": 0.25,
+        "credit": 0.017584288539977413,
+        "contract": 0.07769393459138027,
+        "assets": 0.017584288539977413,
+        "legal": 0.017584288539977413,
+        "board_minutes": 0.017584288539977413,
+        "environmental": 0.015196861639392613,
+        "hr_policy": 0.01581100422625192,
+        "it_policy": 0.015833880043245385,
+        "marketing": 0.009456429062853213,
+        "org_chart": 0.00830359907120743,
+        "whistleblowing": 0.008385264632168656,
+        "continuity": 0.007540290677674578,
+        "quality": 0.0073957688338493295,
+        "insurance": 0.015719792741658085,
+        "procurement": 0.008290235392402574,
+        "code_of_conduct": 0.00978652820777434,
+        "data_protection": 0.007818068455452356,
+        "travel": 0.004846899724802202
+      },
+      "router_board_minutes_weight_with_logged_opening_hints": 0.0175842885399774
+    },
+    "capex": {
+      "n": 60,
+      "observed": {
+        "assets": 30,
+        "board_minutes": 11,
+        "audited": 19
+      },
+      "router_mean_weight_without_named_hints": {
+        "cim": 0.25,
+        "qoe": 0.00934464318790945,
+        "audited": 0.1500000000000002,
+        "credit": 0.00934464318790945,
+        "contract": 0.04125088586379203,
+        "assets": 0.4499999999999995,
+        "legal": 0.00934464318790945,
+        "board_minutes": 0.00934464318790945,
+        "environmental": 0.00808389327390876,
+        "hr_policy": 0.008401978622083119,
+        "it_policy": 0.008415108874183959,
+        "marketing": 0.005018109943032545,
+        "org_chart": 0.0044060273232099855,
+        "whistleblowing": 0.004452662930894355,
+        "continuity": 0.0040039528969482525,
+        "quality": 0.0039231841859550835,
+        "insurance": 0.008350252162268423,
+        "procurement": 0.0043986676485708994,
+        "code_of_conduct": 0.005194688621062462,
+        "data_protection": 0.00415093800678166,
+        "travel": 0.0025710768956705493
+      },
+      "router_board_minutes_weight_with_logged_opening_hints": 0.01405869547549114
+    }
+  },
+  "interface_probes": {
+    "naming_audited_changes_addback_weights": false,
+    "before_weights": {
+      "qoe": 0.45,
+      "audited": 0.25,
+      "cim": 0.15,
+      "board_minutes": 0.07500000000000001,
+      "legal": 0.07500000000000001
+    },
+    "after_weights": {
+      "qoe": 0.45,
+      "audited": 0.25,
+      "cim": 0.15,
+      "board_minutes": 0.07500000000000001,
+      "legal": 0.07500000000000001
+    },
+    "changing_open_low_1_to_9_changes_priced_issue": false,
+    "zero_claim_against_positive_quote_accepted": true,
+    "zero_claim_commit": {
+      "type": "debt_like",
+      "chance": 1.0,
+      "quotes": [
+        {
+          "doc_id": "audited",
+          "text": "The company has a debt-like obligation of $9.0M payable at closing."
+        }
+      ],
+      "docs": [
+        "audited"
+      ],
+      "kind": "quoted",
+      "low": 0.0,
+      "high": 0.0
+    }
+  },
+  "industry_slices": {
+    "manufacturing": {
+      "n": 112,
+      "diff": -0.0016414835950327976,
+      "ci95": [
+        -0.0092594334808869,
+        0.004673604487272725
+      ],
+      "by_case": {
+        "clean": {
+          "n": 19,
+          "diff": 0.008732308666360074,
+          "ci95": [
+            0.0007303986699133323,
+            0.019080696073176123
+          ]
+        },
+        "decoy": {
+          "n": 23,
+          "diff": 0.014125728109153494,
+          "ci95": [
+            0.004603712215225645,
+            0.025604560567351168
+          ]
+        },
+        "flip": {
+          "n": 8,
+          "diff": -0.001873679694217067,
+          "ci95": [
+            -0.0056210390826512005,
+            0.0
+          ]
+        },
+        "interaction": {
+          "n": 30,
+          "diff": -0.01580916786424105,
+          "ci95": [
+            -0.03725739598236536,
+            0.0011179385136070971
+          ]
+        },
+        "unresolvable": {
+          "n": 32,
+          "diff": -0.005793353135439905,
+          "ci95": [
+            -0.017875953791431275,
+            0.003986477761984735
+          ]
+        }
+      }
+    },
+    "services": {
+      "n": 48,
+      "diff": -0.008895419215107484,
+      "ci95": [
+        -0.018709641619408537,
+        -0.0003285697150042791
+      ],
+      "by_case": {
+        "clean": {
+          "n": 7,
+          "diff": -0.007535425859636209,
+          "ci95": [
+            -0.049380418541691125,
+            0.026735776258688154
+          ]
+        },
+        "decoy": {
+          "n": 14,
+          "diff": 0.0001458622834347232,
+          "ci95": [
+            -0.007543150645497149,
+            0.007980737495801318
+          ]
+        },
+        "flip": {
+          "n": 4,
+          "diff": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "interaction": {
+          "n": 13,
+          "diff": -0.021036819450809634,
+          "ci95": [
+            -0.04484924518077883,
+            -0.0029158652014257182
+          ]
+        },
+        "unresolvable": {
+          "n": 10,
+          "diff": -0.010279556041526666,
+          "ci95": [
+            -0.03228617363889781,
+            0.00553414567887505
+          ]
+        }
+      }
+    }
+  }
+}
