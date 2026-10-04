@@ -38,7 +38,8 @@ A new session (possibly on the user's other Claude account) continues from this 
   - The reading simulator was built and run, free and offline (spec `2026-10-01-reading-simulator-design.md`, plan
     `2026-10-01-reading-simulator.md`, results `docs/results/reading-simulator.md`). It wraps the frozen S4 and
     replaces the AI turns with rules. It passed its faithfulness check: 89–97% same calls as the real team.
-  - None of 7 reading or pricing changes beat today's team on 300 template deals, and 3 are clearly worse; re-testing
+  - None of 7 reading or pricing changes (5 ideas) beat today's team on 300 template deals, and 4 (3 of the 5 ideas) are
+    clearly worse; re-testing
     H1 as it stands needs about 740–990 deals.
   - 368 tests pass. Simulator data is in `data/sim-r2` (git-ignored).
 - **Next:** Plan 7, the demo and slides (the showcase deal moved there), reporting Plan 6 as it came out. Still

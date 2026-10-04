@@ -194,17 +194,6 @@
       0.0
     ]
   },
-  "confirmation": {
-    "minus_base": {
-      "n": 60,
-      "diff": 0.0,
-      "ci95": [
-        0.0,
-        0.0
-      ]
-    },
-    "passes": true
-  },
   "sizing": {
     "full": {
       "gap": -0.0038,

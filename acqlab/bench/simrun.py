@@ -224,7 +224,7 @@ def report(runs: Path = RUNS, sim_data: Path = Path("data/sim-r2")) -> dict:
         out["combination_minus_base"] = paired(load(runs, sim_data, c["combo"]), by["baseline"])
         conf = {n: {f"{p.name}/{d}": r for p in PRACTICE for d, r in load(runs, p, n).items()}
                 for n in ("baseline", c["combo"])}
-        if conf[c["combo"]]:
+        if c["combo"] != "baseline" and conf[c["combo"]]:
             m = paired(conf[c["combo"]], conf["baseline"])
             out["confirmation"] = {"minus_base": m, "passes": m["diff"] <= 0}
         out["sizing"] = sizing(out["combination_minus_base"]["diff"])
