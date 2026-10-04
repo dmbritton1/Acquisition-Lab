@@ -3,7 +3,7 @@
 *Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
 specs are the binding authority on design; this file is the source of truth for status and next steps.*
 
-## Resume here (2026-09-27)
+## Resume here (2026-10-04)
 
 A new session (possibly on the user's other Claude account) continues from this point.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
@@ -32,6 +32,15 @@ A new session (possibly on the user's other Claude account) continues from this 
   Team's regret is 30% below Solo's and below best-of-2 Solo, but the CI includes zero, so **H1 fails as
   pre-registered**; **H2 holds** (the gain is on interaction and flip deals); H3 not shown; H4 fails (S4 reads more
   decoy pages); H5 fails on the ratio (1.54×, not 2×, though the engine clearly helps); H6 too few to test (0 deals).
+- **After Plan 6 (2026-10-01 to 10-04):**
+  - A post-hoc look (`docs/results/plan-6-posthoc.md`, exploratory) found that S4 never misread a document; every
+    wrong call came from issues still open when the budget ran out.
+  - The reading simulator was built and run, free and offline (spec `2026-10-01-reading-simulator-design.md`, plan
+    `2026-10-01-reading-simulator.md`, results `docs/results/reading-simulator.md`). It wraps the frozen S4 and
+    replaces the AI turns with rules. It passed its faithfulness check: 89–97% same calls as the real team.
+  - None of 7 reading or pricing changes beat today's team on 300 template deals, and 3 are clearly worse; re-testing
+    H1 as it stands needs about 740–990 deals.
+  - 368 tests pass. Simulator data is in `data/sim-r2` (git-ignored).
 - **Next:** Plan 7, the demo and slides (the showcase deal moved there), reporting Plan 6 as it came out. Still
   open: the "hidden upside" note (Plan 5 dev checks), and the deferred minors in the Plan 6 ledger.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
