@@ -28,12 +28,15 @@ class Strategy(NamedTuple):
     opening: str = "lead"  # "lead": the logged or modelled opening plan; "base_rate": its chances set to BASE_RATE
     absence_cut: float = 0.0  # an open issue a read could settle but didn't: chance *= 1 - absence_cut
     sweep: bool = True
+    midpoint: bool = True  # False: the first directed pass is not limited to documents that fit in half the budget
+    named_boost: float = 1.0  # an unread document the Lead named for an issue: its settle weight *= this, renormalized
 
 
 STRATEGIES = {"baseline": Strategy(), "regret": Strategy(scorer="regret"), "pages_0.5": Strategy(page_power=0.5),
               "pages_0": Strategy(page_power=0.0), "base_rate": Strategy(opening="base_rate"),
               "cut_0.25": Strategy(absence_cut=0.25), "cut_0.5": Strategy(absence_cut=0.5),
-              "no_sweep": Strategy(sweep=False)}
+              "no_sweep": Strategy(sweep=False), "no_mid": Strategy(midpoint=False),
+              "named_x2": Strategy(named_boost=2.0)}
 
 
 def strategy(name: str) -> Strategy:
@@ -89,6 +92,23 @@ class SimPanel(Panel):
         self.key, self.strategy = key, s
         self.opening = [i | {"chance": BASE_RATE[i["type"]]} for i in plan] if s.opening == "base_rate" else plan
         self.planned = False
+        if s.named_boost != 1.0:
+            weights = self.record.weights  # the frozen Record's, wrapped on this instance only
+
+            def boosted(pages: dict[str, float], read: set[str]) -> dict[str, dict[str, float]]:
+                out = weights(pages, read)
+                for t in {t for wd in out.values() for t in wd}:
+                    named = set(self.record.named(t))
+                    for d, wd in out.items():
+                        if t in wd and d in named:
+                            wd[t] *= s.named_boost
+                    total = sum(wd[t] for wd in out.values() if t in wd)
+                    for wd in out.values():
+                        if t in wd:
+                            wd[t] /= total
+                return out
+
+            self.record.weights = boosted
 
     def lead(self) -> bool:
         """The opening plan once; afterwards the current beliefs, unchanged."""
@@ -155,7 +175,8 @@ class SimPanel(Panel):
         return {d: raw[d] / self.pages[d] ** p for d in cands}
 
     def route(self, until: float | None = None) -> str | None:
-        """Panel.route with the strategy's scores."""
+        """Panel.route with the strategy's scores; without the midpoint, `until` is ignored."""
+        until = until if self.strategy.midpoint else None
         read, left = self.read(), (self.budget if until is None else until) - self.spent()
         wts, skip = self.record.weights(self.pages, read), read | self.tried
         cands = [d for d in wts if d not in skip and self.pages[d] <= left]

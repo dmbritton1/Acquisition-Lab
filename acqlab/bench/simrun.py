@@ -27,7 +27,7 @@ from acqlab.routers.track_a import bootstrap_ci
 RUNS = Path("data/sim-r2/runs")
 PRACTICE = (Path("data/cal-r2"), Path("data/heldout-r2"))
 TEST = Path("data/test-r2")
-SINGLES = list(sim.STRATEGIES)
+SINGLES = ["baseline", "regret", "pages_0.5", "pages_0", "base_rate", "cut_0.25", "cut_0.5", "no_sweep"]  # spec §3's
 FAMILIES = {"regret": ["regret"], "pages": ["pages_0.5", "pages_0"], "base_rate": ["base_rate"],
             "cut": ["cut_0.25", "cut_0.5"], "no_sweep": ["no_sweep"]}  # spec §3: a family enters at its best value
 AGREE, REGRET_GAP = 0.85, 0.003  # spec §2's pass bars

@@ -214,3 +214,27 @@ def test_the_logged_plan_is_the_first_accepted_proposal(tmp_path):
             {"tool": "propose", "refused": False, "args": {"issues": ["later"]}}]
     t.write_text("\n".join(json.dumps(r) for r in rows))
     assert sim.logged_plan(t) == ["first"]
+
+
+def test_without_the_midpoint_the_first_pass_may_pick_a_long_document(data, tmp_path):
+    p = _panel(data, tmp_path, sim.Strategy(midpoint=False))
+    p.lead()
+    half = 0.5 * p.budget
+    assert p.route(half) == p.route()
+    q = _panel(data, tmp_path, name="mid.jsonl")
+    q.lead()
+    assert all(q.pages[d] <= half for d in [q.route(half)] if d)
+
+
+def test_named_boost_doubles_named_documents_then_renormalizes(data, tmp_path):
+    p, q = _panel(data, tmp_path), _panel(data, tmp_path, sim.Strategy(named_boost=2.0), "b.jsonl")
+    p.lead(), q.lead()
+    t = TRAPS[0]
+    named = sorted(p.pages)[:1]
+    for r in (p, q):
+        r.record.entries[t].docs = named
+    a, b = p.record.weights(p.pages, set()), q.record.weights(q.pages, set())
+    raw = {d: a[d][t] * (2 if d in named else 1) for d in a if t in a[d]}
+    assert sum(b[d][t] for d in b if t in b[d]) == pytest.approx(1.0)
+    assert all(b[d][t] == pytest.approx(raw[d] / sum(raw.values())) for d in raw)
+    assert q.record.rank_docs(q.pages, set(), sorted(q.pages)) != p.record.rank_docs(p.pages, set(), sorted(p.pages))
