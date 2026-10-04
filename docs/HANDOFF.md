@@ -41,7 +41,12 @@ A new session (possibly on the user's other Claude account) continues from this 
   - None of 7 reading or pricing changes (5 ideas) beat today's team on 300 template deals, and 4 (3 of the 5 ideas) are
     clearly worse; re-testing
     H1 as it stands needs about 740–990 deals.
-  - 368 tests pass. Simulator data is in `data/sim-r2` (git-ignored).
+  - A framework review (`docs/results/framework-review-2026-10-04.md`, exploratory, written by another AI) proposed
+    fixes. Its two cheapest ideas were tested in the simulator with rules fixed in advance
+    (`docs/results/midpoint-check.md`): dropping the half-budget limit on the first reading pass and boosting the
+    Lead's named documents. Neither wins, alone or together: they reach more facts, but loss does not move. S3 is a
+    two-run vote (NO-GO wins ties), not a best-of-2 selector; say so in Plan 7's slides.
+  - 370 tests pass. Simulator data is in `data/sim-r2` (git-ignored).
 - **Next:** Plan 7, the demo and slides (the showcase deal moved there), reporting Plan 6 as it came out. Still
   open: the "hidden upside" note (Plan 5 dev checks), and the deferred minors in the Plan 6 ledger.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
