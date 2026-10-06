@@ -41,7 +41,7 @@ def fakes(monkeypatch, room):
         if name not in f["scripts"]:
             raise recon.RunTimeout("fake timeout")
         trace.write_text("".join(json.dumps(r) + "\n" for r in f["scripts"][name]))
-        return {"total_cost_usd": 0.1, "usage": {"output_tokens": 5}}
+        return {"total_cost_usd": 0.1, "usage": {"output_tokens": 5}, "env_keys": ["HOME", "PATH"]}
 
     for fn in ("draft", "second", "judge"):
         monkeypatch.setattr(recon, fn, run)
@@ -142,6 +142,7 @@ def test_the_combined_trace_scores_like_one_run(fakes, room, data, tmp_path):
     assert row["pages"] == 11.0 and row["go"] is False and row["answered"]
     assert sum(r["tool"] == "submit" for r in trace) == 1 and sum(r["tool"] == "step_submit" for r in trace) == 3
     assert row["cost_usd"] == pytest.approx(0.3) and row["sessions"] == 3 and row["tokens"]["output_tokens"] == 15
+    assert cli["env_keys"] == ["HOME", "PATH"]
 
 
 def test_a_referee_without_a_call_leaves_the_deal_unanswered(fakes, room, data, tmp_path):
@@ -216,11 +217,45 @@ def test_the_analysis_script_reads_a_finished_pilot(data, tmp_path, fake_claude,
     for s in ("s1b", "s4"):  # stand-ins for the baselines: the design's own runs
         shutil.copytree(d / "runs" / "recon_c", d / "runs" / s)
     script = runpy.run_path(str(Path(__file__).parents[2] / "scripts" / "recon_pilot.py"))
-    out = script["analyse"](d)
+    out = script["analyse"](d, split="dev")
     assert out["deals"] == 2 and out["pick"]["chosen"] in recon.DESIGNS and not out["pick"]["go"]
     assert set(out["systems"]) == {"s1b", "s4", *recon.DESIGNS} and out["versus"]["recon_c"]["s1b"]["n"] == 2
     assert "scout1_real_reached" in out["designs"]["recon_a"] and "scout1_real_reached" not in out["designs"]["recon_c"]
     assert "nothing to size" in out["sizing"]["note"]
     assert "by_case" in out["systems"]["recon_c"] and sum(out["systems"]["recon_c"]["by_case"][ct]["n"] for ct in out["systems"]["recon_c"]["by_case"]) == 2
-    assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json")]) == 0
-    assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json")]) == 1  # never overwrites
+    assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json"), "--split", "dev"]) == 0
+    assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json"), "--split", "dev"]) == 1  # never overwrites
+
+
+def test_the_analysis_refuses_a_pilot_where_a_system_is_missing_deals(data, tmp_path, fake_claude, monkeypatch):
+    monkeypatch.setenv("FAKE_CLAUDE", "ok")
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+    recon.run(d, list(recon.DESIGNS), split="dev", claude=fake_claude)
+    for s in ("s1b", "s4"):
+        shutil.copytree(d / "runs" / "recon_c", d / "runs" / s)
+    (d / "runs" / "s4" / "dev-001.json").unlink()
+    script = runpy.run_path(str(Path(__file__).parents[2] / "scripts" / "recon_pilot.py"))
+    with pytest.raises(ValueError, match="s4.*dev-001"):
+        script["analyse"](d, split="dev")
+    out = tmp_path / "x.json"
+    assert script["main"](["--data", str(d), "--out", str(out), "--split", "dev"]) == 1 and not out.exists()
+
+
+def test_design_stats_reports_overrules_by_role_and_the_scouts_overlap(data):
+    script = runpy.run_path(str(Path(__file__).parents[2] / "scripts" / "recon_pilot.py"))
+    docs = json.loads((data / "deals" / "dev-000" / "room" / "index.json").read_text())["documents"]
+    pages = {"dev-000": {x["id"]: x["pages"] for x in docs}}
+    x, y, z = (d["id"] for d in docs[:3])
+    key = AnswerKey.model_validate_json((data / "truth" / "dev-000.json").read_text())
+
+    def opens(step, doc, cost):
+        return _row("open_document", {"doc_id": doc}, cost) | {"step": step}
+
+    trace = [opens("scout1", x, pages["dev-000"][x]), opens("scout2", x, pages["dev-000"][x]),
+             opens("scout2", y, pages["dev-000"][y]), opens("referee", z, pages["dev-000"][z])]
+    row = {"disputed": True, "answered": True, "go": False, "analysts": [{"go": True}, {"go": False}]}
+    out = script["design_stats"]({"dev-000": row}, {"dev-000": trace}, {"dev-000": key}, pages)
+    assert out["overruled"] == {"scout1": 1, "scout2": 0} and "overruled_analyst_1" not in out
+    assert out["overlap_pages_mean"] == pages["dev-000"][x]
+    assert out["referee_new_pages_mean"] == pages["dev-000"][z]

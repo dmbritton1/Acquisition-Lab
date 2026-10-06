@@ -61,7 +61,7 @@ def won_lost_tied(a: dict, b: dict) -> list[int]:
 
 
 def design_stats(rows: dict, traces: dict, keys: dict, pages: dict) -> dict:
-    """Disputes, overrules, the referee's own reads; for A, the scouts' overlap and reach."""
+    """Disputes, overrules by role, the referee's own reads; for A, the scouts' overlap and reach."""
     disputed = [d for d, r in rows.items() if r["disputed"]]
     over, ref_pages, ref_found = [0, 0], [], 0
     for d in disputed:
@@ -72,11 +72,12 @@ def design_stats(rows: dict, traces: dict, keys: dict, pages: dict) -> dict:
                 and not x["refused"] and x["cost"] > 0]
         ref_pages.append(sum(x["cost"] for x in paid))
         ref_found += bool({x["args"]["doc_id"] for x in paid} & real_docs(keys[d]))
+    scout = any(x.get("step") == "scout1" for t in traces.values() for x in t)
     out = {"disputes": len(disputed), "dispute_rate": len(disputed) / len(rows),
-           "overruled_analyst_1": over[0], "overruled_analyst_2": over[1],
+           "overruled": dict(zip(("scout1", "scout2") if scout else ("draft", "second"), over)),
            "referee_new_pages_mean": float(np.mean(ref_pages)) if ref_pages else 0.0,
            "referee_reads_reached_a_real_fact": ref_found}
-    if any(x.get("step") == "scout1" for t in traces.values() for x in t):
+    if scout:
         scouts = {d: [opened([x for x in traces[d] if x.get("step") == s]) for s in ("scout1", "scout2")]
                   for d in rows}
         out["overlap_pages_mean"] = float(np.mean([sum(pages[d][x] for x in set(a) & set(b))
@@ -101,13 +102,20 @@ def sizing(chosen: dict, s1b: dict) -> dict:
                                      for label, g in (("full", -gap), ("half", -gap / 2))}
 
 
-def analyse(data: Path) -> dict:
+def analyse(data: Path, split: str = "test") -> dict:
     by = {s: load(data, s) for s in SYSTEMS}
+    want = set(json.loads((data / "splits.json").read_text())[split])
+    gaps = [f"{s}: missing {sorted(want - set(by[s]))}" + (f", extra {sorted(set(by[s]) - want)}" if set(by[s]) - want else "")
+            for s in SYSTEMS if set(by[s]) != want]
+    if gaps:
+        raise ValueError(f"the systems do not all cover the {split} deals: " + "; ".join(gaps))
     deals = sorted(set().union(*by.values()))
     keys = {d: AnswerKey.model_validate_json((data / "truth" / f"{d}.json").read_text()) for d in deals}
     pages = {d: {x["id"]: x["pages"] for x in json.loads((data / "deals" / d / "room" / "index.json").read_text())
                  ["documents"]} for d in deals}
-    traces = {s: {d: trace_rows(data / "runs" / s / f"{d}.trace.jsonl") for d in by[s]} for s in SYSTEMS}
+    # a run that timed out before its server started has a row but no trace
+    traces = {s: {d: trace_rows(t) if (t := data / "runs" / s / f"{d}.trace.jsonl").exists() else []
+                  for d in by[s]} for s in SYSTEMS}
     out = {"deals": len(deals), "pick": recon.pick(by),
            "systems": {s: summary(by[s], traces[s], keys) for s in SYSTEMS},
            "versus": {d: {b: analysis.compare(by[d], by[b]) | {"won_lost_tied": won_lost_tied(by[d], by[b])}
@@ -121,11 +129,16 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--split", default="test")
     args = ap.parse_args(argv)
     if args.out.exists():  # one-shot, like the Plan 6 analysis: never overwrite a result already written
         print(f"Refusing: {args.out} already exists")
         return 1
-    out = analyse(args.data)
+    try:
+        out = analyse(args.data, args.split)
+    except ValueError as e:
+        print(e)
+        return 1
     args.out.write_text(json.dumps(out, indent=2))
     print(json.dumps(out["pick"], indent=2))
     return 0

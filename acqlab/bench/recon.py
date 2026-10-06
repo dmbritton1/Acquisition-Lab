@@ -139,6 +139,7 @@ def combine(trace: list[dict], clis: list[dict | None], final: dict | None) -> t
            "num_turns": sum(c.get("num_turns") or 0 for c in ok),
            "duration_ms": sum(c.get("duration_ms") or 0 for c in ok),
            "modelUsage": {m: v for c in ok for m, v in c.get("modelUsage", {}).items()},
+           "env_keys": next((c.get("env_keys") for c in ok), None),
            "sessions": len(clis), "timeouts": sum(c is None for c in clis)}
     return out, cli
 
