@@ -61,3 +61,26 @@ def test_without_confirmation_nothing_runs(tmp_path):
 
 def test_a_solo_run_that_never_submitted_says_so():
     assert "ended without submitting" in referee.solo_view(_solo()[:-1])
+
+
+def test_a_reading_referee_is_told_its_budget_and_the_kill_test_s_is_not(s4_fake_run):
+    room, team = s4_fake_run
+    views = [referee.solo_view(_solo()), referee.solo_view(_solo(go=False))]
+    closed, _ = referee.build(room, views, ["qoe"], "dev-000")
+    reading, user = referee.build(room, views, ["qoe"], "dev-000", left=6.5)
+    assert referee.NO_READING in closed and referee.NO_READING not in reading
+    assert "a budget of 6.5 units" in reading and reading.replace(referee.READING.format(left=6.5), "") == \
+        closed.replace(referee.NO_READING, "")
+    assert "## " in user and "(qoe)" in user
+
+
+def test_a_reading_referee_gets_its_budget_the_reading_tools_and_the_paid_documents(s4_fake_run, tmp_path,
+                                                                                     monkeypatch):
+    room, team = s4_fake_run
+    seen = {}
+    monkeypatch.setattr(referee, "run_session", lambda *a, **kw: seen.update(a=a, kw=kw) or {"total_cost_usd": 0})
+    referee.judge_reading(room, ["one", "two"], ["qoe", "cim", "qoe"], "dev-000", 7.0, tmp_path / "t.jsonl",
+                          claude="x")
+    room_, budget, trace, user, system, tools, server_args = seen["a"]
+    assert budget == 7.0 and tools == referee.READ_TOOLS and server_args == ["--paid", "qoe,cim"]
+    assert seen["kw"] == {"claude": "x"}

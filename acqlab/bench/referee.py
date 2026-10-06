@@ -37,6 +37,13 @@ worth more, costs the difference.
 {guide}"""
 
 
+NO_READING = "You cannot read anything else."
+READING = ("You can also read more before deciding, with a budget of {left:g} units: list_documents shows every "
+           "document, opening one costs 1 unit per page and search costs 1 unit. The documents above are already "
+           "paid for.")
+READ_TOOLS = ["list_documents", "search", "open_document", "evaluate", "submit"]
+
+
 def rows(path: Path) -> list[dict]:
     return [json.loads(x) for x in path.read_text().splitlines()]
 
@@ -56,12 +63,17 @@ def team_view(room: Path, trace: list[dict]) -> str:
             f"\nCall: {'GO' if s['go'] else 'NO-GO'}, walk-away ${s['walk_away']:,.1f}M.")
 
 
+def note_lines(trace: list[dict]) -> list[str]:
+    """An analyst's last note per issue type, one line each."""
+    notes = {r["args"]["type"]: r["args"] for r in trace if r["tool"] == "note_issue" and not r.get("refused")}
+    return [f"- {t}: chance {n['chance']:g}, ${n['low']:g}M to ${n['high']:g}M if real ({n.get('name', '')})"
+            for t, n in notes.items()] or ["- no issues noted"]
+
+
 def solo_view(trace: list[dict]) -> str:
     """S1b's last note per issue type, its last evaluate, and its submitted call and reason."""
     ok = [r for r in trace if not r.get("refused")]
-    notes = {r["args"]["type"]: r["args"] for r in ok if r["tool"] == "note_issue"}
-    lines = [f"- {t}: chance {n['chance']:g}, ${n['low']:g}M to ${n['high']:g}M if real ({n.get('name', '')})"
-             for t, n in notes.items()] or ["- no issues noted"]
+    lines = note_lines(ok)
     ev = [r for r in ok if r["tool"] == "evaluate"]
     if ev:
         res = ev[-1].get("result") or {}
@@ -73,24 +85,39 @@ def solo_view(trace: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def prompts(room: Path, team: list[dict], solo: list[dict], deal: str) -> tuple[str, str]:
-    """(system, user). The analysts' order is fixed per deal from its id, so neither is always first."""
+def build(room: Path, views: list[str], read: list[str], deal: str, left: float | None = None) -> tuple[str, str]:
+    """(system, user) for any two analysts' views and the documents read. The views' order is fixed per deal from its
+    id, so neither is always first. With `left`, the referee may also read, with that budget (the recon pilot)."""
     index = json.loads((room / "index.json").read_text())
     titles = {d["id"]: d["title"] for d in index["documents"]}
-    read = [d for d in titles if d in set(opened(team) + opened(solo))]
+    read = [d for d in titles if d in set(read)]
     docs = "\n\n".join(f"## {titles[d]} ({d})\n\n{(room / f'{d}.md').read_text()}" for d in read)
-    views = [team_view(room, team), solo_view(solo)]
+    views = list(views)
     if random.Random(deal).random() < 0.5:
         views.reverse()
     user = (f"{index['teaser']}\n\n# Documents either analyst read\n\n{docs}\n\n# Analyst 1\n\n{views[0]}\n\n"
             f"# Analyst 2\n\n{views[1]}\n\nSettle the disagreement and submit your decision.")
-    return SYSTEM.format(guide=GUIDE), user
+    system = SYSTEM.format(guide=GUIDE)
+    return (system if left is None else system.replace(NO_READING, READING.format(left=left))), user
+
+
+def prompts(room: Path, team: list[dict], solo: list[dict], deal: str) -> tuple[str, str]:
+    """The kill test's (system, user): the team's and single Claude's work, and every document either opened."""
+    return build(room, [team_view(room, team), solo_view(solo)], opened(team) + opened(solo), deal)
 
 
 def judge(room: Path, team: list[dict], solo: list[dict], deal: str, trace: Path, **kw) -> dict:
     """One referee turn: evaluate and submit only, no reading budget. Raises LLMUnavailable like any session."""
     system, user = prompts(room, team, solo, deal)
     return run_session(room, 0, trace, user, system, ["evaluate", "submit"], [], **kw)
+
+
+def judge_reading(room: Path, views: list[str], read: list[str], deal: str, left: float, trace: Path,
+                  **kw) -> dict:
+    """A referee turn that may read with `left` units; the documents already read are paid for (the recon pilot)."""
+    system, user = build(room, views, read, deal, left)
+    paid = list(dict.fromkeys(read))
+    return run_session(room, left, trace, user, system, READ_TOOLS, ["--paid", ",".join(paid)] if paid else [], **kw)
 
 
 def disputed(data: Path) -> list[str]:
