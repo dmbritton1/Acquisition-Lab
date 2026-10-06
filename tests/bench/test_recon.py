@@ -206,3 +206,20 @@ def test_claude_stopping_mid_deal_writes_no_row_and_exits_2(data, tmp_path, monk
     monkeypatch.setitem(recon.RUN, "recon_c", stop)
     assert recon.main(["--data", str(d), "--designs", "recon_c", "--split", "dev", "--confirm-claude"]) == 2
     assert not list((d / "runs" / "recon_c").glob("*.json"))  # a rerun redoes the whole deal
+
+
+def test_the_analysis_script_reads_a_finished_pilot(data, tmp_path, fake_claude, monkeypatch):
+    monkeypatch.setenv("FAKE_CLAUDE", "ok")
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+    recon.run(d, list(recon.DESIGNS), split="dev", claude=fake_claude)
+    for s in ("s1b", "s4"):  # stand-ins for the baselines: the design's own runs
+        shutil.copytree(d / "runs" / "recon_c", d / "runs" / s)
+    script = runpy.run_path(str(Path(__file__).parents[2] / "scripts" / "recon_pilot.py"))
+    out = script["analyse"](d)
+    assert out["deals"] == 2 and out["pick"]["chosen"] in recon.DESIGNS and not out["pick"]["go"]
+    assert set(out["systems"]) == {"s1b", "s4", *recon.DESIGNS} and out["versus"]["recon_c"]["s1b"]["n"] == 2
+    assert "scout1_real_reached" in out["designs"]["recon_a"] and "scout1_real_reached" not in out["designs"]["recon_c"]
+    assert "nothing to size" in out["sizing"]["note"]
+    assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json")]) == 0
+    assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json")]) == 1  # never overwrites
