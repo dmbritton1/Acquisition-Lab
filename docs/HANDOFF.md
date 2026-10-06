@@ -46,7 +46,13 @@ A new session (possibly on the user's other Claude account) continues from this 
     (`docs/results/midpoint-check.md`): dropping the half-budget limit on the first reading pass and boosting the
     Lead's named documents. Neither wins, alone or together: they reach more facts, but loss does not move. S3 is a
     two-run vote (NO-GO wins ties), not a best-of-2 selector; say so in Plan 7's slides.
-  - 370 tests pass. Simulator data is in `data/sim-r2` (git-ignored).
+  - Research track "independent analyses that reconcile" (goal: a team that is actually better, same page budget as
+    single Claude). Its kill test passed (`docs/results/referee-kill-test.md`): on the 48 deals where the team and
+    single Claude disagree, a referee seeing both analysts' work and every document either read got 35/48 right
+    (the team 25). It pools about 1.5 times the reading, so it is a screen, not a result. Next: the spec for a
+    same-budget pilot of designs C (draft, dispute, check) and A (two scouts, one referee) on fresh deals. Real runs
+    need the user's OK.
+  - 377 tests pass. Simulator data is in `data/sim-r2` (git-ignored). The `claude` CLI is now 2.1.291.
 - **Next:** Plan 7, the demo and slides (the showcase deal moved there), reporting Plan 6 as it came out. Still
   open: the "hidden upside" note (Plan 5 dev checks), and the deferred minors in the Plan 6 ledger.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
