@@ -40,6 +40,11 @@ def reached(key: AnswerKey, docs: list[str]) -> float | None:
 def summary(rows: dict, traces: dict, keys: dict) -> dict:
     rs = list(rows.values())
     reach = [x for d in rows if (x := reached(keys[d], opened(traces[d]))) is not None]
+    by_case = {}
+    for case_type in sorted(set(r.get("case_type") for r in rs if "case_type" in r)):
+        case_rows = [r for r in rs if r.get("case_type") == case_type]
+        by_case[case_type] = {"n": len(case_rows), "regret": float(np.mean([r["regret"] for r in case_rows])),
+                              "correct": float(np.mean([r["correct"] for r in case_rows]))}
     return {"n": len(rs), "regret": float(np.mean([r["regret"] for r in rs])),
             "correct": float(np.mean([r["correct"] for r in rs])),
             "false_go": sum(r["go"] and not r["correct"] for r in rs),
@@ -47,7 +52,7 @@ def summary(rows: dict, traces: dict, keys: dict) -> dict:
             "pages": float(np.mean([r["pages"] for r in rs])), "decoy_pages": float(np.mean([r["decoy_pages"] for r in rs])),
             "real_reached": float(np.mean(reach)) if reach else None,
             "cost": float(np.mean([r["cost_usd"] or 0 for r in rs])),
-            "sessions": float(np.mean([r["sessions"] for r in rs]))}
+            "sessions": float(np.mean([r["sessions"] for r in rs])), "by_case": by_case}
 
 
 def won_lost_tied(a: dict, b: dict) -> list[int]:

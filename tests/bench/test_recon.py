@@ -221,5 +221,6 @@ def test_the_analysis_script_reads_a_finished_pilot(data, tmp_path, fake_claude,
     assert set(out["systems"]) == {"s1b", "s4", *recon.DESIGNS} and out["versus"]["recon_c"]["s1b"]["n"] == 2
     assert "scout1_real_reached" in out["designs"]["recon_a"] and "scout1_real_reached" not in out["designs"]["recon_c"]
     assert "nothing to size" in out["sizing"]["note"]
+    assert "by_case" in out["systems"]["recon_c"] and sum(out["systems"]["recon_c"]["by_case"][ct]["n"] for ct in out["systems"]["recon_c"]["by_case"]) == 2
     assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json")]) == 0
     assert script["main"](["--data", str(d), "--out", str(tmp_path / "x.json")]) == 1  # never overwrites
