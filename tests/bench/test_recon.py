@@ -151,3 +151,58 @@ def test_a_referee_without_a_call_leaves_the_deal_unanswered(fakes, room, data, 
     key = AnswerKey.model_validate_json((data / "truth" / "dev-000.json").read_text())
     assert not pilot.score(key, "recon_c", trace, cli, "no_call")["answered"]
     assert cli["sessions"] == 3 and cli["timeouts"] == 1
+
+
+def test_the_runner_refuses_without_confirmation_and_rejects_unknown_designs(tmp_path):
+    assert recon.main(["--data", str(tmp_path)]) == 3
+    assert recon.main(["--data", str(tmp_path), "--designs", "recon_b", "--confirm-claude"]) == 1
+
+
+def test_both_designs_run_end_to_end_with_the_fake_claude(data, tmp_path, fake_claude, monkeypatch):
+    monkeypatch.setenv("FAKE_CLAUDE", "ok")
+    engine = recon.engine_call  # every engine-priced call flipped, so every deal reaches the referee's real session
+    monkeypatch.setattr(recon, "engine_call", lambda room, trace: c and c | {"go": not c["go"]}
+                        if (c := engine(room, trace)) else c)
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+    rows = recon.run(d, list(recon.DESIGNS), split="dev", claude=fake_claude)
+    assert len(rows) == 2 * len(json.loads((d / "splits.json").read_text())["dev"])
+    for r in rows:
+        trace = recon.referee.rows(d / "runs" / r["system"] / f"{r['deal']}.trace.jsonl")
+        assert r["answered"] and r["spent"] <= r["budget"]
+        assert r["disputed"] and r["sessions"] == 3 and any(x["step"] == "referee" for x in trace)
+    assert recon.run(d, list(recon.DESIGNS), split="dev", claude=fake_claude) == []  # finished runs are skipped
+
+
+def test_no_step_reads_the_answer_key():
+    source = Path(recon.__file__).read_text().split("def run(")[0]
+    assert not any(word in source for word in ("AnswerKey", "truth", "model_validate"))
+
+
+def test_the_pick_follows_the_fixed_rules():
+    def rows(regret, cost=0.2, answered=40, spent=10.0):
+        return {f"d{i}": {"regret": regret, "cost_usd": cost, "answered": i < answered, "spent": spent,
+                          "budget": 20.0} for i in range(40)}
+
+    base = {"s1b": rows(0.02), "s4": rows(0.015)}
+    p = recon.pick(base | {"recon_c": rows(0.010), "recon_a": rows(0.012)})
+    assert p["chosen"] == "recon_c" and p["go"] and not p["tied"]
+    p = recon.pick(base | {"recon_c": rows(0.010), "recon_a": rows(0.0104, cost=0.1)})
+    assert p["tied"] and p["chosen"] == "recon_a"  # within 0.0005: the cheaper one
+    assert not recon.pick(base | {"recon_c": rows(0.016), "recon_a": rows(0.017)})["go"]  # not below the team
+    p = recon.pick(base | {"recon_c": rows(0.010, answered=37), "recon_a": rows(0.012)})
+    assert not p["mechanics"]["recon_c"]["passes"] and not p["go"]  # fewer than 38 of 40 answered
+    p = recon.pick(base | {"recon_c": rows(0.010), "recon_a": rows(0.012, spent=20.5)})
+    assert p["mechanics"]["recon_a"]["over_budget"] == 40 and not p["go"]
+
+
+def test_claude_stopping_mid_deal_writes_no_row_and_exits_2(data, tmp_path, monkeypatch):
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+
+    def stop(*a, **kw):
+        raise recon.LLMUnavailable("usage limit")
+
+    monkeypatch.setitem(recon.RUN, "recon_c", stop)
+    assert recon.main(["--data", str(d), "--designs", "recon_c", "--split", "dev", "--confirm-claude"]) == 2
+    assert not list((d / "runs" / "recon_c").glob("*.json"))  # a rerun redoes the whole deal

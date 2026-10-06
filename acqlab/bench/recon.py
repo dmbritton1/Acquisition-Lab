@@ -182,3 +182,76 @@ def run_a(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[list[d
 
 
 RUN = {"recon_c": run_c, "recon_a": run_a}
+
+
+# --- the runner and the decision rule ------------------------------------------------------------------------------
+
+def run(data: Path, designs: list[str], split: str = "test", **kw) -> list[dict]:
+    """Every missing run of these designs on the split's deals; raises LLMUnavailable to stop the batch."""
+    from acqlab.bench.pilot import score  # scoring reads the answer key, after the final call
+    from acqlab.generator.batch import AnswerKey
+    out = []
+    for deal in json.loads((data / "splits.json").read_text())[split]:
+        room = data / "deals" / deal / "room"
+        budget = float(json.loads((room / "index.json").read_text())["default_budget"])
+        for design in designs:
+            path = data / "runs" / design / f"{deal}.json"
+            if path.exists():
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            trace, cli = RUN[design](room, budget, deal, path, **kw)
+            path.with_suffix(".trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in trace))
+            key = AnswerKey.model_validate_json((data / "truth" / f"{deal}.json").read_text())
+            assert key.budget == budget, f"{deal}: the room's budget is not the answer key's"
+            row = score(key, design, trace, cli, "ok" if call_of(trace) else "no_call") | {
+                "rep": 0, "budget": budget, "spent": spent(trace), "disputed": cli["disputed"],
+                "analysts": cli["analysts"], "timeouts": cli["timeouts"]}
+            path.write_text(json.dumps(row, indent=2))
+            out.append(row)
+            print(f"{design} {deal}: disputed={row['disputed']} correct={row['correct']} regret {row['regret']:.3f} "
+                  f"pages {row['pages']:g}/{budget:g}")
+    return out
+
+
+def pick(by: dict[str, dict[str, dict]]) -> dict:
+    """Spec §5 on the finished pilot (system -> deal -> row): each design's mechanics, the pick, and go or stop."""
+    n = len(by["s1b"])
+    mech = {}
+    for d in DESIGNS:
+        rs = list(by[d].values())
+        m = {"n": len(rs), "answered": sum(r["answered"] for r in rs),
+             "over_budget": sum(r["spent"] > r["budget"] + 1e-9 for r in rs)}
+        mech[d] = m | {"passes": m["n"] == n and m["answered"] >= math.ceil(0.95 * n) and m["over_budget"] == 0}
+    regret = {s: sum(r["regret"] for r in rows.values()) / len(rows) for s, rows in by.items()}
+    cost = {d: sum(r["cost_usd"] or 0 for r in by[d].values()) / len(by[d]) for d in DESIGNS}
+    tied = abs(regret[DESIGNS[0]] - regret[DESIGNS[1]]) <= TIE
+    chosen = min(DESIGNS, key=lambda d: cost[d] if tied else regret[d])
+    go = (all(m["passes"] for m in mech.values()) and regret[chosen] < regret["s1b"]
+          and regret[chosen] < regret["s4"])
+    return {"n": n, "mechanics": mech, "regret": regret, "cost": cost, "tied": tied, "chosen": chosen, "go": go}
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--data", type=Path, required=True)
+    ap.add_argument("--designs", default=",".join(DESIGNS))
+    ap.add_argument("--split", default="test")
+    ap.add_argument("--confirm-claude", action="store_true", help="required: this spends real Claude usage")
+    args = ap.parse_args(argv)
+    designs = [d for d in args.designs.split(",") if d]
+    if bad := [d for d in designs if d not in RUN]:
+        print(f"Unknown designs {bad}: choose from {list(RUN)}")
+        return 1
+    if not args.confirm_claude:
+        print("Refusing: pass --confirm-claude to spend real Claude usage")
+        return 3
+    try:
+        run(args.data, designs, args.split)
+    except LLMUnavailable as e:
+        print(f"Claude stopped: {e}. Rerun to resume.")
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
