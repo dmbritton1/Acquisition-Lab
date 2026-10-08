@@ -3,7 +3,7 @@
 *Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
 specs are the binding authority on design; this file is the source of truth for status and next steps.*
 
-## Resume here (2026-10-04)
+## Resume here (2026-10-08)
 
 A new session (possibly on the user's other Claude account) continues from this point.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
@@ -55,6 +55,29 @@ A new session (possibly on the user's other Claude account) continues from this 
     rarely disagree (12-15%), so C leaves its reserve unread. On these 40 deals the team (0.0126) also did worse than
     single Claude. Next research track: hidden-upside deals. Real runs need the user's OK.
   - 397 tests pass. Simulator data is in `data/sim-r2` (git-ignored). The `claude` CLI is now 2.1.291.
+- **Hidden-upside pilot, stage 1 (2026-10-07 to 10-08): built; the paid runs wait for the user's OK.**
+  - **Background:** a research note on agent teams versus one agent (`docs/research/agent-teams-research-2026-10-07.md`)
+    explains why the team leans towards NO-GO. That lean is the question this pilot tests.
+  - **Design:**
+    - Spec `docs/superpowers/specs/2026-10-08-upside-pilot-design.md`; plan `docs/superpowers/plans/2026-10-08-upside-pilot.md`.
+    - New `r2u` deals: the teaser flags a worry with an upper bound ("Seller discloses: ..."). Independent documents
+      show it is small (`relief`, truly GO) or large (`confirmed`, truly NO-GO).
+  - **Build:** subagent-driven, with a review per task and a final review. The final review's fixes:
+    - add-backs are never flagged, because the CIM states the item's size;
+    - both deal types use one flip-point window;
+    - the analysis reports unanswered runs and checks the model in every row.
+    - 422 tests pass.
+  - **Deals:** 40 in `data/pilot-r2u`: 16 relief, 8 confirmed, 16 ordinary. All free checks pass. An earlier draw,
+    superseded before any run, is in `data/pilot-r2u-v1`.
+  - **Fixed rules:** committed in `docs/results/upside-pilot-prereg.md`.
+  - **Next step (needs the user's OK, about $28):**
+    1. Record the CLI version (`claude --version`, 2.1.291 or newer) in the prereg.
+    2. Run `.venv/bin/python -m acqlab.bench.pilot --data data/pilot-r2u --split test --n 40 --systems s1b,s4 --confirm-claude`
+       (it resumes after usage limits).
+    3. Run `.venv/bin/python scripts/upside_pilot.py --data data/pilot-r2u --out docs/results/upside-pilot.json`.
+    4. Write `docs/results/upside-pilot.md`.
+  - **After that:** the debate design (a bull and a bear advocate plus a referee), tested on the same 40 deals. Stage 2
+    ("genuine extra value", negative amounts) comes with it.
 - **Next:** Plan 7, the demo and slides (the showcase deal moved there), reporting Plan 6 as it came out. Still
   open: the "hidden upside" note (Plan 5 dev checks), and the deferred minors in the Plan 6 ledger.
 - **Working conventions:** the user prefers plain explanations (they have asked for "explain like I'm 12"); ask
