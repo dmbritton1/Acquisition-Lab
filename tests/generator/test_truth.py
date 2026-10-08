@@ -8,7 +8,7 @@ import pytest
 
 from acqlab.engine import is_go
 from acqlab.generator.render import render, teaser_text
-from acqlab.generator.roles import LOOK, MARGIN, PULL_BACK, flip_severity
+from acqlab.generator.roles import LOOK, MARGIN, PULL_BACK, RELIEF_FLOOR, flip_severity
 from acqlab.generator.traps import TEST_ONLY, TRAPS, params_for
 from acqlab.generator.truth import (PROFILES, DealTruth, cross_fit, generate, prior_draws, simulate, value_groups,
                                    value_of_knowing)
@@ -119,6 +119,15 @@ def test_flagged_deals_look_bad_and_their_type_matches_the_truth():
             assert not is_go(t.deal, params_for({f.trap: (LOOK - PULL_BACK) * f.worst}, t.base))
             tf = flip_severity(t.base, f.trap) * f.worst
             assert (0 < f.amount <= tf - MARGIN * f.worst + 0.05) if case == "relief" else f.amount >= tf + MARGIN * f.worst - 0.05
+
+
+def test_flagged_deals_never_flag_an_addback_and_share_one_flip_point_window():
+    """Upside final review: the CIM states an add-back's size, and fragility must be no cue to the deal type."""
+    for case in ("relief", "confirmed"):
+        for seed in range(6):
+            t = generate("x", "test", 200 + seed, mc=20, force_case=case, profile="r2u")
+            assert t.flag.trap != "addback"
+            assert RELIEF_FLOOR + MARGIN <= flip_severity(t.base, t.flag.trap) < LOOK - PULL_BACK
 
 
 def test_unflagged_deals_have_no_flag_and_old_answer_keys_load():

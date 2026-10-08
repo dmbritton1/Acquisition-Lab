@@ -42,6 +42,8 @@ A **flagged deal** has one flagged issue type, `flag.trap`, and a stated bound `
     are chosen today.
   - In practice, add-backs, debt-like items and customer loss qualify most often. Working capital and capex rarely
     do, because their flip points are usually out of range.
+  - Add-backs are never flagged, because the CIM's add-back table states the item's size and would reveal the real
+    amount (final review, 2026-10-08).
 - **The teaser** gains one line, after the capex/NWC line:
   - The line is `Seller discloses: <label>; <bound phrase> up to <money(bound)>.`
   - `<label>` comes from the fact's variant (`render.LABELS`).
@@ -71,6 +73,8 @@ All values are in severity units, as in `roles.py`:
   - In symbols: `t ≤ LOOK − PULL_BACK`, where `LOOK = 0.5`.
   - This uses the smaller margin because the full `MARGIN` (0.20) leaves only about 5% of deals per issue type
     eligible (measured on 400 face-GO bases).
+  - Both roles use one flip-point window, `RELIEF_FLOOR + MARGIN ≤ t < LOOK − PULL_BACK` (0.25 to 0.40), so a deal's
+    fragility says nothing about its type (final review, 2026-10-08).
 - **`relief`:**
   - The real severity is drawn uniformly from `[RELIEF_FLOOR, t − MARGIN]`, with `RELIEF_FLOOR = 0.05`.
   - Combined with the "looks bad" rule, this needs `0.25 ≤ t ≤ 0.40`.
@@ -106,7 +110,7 @@ All values are in severity units, as in `roles.py`:
     `data/sim-r2` and `data/pilot-r2`.
   - They go to `data/pilot-r2u`, which git ignores.
   - No Codex calls.
-- **Versions:** `GENERATOR_VERSION` becomes 4.1.0.
+- **Versions:** `GENERATOR_VERSION` becomes 4.1.0, and 4.1.1 after the final review (final review, 2026-10-08).
   - `DealTruth` gains `flag: Flag | None = None`, where `Flag` holds `trap` and `bound`. Older answer keys load with
     no flag.
   - Any seeded `r2` deal must generate exactly as before, apart from the `generator_version` label.
@@ -133,6 +137,8 @@ These are added to `validate.py`:
 - **Runs:** one run per deal, with the existing runner (`acqlab.bench.pilot --split test --n 40`), which resumes after
   a stop.
 - **Model:** `claude-opus-5-5` on Claude Code CLI 2.1.291 or newer, checked in every row.
+  - The CLI version is recorded before the runs start (final review, 2026-10-08).
+  - Every row must show model `claude-opus-5-5` (a timed-out row may show none), or the analysis refuses (final review, 2026-10-08).
 - **Cost:** about $28 (`s4` about $22, `s1b` about $6, from the recon pilot's per-deal costs).
 - **The paid runs wait for the user's OK.** That OK is asked for after the code is built and tested, the deals are
   made, the free checks pass and the fixed rules are committed.
@@ -173,6 +179,12 @@ coverage, as in Plan 6 (`analysis.compare`).
      ignored", not "evidence weighed well".
 7. **Caution control.** `pilot.s1b_matched` is computed over all 40 deals: single Claude made exactly as cautious as
    the team. Its false NO-GOs and regret on the 16 relief deals are reported beside both systems.
+8. **Unanswered runs and missing traces** (final review, 2026-10-08):
+   - unanswered runs are scored at face value (GO on flagged deals);
+   - each group reports unanswered runs and timeouts;
+   - any unanswered relief run in either system marks the reading provisional;
+   - missing traces are listed per system;
+   - the cost mean leaves out runs with no cost.
 
 ### 2.4 How the result is read (fixed before the paid runs)
 

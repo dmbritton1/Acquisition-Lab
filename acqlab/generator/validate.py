@@ -8,7 +8,7 @@ from acqlab.engine import is_go, walk_away
 from acqlab.generator.documents import PLACEHOLDER, Doc, money, pct
 from acqlab.generator.padding import EXTRA_FILLER
 from acqlab.generator.render import FILLER, LABELS, MINUTES_TITLE, Evidence, answer, disclosure, span
-from acqlab.generator.roles import DECOY_MOVE, LOOK, MARGIN, PULL_BACK, UNRESOLVED_WIDTH
+from acqlab.generator.roles import DECOY_MOVE, LOOK, MARGIN, PULL_BACK, RELIEF_FLOOR, UNRESOLVED_WIDTH, flip_severity
 from acqlab.generator.traps import params_for
 from acqlab.generator.truth import DealTruth, Fact
 
@@ -94,6 +94,9 @@ def _flag_problems(t: DealTruth) -> list[str]:
         problems.append(f"{f.trap}: the deal does not fail with the flagged issue at half its bound")
     if t.go != (f.role == "relief"):
         problems.append(f"{f.role} deal has the wrong call")
+    fp = flip_severity(t.base, f.trap)  # upside final review: never an add-back, and one flip-point window
+    if f.trap == "addback" or fp is None or not RELIEF_FLOOR + MARGIN <= fp < LOOK - PULL_BACK:
+        problems.append(f"{f.trap}: the flagged issue is an add-back or its flip point is outside the window")
     return problems
 
 

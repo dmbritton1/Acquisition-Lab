@@ -8,7 +8,7 @@ from acqlab.generator.roles import (DECOY_MOVE, FLAG_ROLES, LOOK, MARGIN, PULL_B
 from acqlab.generator.sample import BaseDeal, sample_base, with_asking
 from acqlab.generator.traps import PARAM, TRAPS, params_for, sample_variant, trap_weight, worst_amount
 
-GENERATOR_VERSION = "4.1.0"  # 4.1.0: flagged deals (upside spec); r2 deals generate as before
+GENERATOR_VERSION = "4.1.1"  # 4.1.0: flagged deals (upside spec); 4.1.1: never an add-back, one flip window; r2 as before
 ASK_NOISE = (-0.15, 0.10)  # asking = market EV x (1 + N(mean, sd)); a 20% hurdle rarely clears at market prices
 CASE_MIX = {"clean": 0.15, "flip": 0.25, "interaction": 0.10, "none": 0.50}
 FACE_GO = 0.97  # P(face-value go) for clean and no-flip deals; flip deals are always face-value go
@@ -114,8 +114,9 @@ def _plan(rng: np.random.Generator, b: BaseDeal, case: str) -> dict[str, str] | 
             return None
         roles[_pick(rng, {t: trap_weight(t, b) for t in can_flip})] = "flipper"
     if case in FLAG_ROLES:  # upside spec §1.2: the deal fails at half the bound, with room for the role's amount
-        can_flag = [t for t in TRAPS if alone[t] is not None and alone[t] < LOOK - PULL_BACK
-                    and (case == "confirmed" or alone[t] - MARGIN >= RELIEF_FLOOR)]
+        # the CIM states an add-back's item size, and one window for both roles makes fragility no cue (upside final review)
+        can_flag = [t for t in TRAPS if t != "addback" and alone[t] is not None
+                    and RELIEF_FLOOR + MARGIN <= alone[t] < LOOK - PULL_BACK]
         if not can_flag:
             return None
         roles[_pick(rng, {t: trap_weight(t, b) for t in can_flag})] = case

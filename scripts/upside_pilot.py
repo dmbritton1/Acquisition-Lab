@@ -23,6 +23,7 @@ from acqlab.generator.truth import PROFILES
 SYSTEMS = ("s1b", "s4")
 FLAGGED = ("relief", "confirmed")
 GROUPS = (*FLAGGED, "ordinary")
+MODEL = "claude-opus-5-5"
 
 
 def keys(data: Path, split: str = "test") -> dict[str, AnswerKey]:
@@ -69,7 +70,9 @@ def stats(rows: list[dict]) -> dict:
             "false_go": sum(r["go"] and not r["correct"] for r in rows),
             "false_nogo": sum(not r["go"] and not r["correct"] for r in rows),
             "pages": float(np.mean([r["pages"] for r in rows])),
-            "cost": float(np.mean([r["cost_usd"] or 0 for r in rows])),
+            "no_answer": sum(not r["answered"] for r in rows),  # scored at face value, which is GO on a flagged deal
+            "timeouts": sum(r["status"] == "timeout" for r in rows),
+            "cost": float(np.mean(c)) if (c := [r["cost_usd"] for r in rows if r["cost_usd"] is not None]) else None,
             "sessions": float(np.mean([r["sessions"] for r in rows]))}
 
 
@@ -104,7 +107,12 @@ def analyse(data: Path, split: str = "test") -> dict:
     for s, rows in by.items():
         if set(rows) != set(ks):
             raise ValueError(f"{s} runs cover {sorted(set(rows) ^ set(ks))} differently from the {split} split")
-    traces = {s: {d: trace_rows(p) if (p := data / "runs" / s / f"{d}.trace.jsonl").exists() else [] for d in ks}
+    wrong = [f"{s}/{d}" for s, rows in by.items() for d, r in rows.items()
+             if r["models"] != [MODEL] and not (r["status"] == "timeout" and not r["models"])]
+    if wrong:  # spec §2.1: every row must show the pilot model; a timed-out run may show none
+        raise ValueError(f"rows not run on {MODEL}: {wrong}")
+    missing = {s: sorted(d for d in ks if not (data / "runs" / s / f"{d}.trace.jsonl").exists()) for s in SYSTEMS}
+    traces = {s: {d: [] if d in missing[s] else trace_rows(data / "runs" / s / f"{d}.trace.jsonl") for d in ks}
               for s in SYSTEMS}
     ids = {g: sorted(d for d, k in ks.items() if group(k) == g) for g in GROUPS} | {"all": sorted(ks)}
     flagged = ids["relief"] + ids["confirmed"]
@@ -113,7 +121,9 @@ def analyse(data: Path, split: str = "test") -> dict:
     warn = {s: {d: warning(s, traces[s][d], ks[d].truth.flag.trap) for d in flagged} for s in SYSTEMS}
     chances = [x for x in warn["s4"].values() if x is not None]
     out = {
-        "deals": len(ks),
+        "deals": len(ks), "missing_traces": missing,
+        "reading_provisional": any(not by[s][d]["answered"] for s in SYSTEMS for d in ids["relief"]),
+        "settling_docs": {d: settling_doc(ks[d]) for d in flagged},
         "systems": {s: {g: stats([rows[d] for d in v]) for g, v in ids.items()} for s, rows in systems.items()},
         "by_case": {s: {c: stats([r for r in rows.values() if r["case_type"] == c]) for c in analysis.CASES}
                     for s, rows in by.items()},
@@ -154,8 +164,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Refusing: {e}")
         return 1
     args.out.write_text(json.dumps(out, indent=2))
-    print(json.dumps({"reading": out["reading"], "relief": {s: out["systems"][s]["relief"] for s in SYSTEMS}},
-                     indent=2))
+    print(json.dumps({"reading": out["reading"], "reading_provisional": out["reading_provisional"],
+                      "relief": {s: out["systems"][s]["relief"] for s in SYSTEMS}}, indent=2))
     return 0
 
 

@@ -38,7 +38,7 @@ def write(d: Path, system: str, deal: str, key: AnswerKey, trace: list[dict]) ->
     out = d / "runs" / system
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{deal}.trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in trace))
-    row = pilot.score(key, system, trace, {"total_cost_usd": 0.1, "sessions": 1}, "ok")
+    row = pilot.score(key, system, trace, {"total_cost_usd": 0.1, "sessions": 1, "modelUsage": {"claude-opus-5-5": {}}}, "ok")
     (out / f"{deal}.json").write_text(json.dumps(row))
 
 
@@ -114,3 +114,56 @@ def test_the_analysis_refuses_runs_that_do_not_cover_the_split(finished, tmp_pat
         SCRIPT["analyse"](finished)
     out = tmp_path / "x.json"
     assert SCRIPT["main"](["--data", str(finished), "--out", str(out)]) == 1 and not out.exists()
+
+
+def rewrite(d: Path, system: str, deal: str, **changes) -> None:
+    p = d / "runs" / system / f"{deal}.json"
+    p.write_text(json.dumps(json.loads(p.read_text()) | changes))
+
+
+def test_an_unanswered_relief_run_is_counted_and_makes_the_reading_provisional(finished):
+    relief = next(d for d, k in keys(finished).items() if k.truth.case_type == "relief")
+    assert SCRIPT["analyse"](finished)["reading_provisional"] is False
+    write(finished, "s4", relief, keys(finished)[relief], [])  # no submit: scored at face value, answered=False
+    out = SCRIPT["analyse"](finished)
+    assert out["systems"]["s4"]["relief"]["no_answer"] == 1 and out["systems"]["s1b"]["relief"]["no_answer"] == 0
+    assert out["systems"]["s4"]["confirmed"]["no_answer"] == 0 and out["reading_provisional"] is True
+
+
+def test_the_analysis_refuses_a_row_from_the_wrong_model(finished, tmp_path):
+    deal = next(iter(keys(finished)))
+    rewrite(finished, "s1b", deal, models=["claude-sonnet-5-5"])
+    with pytest.raises(ValueError, match=f"s1b/{deal}"):
+        SCRIPT["analyse"](finished)
+    out = tmp_path / "x.json"
+    assert SCRIPT["main"](["--data", str(finished), "--out", str(out)]) == 1 and not out.exists()
+
+
+def test_a_timed_out_row_may_show_no_model_but_is_counted(finished):
+    deal = next(iter(keys(finished)))
+    rewrite(finished, "s4", deal, models=[], status="timeout")
+    assert SCRIPT["analyse"](finished)["systems"]["s4"]["all"]["timeouts"] == 1
+    rewrite(finished, "s4", deal, models=[], status="ok")
+    with pytest.raises(ValueError, match=f"s4/{deal}"):
+        SCRIPT["analyse"](finished)
+
+
+def test_missing_traces_are_listed_per_system(finished):
+    flagged = next(d for d, k in keys(finished).items() if k.truth.flag)
+    (finished / "runs" / "s4" / f"{flagged}.trace.jsonl").unlink()
+    assert SCRIPT["analyse"](finished)["missing_traces"] == {"s1b": [], "s4": [flagged]}
+
+
+def test_the_cost_mean_leaves_out_runs_with_no_cost(finished):
+    deal = next(iter(keys(finished)))
+    rewrite(finished, "s1b", deal, cost_usd=None)
+    all_ = SCRIPT["analyse"](finished)["systems"]["s1b"]["all"]
+    assert all_["cost"] == pytest.approx(0.1)
+    assert SCRIPT["stats"]([{**json.loads((finished / "runs" / "s1b" / f"{deal}.json").read_text())}])["cost"] is None
+
+
+def test_settling_docs_has_one_entry_per_flagged_deal(finished):
+    out = SCRIPT["analyse"](finished)
+    ks = keys(finished)
+    assert out["settling_docs"] == {d: SCRIPT["settling_doc"](k) for d, k in ks.items() if k.truth.flag}
+    assert len(out["settling_docs"]) == 3
