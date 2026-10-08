@@ -100,7 +100,8 @@ All values are in severity units, as in `roles.py`:
   - A seeded shuffle of the split's deal indices assigns the quota cases.
   - The remaining 16 draw their case from `r2`'s case mix as today.
   - Each deal's case is fixed before generation and kept on retry, as `force_case` does today.
-- **Deals generated:** 40 template-prose deals, split `test`, base seed 11,000,000.
+- **Deals generated:** 40 template-prose deals, split `test`, base seed 11,250,000. The first choice, 11,000,000,
+  clashed with `data/pilot-r2`: seeds clash modulo 1,000,000.
   - The seeds are clash-checked (`testset.clashes`) against `data/cal-r2`, `data/heldout-r2`, `data/test-r2`,
     `data/sim-r2` and `data/pilot-r2`.
   - They go to `data/pilot-r2u`, which git ignores.
@@ -108,7 +109,7 @@ All values are in severity units, as in `roles.py`:
 - **Versions:** `GENERATOR_VERSION` becomes 4.1.0.
   - `DealTruth` gains `flag: Flag | None = None`, where `Flag` holds `trap` and `bound`. Older answer keys load with
     no flag.
-  - Any seeded `r2` deal must generate exactly as before.
+  - Any seeded `r2` deal must generate exactly as before, apart from the `generator_version` label.
 
 ### 1.4 Checks on every new deal
 
@@ -228,8 +229,8 @@ It does not decide whether the debate design goes ahead; the user has already ch
   - the disclosure line appears only on flagged deals, names the flagged issue's label and shows the bound;
   - it never shows any fact's real amount.
 - **Nothing old changes:**
-  - a seeded `r2` deal's answer key, documents and teaser are identical to before (a fixed seed, compared field by
-    field);
+  - five seeded `r2` deals' answer keys (apart from `generator_version`), documents, evidence and teasers hash to the
+    value pinned from the old code;
   - old answer keys load with `flag` set to `None`.
 - **The quota:** a 40-deal `r2u` split has exactly 16 relief, 8 confirmed and 16 others, and the same seed gives the
   same assignment.
