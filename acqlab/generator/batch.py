@@ -36,13 +36,25 @@ class AnswerKey(BaseModel):
     prose_fallbacks: int = 0  # paragraphs left as template prose after the LLM's attempts
 
 
-def build(deal_id: str, split: str, seed: int, *, mc: int, llm=None,
-          profile: str = "base") -> tuple[AnswerKey, list[Doc], str]:
+def cases_for(n: int, profile: str, seed: int) -> list[str | None]:
+    """Each deal's forced case (upside spec §1.3): the profile's quota shares of n, rounded, at seeded-shuffled
+    positions; None elsewhere, so those deals draw from the case mix as usual."""
+    out: list[str | None] = [None] * n
+    order, i = np.random.default_rng(seed).permutation(n), 0
+    for case, share in PROFILES[profile].get("quota", {}).items():
+        for j in order[i:i + round(share * n)]:
+            out[j] = case
+        i += round(share * n)
+    return out
+
+
+def build(deal_id: str, split: str, seed: int, *, mc: int, llm=None, profile: str = "base",
+          case: str | None = None) -> tuple[AnswerKey, list[Doc], str]:
     """One validated deal. Failed checks regenerate from a new seed. The cheap checks run on the template render
     first, so Codex is only paid for deals that pass them."""
     for k in range(MAX_RETRIES):
-        t = generate(deal_id, split, seed + k * RETRY_SEED, mc=mc, force_case="flip" if split == "showcase" else None,
-                     profile=profile)
+        t = generate(deal_id, split, seed + k * RETRY_SEED, mc=mc,
+                     force_case="flip" if split == "showcase" else case, profile=profile)
         docs, evidence = render(t)
         teaser = teaser_text(t)
         if check_engine(t) + check_leaks(t, docs, teaser):
@@ -68,9 +80,11 @@ def run(out: Path, counts: dict[str, int], *, seed: int = 0, mc: int = 400, llm=
     splits: dict[str, list[str]] = {s: [] for s in counts}
     keys, texts, pages, words = [], {}, {}, {}
     for split, n in counts.items():
+        cases = cases_for(n, profile, seed + SEED_OFFSET[split])
         for i in range(n):
             deal_id = f"{split}-{i:03d}"
-            key, docs, teaser = build(deal_id, split, seed + SEED_OFFSET[split] + i, mc=mc, llm=llm, profile=profile)
+            key, docs, teaser = build(deal_id, split, seed + SEED_OFFSET[split] + i, mc=mc, llm=llm, profile=profile,
+                                      case=cases[i])
             face = {"teaser": key.truth.base.teaser.model_dump(), "deal": key.truth.deal.model_dump()}
             key.budget = write_room(out / "deals" / deal_id / "room", teaser, docs,
                                     budget_share=PROFILES[profile]["budget_share"], engine=face)

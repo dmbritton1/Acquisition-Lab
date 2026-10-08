@@ -14,7 +14,7 @@ from acqlab.bench import campaign, pilot
 from acqlab.generator.batch import AnswerKey
 from acqlab.routers.track_a import bootstrap_ci
 
-CASES = ("clean", "decoy", "flip", "interaction", "unresolvable")
+CASES = ("clean", "decoy", "flip", "interaction", "unresolvable", "relief", "confirmed")
 TARGET = ("interaction", "flip")  # H2: interaction and belief-error deals; belief-error = the flip case type
 H1_CUT, H5_FACTOR, H6_MIN = 0.25, 2.0, 5  # H1's 25% cut; "sharply" in H5 = at least double; H6's fewest deals
 BOOT, SEED = 2000, 0

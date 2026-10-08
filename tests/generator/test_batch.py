@@ -1,5 +1,6 @@
 import json
 import math
+from collections import Counter
 from functools import partial
 
 import pytest
@@ -161,3 +162,21 @@ def test_cli_reports_a_deal_that_keeps_failing_validation_and_exits_3(tmp_path, 
     code = batch.main(["--out", str(tmp_path), "--dev", "1", "--test", "0", "--hand", "0", "--showcase", "0",
                        "--mc", "20"])
     assert code == 3 and "dev-000" in capsys.readouterr().out
+
+
+def test_cases_for_gives_exact_seeded_quotas_and_nothing_without_one():
+    cases = batch.cases_for(40, "r2u", 11_260_000)
+    assert Counter(cases) == {"relief": 16, "confirmed": 8, None: 16}
+    assert cases == batch.cases_for(40, "r2u", 11_260_000) and cases != batch.cases_for(40, "r2u", 1)
+    assert Counter(batch.cases_for(7, "r2u", 0)) == {"relief": 3, "confirmed": 1, None: 3}  # 2.8 and 1.4, rounded
+    assert batch.cases_for(40, "r2", 0) == [None] * 40
+
+
+def test_an_r2u_batch_has_its_quota_and_flagged_teasers(tmp_path):
+    assert batch.run(tmp_path, {"dev": 0, "test": 5, "hand": 0, "showcase": 0}, mc=20, profile="r2u") == []
+    keys = [json.loads((tmp_path / "truth" / f"test-{i:03d}.json").read_text())["truth"] for i in range(5)]
+    assert Counter(k["case_type"] for k in keys if k["case_type"] in ("relief", "confirmed")) == {"relief": 2,
+                                                                                                "confirmed": 1}
+    for i, k in enumerate(keys):
+        teaser = json.loads((tmp_path / "deals" / f"test-{i:03d}" / "room" / "index.json").read_text())["teaser"]
+        assert ("Seller discloses" in teaser) == (k["flag"] is not None) == (k["case_type"] in ("relief", "confirmed"))
