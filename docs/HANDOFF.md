@@ -55,7 +55,18 @@ A new session (possibly on the user's other Claude account) continues from this 
     rarely disagree (12-15%), so C leaves its reserve unread. On these 40 deals the team (0.0126) also did worse than
     single Claude. Next research track: hidden-upside deals. Real runs need the user's OK.
   - 397 tests pass. Simulator data is in `data/sim-r2` (git-ignored). The `claude` CLI is now 2.1.291.
-- **Hidden-upside pilot, stage 1 (2026-10-07 to 10-08): built; the paid runs wait for the user's OK.**
+- **Hidden-upside pilot, stage 1: done (2026-10-08).** Results in `docs/results/upside-pilot.md`; numbers in
+  `upside-pilot.json`; the runs cost $26.
+  - Reading: "team leans on caution". On the 16 relief deals the team made 12 false NO-GOs and single Claude 7. The
+    paired regret range includes zero.
+  - On all 40 deals single Claude did better: regret 0.0084 against 0.0135, and 75% correct against 62.5%.
+  - Single Claude made as cautious as the team does slightly worse on relief deals (14 misses), so the team's
+    misses come from how often it says NO-GO, not from worse judgment.
+  - Why each system misses: the team mostly never opened the settling document (9 of its 12 misses, often the board
+    minutes). Single Claude mostly read the good news and still passed (5 of its 7 misses).
+- **Next:** the debate design (spec not written yet). Give the bull advocate a small reading budget, because the
+  team's failure is reading. Stage 2 ("genuine extra value", negative amounts) comes with it.
+- **Background to stage 1 (built 2026-10-07 to 10-08; the history follows):**
   - **Background:** a research note on agent teams versus one agent (`docs/research/agent-teams-research-2026-10-07.md`)
     explains why the team leans towards NO-GO. That lean is the question this pilot tests.
   - **Design:**
@@ -70,7 +81,7 @@ A new session (possibly on the user's other Claude account) continues from this 
   - **Deals:** 40 in `data/pilot-r2u`: 16 relief, 8 confirmed, 16 ordinary. All free checks pass. An earlier draw,
     superseded before any run, is in `data/pilot-r2u-v1`.
   - **Fixed rules:** committed in `docs/results/upside-pilot-prereg.md`.
-  - **Next step (needs the user's OK, about $28):**
+  - **Steps that were run (2026-10-08, with the user's OK):**
     1. Record the CLI version (`claude --version`, 2.1.291 or newer) in the prereg.
     2. Run `.venv/bin/python -m acqlab.bench.pilot --data data/pilot-r2u --split test --n 40 --systems s1b,s4 --confirm-claude`
        (it resumes after usage limits).
