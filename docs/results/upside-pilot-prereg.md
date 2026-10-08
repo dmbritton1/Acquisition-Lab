@@ -84,6 +84,8 @@ test-039 decoy - 11260039
 - `s1b` (single Claude) and `s4` (the frozen team, tag `s4-frozen-plan5`), one run per deal.
 - Model `claude-opus-5-5`, on Claude Code CLI 2.1.291 or newer.
 - Before the runs start, the CLI version (`claude --version`, 2.1.291 or newer) is recorded here.
+- Recorded on 2026-10-08, before the runs started: `claude --version` gives `2.1.291 (Claude Code)`, at
+  `/Users/dwightbritton/.nvm/versions/node/v22.22.3/bin/claude` (`CLAUDE_BIN` unset, so the runner uses `claude`).
 - Runner: `.venv/bin/python -m acqlab.bench.pilot --data data/pilot-r2u --split test --n 40 --systems s1b,s4
   --confirm-claude`.
 - Started only after the user's OK.
