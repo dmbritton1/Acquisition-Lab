@@ -3,11 +3,12 @@ import numpy as np
 from pydantic import BaseModel
 
 from acqlab.engine import Deal, Params, evaluate, is_go, walk_away
-from acqlab.generator.roles import DECOY_MOVE, MARGIN, PULL_BACK, flip_severity, min_severity_to_move, place
+from acqlab.generator.roles import (DECOY_MOVE, FLAG_ROLES, LOOK, MARGIN, PULL_BACK, RELIEF_FLOOR, flip_severity,
+                                    min_severity_to_move, place)
 from acqlab.generator.sample import BaseDeal, sample_base, with_asking
 from acqlab.generator.traps import PARAM, TRAPS, params_for, sample_variant, trap_weight, worst_amount
 
-GENERATOR_VERSION = "4.0.0"
+GENERATOR_VERSION = "4.1.0"  # 4.1.0: flagged deals (upside spec); r2 deals generate as before
 ASK_NOISE = (-0.15, 0.10)  # asking = market EV x (1 + N(mean, sd)); a 20% hurdle rarely clears at market prices
 CASE_MIX = {"clean": 0.15, "flip": 0.25, "interaction": 0.10, "none": 0.50}
 FACE_GO = 0.97  # P(face-value go) for clean and no-flip deals; flip deals are always face-value go
@@ -19,7 +20,7 @@ def _role_blind(weights: dict[str, float]) -> dict[str, dict[str, float]]:
     """Placement weights (mode -> weight) for every role alike, so where a sentence sits says nothing about whether it
     is a real problem (Plan 4b: search is back, and it would see a role-dependent placement). An unresolvable fact
     states its range in the same places, except a calculation."""
-    return {r: weights for r in ("flipper", "interaction", "decoy", "clean")} | {
+    return {r: weights for r in ("flipper", "interaction", "decoy", "clean", *FLAG_ROLES)} | {
         "unresolvable": {k: w for k, w in weights.items() if k != "calculation"}}
 
 
@@ -38,6 +39,14 @@ PROFILES = {
     "r2": {"case_mix": _MULTI_ISSUE, "placement": _BURIED, "budget_share": 0.25, "clean_item_power": 1.0},
 }
 PROFILES["r3"] = PROFILES["r2"] | {"budget_share": 0.20}
+# Upside spec §1.3: r2 plus fixed shares of flagged deals, assigned by batch.cases_for; the rest draw from r2's mix.
+PROFILES["r2u"] = PROFILES["r2"] | {"quota": {"relief": 0.4, "confirmed": 0.2}}
+
+
+class Flag(BaseModel):
+    """The teaser's seller disclosure (upside spec §1.1): one issue type and its stated upper bound."""
+    trap: str
+    bound: float  # $M: the trap's worst case
 
 
 class Fact(BaseModel):
@@ -69,6 +78,7 @@ class DealTruth(BaseModel):
     debt_limit: str
     case_type: str
     profile: str = "base"  # difficulty profile (PROFILES); deals before generator 4.0.0 are "base"
+    flag: Flag | None = None  # relief and confirmed deals only (upside spec)
 
     @property
     def deal(self) -> Deal:
@@ -79,7 +89,7 @@ class DealTruth(BaseModel):
 
 
 def case_type(roles: list[str]) -> str:
-    for role, case in (("flipper", "flip"), ("interaction", "interaction"), ("unresolvable", "unresolvable"),
+    for role, case in (("relief", "relief"), ("confirmed", "confirmed"), ("flipper", "flip"), ("interaction", "interaction"), ("unresolvable", "unresolvable"),
                        ("decoy", "decoy")):
         if role in roles:
             return case
@@ -103,6 +113,12 @@ def _plan(rng: np.random.Generator, b: BaseDeal, case: str) -> dict[str, str] | 
         if not can_flip:
             return None
         roles[_pick(rng, {t: trap_weight(t, b) for t in can_flip})] = "flipper"
+    if case in FLAG_ROLES:  # upside spec §1.2: the deal fails at half the bound, with room for the role's amount
+        can_flag = [t for t in TRAPS if alone[t] is not None and alone[t] < LOOK - PULL_BACK
+                    and (case == "confirmed" or alone[t] - MARGIN >= RELIEF_FLOOR)]
+        if not can_flag:
+            return None
+        roles[_pick(rng, {t: trap_weight(t, b) for t in can_flag})] = case
     if case == "interaction":
         w0 = walk_away(b.deal, Params())
         drop = {t: w0 - walk_away(b.deal, params_for({t: worst_amount(t, b)}, b)) for t in TRAPS
@@ -193,7 +209,7 @@ def generate(deal_id: str, split: str, seed: int, *, mc: int = 400, force_case: 
     case = force_case or _pick(rng, prof["case_mix"])  # drawn once, so hard cases aren't swapped for easy ones on retry
     for _ in range(max_tries):
         b = sample_base(rng)
-        want_go = case in ("flip", "interaction") or rng.random() < FACE_GO
+        want_go = case in ("flip", "interaction", *FLAG_ROLES) or rng.random() < FACE_GO
         ask = b.deal.asking_price * (1 + rng.normal(*ASK_NOISE))
         b = with_asking(b, ask)
         if is_go(b.deal, Params()) != want_go:
@@ -237,7 +253,9 @@ def _finish(deal_id, split, seed, rng, b: BaseDeal, facts: list[Fact], mc: int, 
         f.alone_flips = is_go(b.deal, params_for({f.trap: f.amount}, b)) != face_go
     params = params_for({f.trap: f.amount for f in facts}, b)
     go_ = is_go(b.deal, params)
-    explained = any(f.role in ("flipper", "interaction") or (f.role == "unresolvable" and f.alone_flips)
+    if any(f.role == "relief" for f in facts) and not go_ or any(f.role == "confirmed" for f in facts) and go_:
+        return None  # upside spec §1.2: a relief deal is truly GO, a confirmed one truly NO-GO
+    explained = any(f.role in ("flipper", "interaction", "confirmed") or (f.role == "unresolvable" and f.alone_flips)
                     for f in facts)
     if go_ != face_go and not explained:  # several decoys added up to an unlabelled flip
         return None
@@ -249,4 +267,5 @@ def _finish(deal_id, split, seed, rng, b: BaseDeal, facts: list[Fact], mc: int, 
                      style="A" if split == "dev" else str(rng.choice(["A", "B"])), base=b, facts=facts,
                      face_walk_away=walk_away(b.deal, Params()), face_go=face_go,
                      walk_away=walk_away(b.deal, params), go=go_, debt_limit=result.debt_limit,
-                     case_type=case_type([f.role for f in facts]), profile=profile)
+                     case_type=case_type([f.role for f in facts]), profile=profile,
+                     flag=next((Flag(trap=f.trap, bound=f.worst) for f in facts if f.role in FLAG_ROLES), None))

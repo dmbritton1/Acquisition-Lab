@@ -1,11 +1,16 @@
+import hashlib
+import json
 import warnings
 from collections import Counter
 
 import numpy as np
 import pytest
 
-from acqlab.generator.traps import TEST_ONLY, TRAPS
-from acqlab.generator.truth import (PROFILES, cross_fit, generate, prior_draws, simulate, value_groups,
+from acqlab.engine import is_go
+from acqlab.generator.render import render, teaser_text
+from acqlab.generator.roles import LOOK, MARGIN, PULL_BACK, flip_severity
+from acqlab.generator.traps import TEST_ONLY, TRAPS, params_for
+from acqlab.generator.truth import (PROFILES, DealTruth, cross_fit, generate, prior_draws, simulate, value_groups,
                                    value_of_knowing)
 
 
@@ -101,3 +106,39 @@ def test_profiles_raise_the_share_of_interaction_deals_and_make_placement_role_b
             assert f.role != "unresolvable" or f.placement != "calculation"
     assert any(f.placement == "minutes" for t in hard for f in t.facts)
     assert PROFILES["r3"]["budget_share"] < PROFILES["r2"]["budget_share"]
+
+
+def test_flagged_deals_look_bad_and_their_type_matches_the_truth():
+    for case in ("relief", "confirmed"):
+        for seed in range(4):
+            t = generate("x", "test", 100 + seed, mc=20, force_case=case, profile="r2u")
+            f = next(f for f in t.facts if f.trap == t.flag.trap)
+            assert t.case_type == case and f.role == case and t.flag.bound == f.worst
+            assert [x.role for x in t.facts].count(case) == 1
+            assert t.face_go and t.go == (case == "relief")
+            assert not is_go(t.deal, params_for({f.trap: (LOOK - PULL_BACK) * f.worst}, t.base))
+            tf = flip_severity(t.base, f.trap) * f.worst
+            assert (0 < f.amount <= tf - MARGIN * f.worst + 0.05) if case == "relief" else f.amount >= tf + MARGIN * f.worst - 0.05
+
+
+def test_unflagged_deals_have_no_flag_and_old_answer_keys_load():
+    assert generate("x", "test", 3, mc=20, profile="r2").flag is None
+    old = json.loads(generate("x", "test", 3, mc=20, profile="r2").model_dump_json())
+    del old["flag"]  # an answer key written before generator 4.1.0
+    assert DealTruth.model_validate(old).flag is None
+
+
+def test_r2_deals_generate_exactly_as_before_the_flagged_deals():
+    h = hashlib.sha256()
+    for s in range(5):
+        t = generate("x", "test", 9010000 + s, mc=40, profile="r2")
+        docs, evidence = render(t)
+        h.update(json.dumps(t.model_dump(exclude={"generator_version", "flag"}), sort_keys=True).encode())
+        h.update(teaser_text(t).encode() + "".join(d.render() for d in docs).encode())
+        h.update(json.dumps([e.model_dump() for e in evidence], sort_keys=True).encode())
+    # pinned from generator 4.0.0 (commit aba3dfd) on the same five seeds
+    assert h.hexdigest() == "fec520f94e004511c476da8e395bc73f991105df45fc9da6a0166aba6d4c8a86"
+
+
+def test_r2u_is_r2_plus_a_quota_of_flagged_deals():
+    assert PROFILES["r2u"] == PROFILES["r2"] | {"quota": {"relief": 0.4, "confirmed": 0.2}}
