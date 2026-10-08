@@ -172,3 +172,37 @@ def test_word_leaks_finds_a_planted_word_and_the_reveal_wording_has_none(big_bat
     planted = {tid: dict(w, qoe=w["qoe"] + Counter({"zebra": tid in capex})) for tid, w in words.items()}
     assert ("capex", "qoe", "zebra") in {(r["trap"], r["doc"], r["word"]) for r in word_leaks(deals, planted)}
     assert not any(r["word"] == "zebra" for r in word_leaks(deals, words))
+
+
+FLAGGED = [generate(f"f{s}", "test", 300 + s, mc=20, force_case=c, profile="r2u")
+           for s, c in enumerate(["relief", "confirmed"] * 3)]
+
+
+def test_flagged_deals_pass_every_check_and_the_disclosure_is_not_a_leak():
+    for t in FLAGGED:
+        docs, evidence = render(t)
+        assert check_engine(t) == [] and check_leaks(t, docs, teaser_text(t)) == []
+        assert check_consistency(t, docs, evidence) == []
+
+
+def test_engine_check_catches_a_zero_relief_amount_and_a_flagged_deal_with_the_wrong_call():
+    t = next(t for t in FLAGGED if t.case_type == "relief")
+    i = next(i for i, f in enumerate(t.facts) if f.role == "relief")
+    bad = t.model_copy(deep=True)
+    bad.facts[i].amount = 0.0
+    assert any("relief amount" in p for p in check_engine(bad))
+    bad = t.model_copy(deep=True)
+    bad.go = False
+    assert any("wrong call" in p for p in check_engine(bad))
+    bad = t.model_copy(deep=True)
+    bad.flag.trap = next(f.trap for f in t.facts if f.role != "relief")
+    assert any("flag does not match" in p for p in check_engine(bad))
+
+
+def test_leak_check_allows_only_the_disclosure_and_never_a_real_amount():
+    t = FLAGGED[0]
+    docs, _ = render(t)
+    teaser = teaser_text(t)
+    assert check_leaks(t, docs, teaser + " Seller has an unfunded pension.")  # a leak word outside the line
+    f = next(f for f in t.facts if f.role == "relief")
+    assert any("amount" in p for p in check_leaks(t, docs, teaser + f" Settled for {money(f.amount)}."))

@@ -325,6 +325,22 @@ def _capex(f: Fact, t: DealTruth, rng: np.random.Generator) -> tuple[dict, Evide
     return sites, Evidence(trap=f.trap, docs=docs, formula=ev_formula, values=ev_vals)
 
 
+BOUND_PHRASE = {"addback": "add-backs that may not be one-time", "debt_like": "estimated exposure",
+                "concentration": "annual revenue at risk",
+                "nwc": "possible shortfall in working capital at closing",
+                "capex": "possible extra capital expenditure per year"}  # upside spec §1.1
+
+
+def disclosure(t: DealTruth) -> str:
+    """The teaser's seller-disclosure line on a flagged deal (upside spec §1.1), else "". It names the issue and its
+    stated bound, never the real amount."""
+    if t.flag is None:
+        return ""
+    label = LABELS[next(f for f in t.facts if f.trap == t.flag.trap).variant]
+    what = f"for the top customer, {label}" if t.flag.trap == "concentration" else label
+    return f"Seller discloses: {what}; {BOUND_PHRASE[t.flag.trap]} up to {money(t.flag.bound)}."
+
+
 def teaser_text(t: DealTruth) -> str:
     tz, fin, pol = t.base.teaser, t.deal.financing, t.deal.policy
     covs = ", ".join(f"{c:.2f}x" for c in fin.covenant_max_leverage)
@@ -334,6 +350,7 @@ def teaser_text(t: DealTruth) -> str:
         f"Reported EBITDA: {money(tz.reported_ebitda)}; claimed add-backs: {money(tz.claimed_addbacks)}; "
         f"adjusted EBITDA: {money(tz.adj_ebitda)}",
         f"Capex: {pct(tz.capex_pct)} of revenue; net working capital: {pct(tz.nwc_pct)} of revenue",
+        *([disclosure(t)] if t.flag else []),
         f"Asking price: {money(tz.asking_price)}",
         f"Lender terms: up to {fin.max_leverage:.2f}x adjusted EBITDA at {pct(fin.interest_rate)}; amortization "
         f"{pct(fin.amortization_pct)} per year; cash sweep {pct(fin.cash_sweep)}; fees {pct(fin.fees_pct)} of price; "

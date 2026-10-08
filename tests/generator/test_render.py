@@ -1,7 +1,7 @@
 import re
 
-from acqlab.generator.documents import PLACEHOLDER, Slot
-from acqlab.generator.render import LABELS, answer, render, span, teaser_text
+from acqlab.generator.documents import PLACEHOLDER, Slot, money
+from acqlab.generator.render import LABELS, answer, disclosure, render, span, teaser_text
 from acqlab.generator.truth import generate
 from acqlab.generator.validate import check_consistency
 
@@ -117,3 +117,16 @@ def test_board_minutes_hold_a_line_on_every_topic_and_the_answer_when_placed_the
                 placed += 1
                 assert ev.docs == ["board_minutes"]
     assert placed >= 10
+
+
+def test_the_disclosure_line_names_the_flagged_issue_and_its_bound_never_an_amount():
+    for case in ("relief", "confirmed"):
+        for seed in range(4):
+            t = generate("x", "test", 200 + seed, mc=20, force_case=case, profile="r2u")
+            f = next(f for f in t.facts if f.trap == t.flag.trap)
+            line = disclosure(t)
+            assert line.startswith("Seller discloses: ") and LABELS[f.variant] in line and money(t.flag.bound) in line
+            assert line in teaser_text(t).splitlines()
+            assert not any(money(x.amount) in teaser_text(t) for x in t.facts if x.amount > 0)
+    for t in DEALS[:10]:
+        assert disclosure(t) == "" and "Seller discloses" not in teaser_text(t)

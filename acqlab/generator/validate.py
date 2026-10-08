@@ -7,8 +7,8 @@ import numpy as np
 from acqlab.engine import is_go, walk_away
 from acqlab.generator.documents import PLACEHOLDER, Doc, money, pct
 from acqlab.generator.padding import EXTRA_FILLER
-from acqlab.generator.render import FILLER, LABELS, MINUTES_TITLE, Evidence, answer, span
-from acqlab.generator.roles import DECOY_MOVE, MARGIN, PULL_BACK, UNRESOLVED_WIDTH
+from acqlab.generator.render import FILLER, LABELS, MINUTES_TITLE, Evidence, answer, disclosure, span
+from acqlab.generator.roles import DECOY_MOVE, LOOK, MARGIN, PULL_BACK, UNRESOLVED_WIDTH
 from acqlab.generator.traps import params_for
 from acqlab.generator.truth import DealTruth, Fact
 
@@ -55,6 +55,11 @@ def check_engine(t: DealTruth) -> list[str]:
                 problems.append(f"{f.trap}: decoy moves walk-away by only {moved:.1f}")
         if f.role == "interaction" and (flips or _go_with(t, {f.trap: min(f.worst, f.amount + slack * f.worst)}) != face):
             problems.append(f"{f.trap}: interaction fact is within the margin of flipping alone")
+        if f.role == "relief" and (f.amount <= 0 or flips or
+                                   _go_with(t, {f.trap: min(f.worst, f.amount + slack * f.worst)}) != face):
+            problems.append(f"{f.trap}: relief amount is zero or within the margin of flipping")
+        if f.role == "confirmed" and not (flips and _go_with(t, {f.trap: f.amount - slack * f.worst}) != face):
+            problems.append(f"{f.trap}: confirmed amount does not clear its flip point by the margin")
         if f.role == "unresolvable" and (f.documented is None or
                                          abs(f.documented[1] - f.documented[0] - UNRESOLVED_WIDTH * f.worst) > 0.11):
             problems.append(f"{f.trap}: unresolvable range is missing or the wrong width")
@@ -74,13 +79,31 @@ def check_engine(t: DealTruth) -> list[str]:
     worse = p.model_copy(update={"revenue_haircut": p.revenue_haircut + 0.05})
     if walk_away(t.deal, worse) > walk_away(t.deal, p) + 1e-3:
         problems.append("a bigger revenue haircut raises walk-away")
+    return problems + _flag_problems(t)
+
+
+def _flag_problems(t: DealTruth) -> list[str]:
+    """Upside spec §1.4: a flagged deal fails at half its bound (by PULL_BACK), and its type matches its call."""
+    flagged = [f for f in t.facts if f.role in ("relief", "confirmed")]
+    if not flagged and t.flag is None:
+        return []
+    if len(flagged) != 1 or t.flag is None or t.flag.trap != flagged[0].trap or t.flag.bound != flagged[0].worst:
+        return ["flag does not match the one relief or confirmed fact"]
+    f, problems = flagged[0], []
+    if _go_with(t, {f.trap: (LOOK - PULL_BACK) * f.worst}):
+        problems.append(f"{f.trap}: the deal does not fail with the flagged issue at half its bound")
+    if t.go != (f.role == "relief"):
+        problems.append(f"{f.role} deal has the wrong call")
     return problems
 
 
 def check_leaks(t: DealTruth, docs: list[Doc], teaser: str) -> list[str]:
     problems = [f"unexpected title {d.title!r}" for d in docs
                 if d.title not in CORE_TITLES and not d.title.startswith(("Customer Agreement — ", "Audited Financial"))]
-    problems += [f"teaser mentions {w!r}" for w in LEAK_WORDS if w in teaser.lower()]
+    body = teaser.replace(disclosure(t), "") if t.flag else teaser  # the disclosure may name its own issue
+    problems += [f"teaser mentions {w!r}" for w in LEAK_WORDS if w in body.lower()]
+    if t.flag:  # upside spec §1.4: the teaser names the bound, never a real amount
+        problems += [f"teaser shows the {f.trap} amount" for f in t.facts if f.amount > 0 and money(f.amount) in teaser]
     return problems
 
 
