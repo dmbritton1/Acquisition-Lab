@@ -10,6 +10,9 @@ MARGIN = 0.20  # flippers clear, and decoys stay short of, their flip point by 2
 PULL_BACK = 0.10  # an interaction still flips if either value is pulled back this far
 DECOY_MOVE = 0.05  # decoys move walk-away by at least 5% of EV
 UNRESOLVED_WIDTH = 0.40  # documented range width for unresolvable facts
+LOOK = 0.5  # upside spec §1.2: a flagged worry priced at half its stated bound already fails, by PULL_BACK
+RELIEF_FLOOR = 0.05  # a relief amount is never 0: zero renders as "no such issue", contradicting the teaser
+FLAG_ROLES = ("relief", "confirmed")  # the flagged issue's roles: the teaser states its bound (upside spec §1.1)
 
 
 def amounts(b: BaseDeal, sev: dict[str, float]) -> dict[str, float]:
@@ -67,6 +70,13 @@ def place(b: BaseDeal, roles: dict[str, str], rng: np.random.Generator) -> dict[
             if lo is None or lo > _upper(t):
                 return None
             out[trap] = {"severity": float(rng.uniform(lo, _upper(t))), "documented": None}
+        elif role in FLAG_ROLES:
+            if t is None or t >= LOOK - PULL_BACK:
+                return None
+            lo, hi = (RELIEF_FLOOR, t - MARGIN) if role == "relief" else (t + MARGIN, 1.0)
+            if lo > hi:
+                return None
+            out[trap] = {"severity": float(rng.uniform(lo, hi)), "documented": None}
         elif role == "unresolvable":
             for _ in range(20):
                 low = float(rng.uniform(0.0, 1.0 - UNRESOLVED_WIDTH))
