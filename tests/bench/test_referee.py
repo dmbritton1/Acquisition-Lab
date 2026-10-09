@@ -1,7 +1,8 @@
+import hashlib
 import json
 from pathlib import Path
 
-from acqlab.bench import referee
+from acqlab.bench import recon, referee
 
 
 def _solo(doc="qoe", go=True):
@@ -84,3 +85,30 @@ def test_a_reading_referee_gets_its_budget_the_reading_tools_and_the_paid_docume
     room_, budget, trace, user, system, tools, server_args = seen["a"]
     assert budget == 7.0 and tools == referee.READ_TOOLS and server_args == ["--paid", "qoe,cim"]
     assert seen["kw"] == {"claude": "x"}
+
+
+def _fingerprint(prompts: tuple[str, str]) -> str:
+    return hashlib.sha256("\x00".join(prompts).encode()).hexdigest()
+
+
+def test_the_earlier_pilots_prompts_are_unchanged(s4_fake_run):
+    """Fingerprints taken before referee.documents was extracted (the debate pilot's plan, Task 1): the kill test's
+    referee, the recon pilot's reading referee and its second opinion."""
+    room, team = s4_fake_run
+    solo = [{"tool": "open_document", "args": {"doc_id": "board_minutes"}, "cost": 3.0, "refused": False},
+            {"tool": "submit", "args": {"go": True, "walk_away": 101.5, "reason": "solo"}, "refused": False}]
+    assert _fingerprint(referee.prompts(room, team, solo, "dev-000")) == \
+        "6ffe421c464d6e831557a63067ee98e24f25035ca619ba256af24317fb07ab35"
+    assert _fingerprint(referee.build(room, ["one", "two"], ["qoe", "legal"], "dev-000", 6.5)) == \
+        "1d111d468dac2a8b4a033a8a85e1173860823ef7fde3b7c11ae1818228ee99ff"
+    assert _fingerprint(recon.second_prompts(room, ["legal", "qoe"])) == \
+        "e74dcf9c54194457eb9d8d83f9e6146aac391f756a3738fad4189c56f4746387"
+
+
+def test_documents_are_the_full_text_of_those_read_in_index_order(s4_fake_run):
+    room, _ = s4_fake_run
+    titles = {d["id"]: d["title"] for d in json.loads((room / "index.json").read_text())["documents"]}
+    out = referee.documents(room, ["legal", "qoe", "legal", "no_such_doc"])
+    assert out.index("(qoe)") < out.index("(legal)") and out.count(f"## {titles['legal']} (legal)") == 1
+    assert (room / "legal.md").read_text() in out and "no_such_doc" not in out
+    assert referee.documents(room, []) == ""

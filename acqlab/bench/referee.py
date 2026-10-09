@@ -85,13 +85,17 @@ def solo_view(trace: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def documents(room: Path, read: list[str]) -> str:
+    """The full text of the documents read, in the room's index order, each under its title and id."""
+    titles = {d["id"]: d["title"] for d in json.loads((room / "index.json").read_text())["documents"]}
+    return "\n\n".join(f"## {titles[d]} ({d})\n\n{(room / f'{d}.md').read_text()}" for d in titles if d in set(read))
+
+
 def build(room: Path, views: list[str], read: list[str], deal: str, left: float | None = None) -> tuple[str, str]:
     """(system, user) for any two analysts' views and the documents read. The views' order is fixed per deal from its
     id, so neither is always first. With `left`, the referee may also read, with that budget (the recon pilot)."""
     index = json.loads((room / "index.json").read_text())
-    titles = {d["id"]: d["title"] for d in index["documents"]}
-    read = [d for d in titles if d in set(read)]
-    docs = "\n\n".join(f"## {titles[d]} ({d})\n\n{(room / f'{d}.md').read_text()}" for d in read)
+    docs = documents(room, read)
     views = list(views)
     if random.Random(deal).random() < 0.5:
         views.reverse()

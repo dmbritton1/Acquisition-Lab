@@ -94,10 +94,8 @@ def draft(room: Path, budget: float, *, trace: Path, router: bool = False, **kw)
 
 
 def second_prompts(room: Path, read: list[str]) -> tuple[str, str]:
-    index = json.loads((room / "index.json").read_text())
-    titles = {d["id"]: d["title"] for d in index["documents"]}
-    docs = "\n\n".join(f"## {titles[d]} ({d})\n\n{(room / f'{d}.md').read_text()}" for d in titles if d in set(read))
-    user = f"{index['teaser']}\n\n# Documents\n\n{docs}\n\nNote every kind of issue, then submit."
+    teaser = json.loads((room / "index.json").read_text())["teaser"]
+    user = f"{teaser}\n\n# Documents\n\n{referee.documents(room, read)}\n\nNote every kind of issue, then submit."
     return SECOND_SYSTEM.format(guide=GUIDE), user
 
 
