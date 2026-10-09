@@ -52,32 +52,39 @@ def versus(a: dict, b: dict) -> dict:
 
 def overturned(rows: dict[str, dict], groups: dict[str, str]) -> dict:
     """Spec §3 item 4: deals where the referee's call differs from the reader's, four ways, overall and by group.
-    A deal whose reader gave no call has nothing to overturn; those are counted apart."""
+    A deal whose reader gave no call has nothing to overturn, and one whose referee gave no call has no call to
+    compare (pilot.score scores it at face value, so it is not a call); those are counted apart."""
     kinds = [f"{a}_to_{b}_{c}" for a, b in (("nogo", "go"), ("go", "nogo")) for c in ("right", "wrong")]
     out = {g: dict.fromkeys(kinds, 0) for g in ("all", *GROUPS)}
-    none = 0
+    none = no_ref = 0
     for deal, r in rows.items():
         before = r["calls"]["reader"]
         if before is None:
             none += 1
+            continue
+        if r["calls"]["referee"] is None:
+            no_ref += 1
             continue
         if before["go"] != r["go"]:
             k = f"{'go' if before['go'] else 'nogo'}_to_{'go' if r['go'] else 'nogo'}_" \
                 f"{'right' if r['correct'] else 'wrong'}"
             out["all"][k] += 1
             out[groups[deal]][k] += 1
-    return out | {"no_reader_call": none}
+    return out | {"no_reader_call": none, "no_referee_call": no_ref}
 
 
 def by_step(rows: dict[str, dict], traces: dict[str, list[dict]]) -> dict:
-    """Each step's mean cost and pages per deal (a timed-out step's cost is unknown and left out)."""
+    """Each step's mean cost and pages per deal (a timed-out step's cost is unknown and left out), and spec §3 item 8's
+    counts: deals where the step gave no call (no_call) and deals with no CLI result for it (timeouts)."""
     out = {}
     for s in ("reader", "bull", "bear", "referee"):
         costs = [r["step_cost"][s] for r in rows.values() if r["step_cost"][s] is not None]
         out[s] = {"cost": float(np.mean(costs)) if costs else None,
                   "pages": float(np.mean([sum(x["cost"] for x in traces[d] if x.get("step") == s
                                               and x["tool"] == "open_document" and not x.get("refused"))
-                                          for d in rows]))}
+                                          for d in rows])),
+                  "no_call": sum(r["calls"][s] is None for r in rows.values()),
+                  "timeouts": sum(r["step_cost"][s] is None for r in rows.values())}
     return out
 
 

@@ -87,15 +87,18 @@ def test_the_mechanics_check_needs_38_of_40_answered_and_no_deal_past_its_limit(
 
 def test_overturned_calls_are_split_four_ways_and_by_group():
     def row(before, go, correct):
-        return {"calls": {"reader": None if before is None else {"go": before}}, "go": go, "correct": correct}
+        return {"calls": {"reader": None if before is None else {"go": before}, "referee": {"go": go}},
+                "go": go, "correct": correct}
 
     rows = {"a": row(False, True, True), "b": row(False, True, False), "c": row(True, False, True),
-            "d": row(True, False, False), "e": row(True, True, True), "f": row(None, True, True)}
-    groups = {"a": "relief", "b": "relief", "c": "confirmed", "d": "ordinary", "e": "ordinary", "f": "relief"}
+            "d": row(True, False, False), "e": row(True, True, True), "f": row(None, True, True),
+            "g": {"calls": {"reader": {"go": False}, "referee": None}, "go": True, "correct": True}}
+    groups = {"a": "relief", "b": "relief", "c": "confirmed", "d": "ordinary", "e": "ordinary", "f": "relief",
+              "g": "ordinary"}
     out = SCRIPT["overturned"](rows, groups)
     assert out["all"] == {"nogo_to_go_right": 1, "nogo_to_go_wrong": 1, "go_to_nogo_right": 1, "go_to_nogo_wrong": 1}
     assert out["relief"]["nogo_to_go_right"] == 1 and out["confirmed"]["go_to_nogo_right"] == 1
-    assert out["no_reader_call"] == 1
+    assert out["no_reader_call"] == 1 and out["no_referee_call"] == 1
 
 
 def test_the_bull_finds_the_good_news_only_where_the_reader_had_not():
@@ -119,6 +122,9 @@ def test_the_analysis_reads_a_finished_pilot(finished, tmp_path):
     assert out["bull_found"] == {"debate_x": relief, "debate_s": relief}
     assert out["versus"]["debate_s"]["s1b"]["tied"] == 5 and out["x_minus_s"]["n"] == 5
     assert out["steps"]["debate_x"]["bull"]["cost"] is None and out["steps"]["debate_x"]["bear"]["cost"] == 0.1
+    assert out["steps"]["debate_x"]["bull"] == {"cost": None, "pages": out["steps"]["debate_x"]["bull"]["pages"],
+                                                "no_call": 5, "timeouts": 5}
+    assert out["steps"]["debate_x"]["referee"]["no_call"] == 0
     assert out["systems"]["debate_x"]["relief"]["n"] == relief and "decoy_pages" in out["systems"]["s4"]["all"]
     path = tmp_path / "x.json"
     assert SCRIPT["main"](["--data", str(finished), "--out", str(path)]) == 0
