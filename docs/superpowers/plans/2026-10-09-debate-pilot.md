@@ -1217,11 +1217,17 @@ The controller does this task itself, not an implementer subagent. **Steps 2 onw
   .venv/bin/python -m acqlab.bench.debate --data data/cal-r2 --split dev --deals dev-000,dev-001 --confirm-claude
   ```
 
+  Before running, record the CLI that will run: `"${CLAUDE_BIN:-claude}" --version`. A leftover `CLAUDE_BIN` pointing at an older
+  CLI would break the 2.1.291-or-newer rule (final review).
+
   Check the following:
   - every step submitted (`calls` in each row);
   - `spent` is at most 1.2·B for `debate_x` and at most B for `debate_s`;
   - the referee's session got every opened document and all three summaries (rebuild its prompt with `judge_prompts` from the step traces);
   - `models == ["claude-opus-5-5"]`.
+  - a missing advocate case reads clearly to the referee (`solo_view` says "the analyst's run ended without
+    submitting one"; it is pinned by the earlier pilots, so it is not edited);
+  - the advocates' notes reach the referee through their summaries.
 
   Prompts may be fixed here, and only here. After any prompt edit, delete the smoke runs and rerun them.
 
@@ -1232,6 +1238,18 @@ The controller does this task itself, not an implementer subagent. **Steps 2 onw
   - `debate.PROMPT_SHA`, from `.venv/bin/python -c "from acqlab.bench import debate; print(debate.PROMPT_SHA)"`;
   - the CLI version (`claude --version`);
   - the smoke test's outcome and cost.
+
+  Before writing it, pin the whole of what each step sees (final review, Important):
+  - add a test to `tests/bench/test_debate.py`, in the style of `test_the_earlier_pilots_prompts_are_unchanged`;
+  - it pins `sha256("\x00".join(...))` of `bull_prompts`, `bear_prompts` and `judge_prompts`, rendered on the
+    `s4_fake_run` room with fixed views and a fixed deal id;
+  - it also pins the literal `debate.PROMPT_SHA` values.
+
+  The pre-registration then records both sets of fingerprints, plus two notes from the final review:
+  - on `pilot-r2u`, s1b left the settling document unopened on only 3 relief deals, and `debate_x`'s bull can afford
+    it on at most 1, so measure 5 for `debate_x` is near zero by design;
+  - the summary order on the 40 deal ids: the analyst is first 17 times, the bear 13 and the bull 10; the bear is
+    last 17 times.
 
   Commit it before any pilot run.
 
