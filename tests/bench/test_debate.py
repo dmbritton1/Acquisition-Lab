@@ -1,4 +1,5 @@
 import functools
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -96,6 +97,27 @@ def test_every_prompt_carries_the_shared_rules():
     assert set(debate.PROMPT_SHA) == {"shared", "bull", "bear", "referee"}
     assert all(len(h) == 64 for h in debate.PROMPT_SHA.values())
 
+
+def test_the_frozen_prompts_are_unchanged(s4_fake_run):
+    """The debate pilot's freeze (docs/results/debate-pilot-prereg.md): the four templates and everything each step
+    sees around them, rendered on a fixed room. The views come from referee.solo_view, pinned by test_referee."""
+    room, _ = s4_fake_run
+    views = {"reader": "READER VIEW", "bull": "BULL CASE", "bear": "BEAR CASE"}
+
+    def h(prompts):
+        return hashlib.sha256("\x00".join(prompts).encode()).hexdigest()
+
+    assert debate.PROMPT_SHA == {
+        "shared": "5a90675be76cfd91e3e0a64cf09e402d905c83d47d8148e1b88362f91201f601",
+        "bull": "87b139f56a22be4a9440f84aa28eee87db08bc1c8506ff0cb0d2f7f2baee9824",
+        "bear": "5e0ed69d1f33616a646a020f1c3bcdd24a73a08913cdfb04bff0993b321c238e",
+        "referee": "b61b9ea729dc1506358b84b908f85690ac29733f22e0cce18d0b04bba9ebd270"}
+    assert h(debate.bull_prompts(room, 4.5, ["qoe", "legal"], views["reader"])) == \
+        "df9b47eb98b6da4ab8f70734e42e38f85248b86ecbff7c8463a3b3cf0568e19d"
+    assert h(debate.bear_prompts(room, ["qoe", "legal", "audited"], views["reader"], views["bull"])) == \
+        "0b8017de1888aee165981dc7663eff4b720575ccaf4960e58fd6604f77644f28"
+    assert h(debate.judge_prompts(room, ["qoe", "legal", "audited"], views, "test-007")) == \
+        "9a218e0291a466d7e2e3b3995d08bb9c7ad4352289e1622fa744a6f089461ac9"
 
 def test_no_step_reads_the_answer_key():
     source = Path(debate.__file__).read_text().split("def run(")[0]

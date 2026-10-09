@@ -74,12 +74,12 @@ A new session (possibly on the user's other Claude account) continues from this 
     `referee.documents` was extracted, and the earlier pilots' prompts are pinned unchanged.
   - Built subagent-driven (commits `00d35e7..8b01ffa`), with a review per task and a final review on Opus, which said
     it is ready for the smoke test. 450 tests pass.
-  - **Next is the plan's Task 5, and each paid step needs the user's OK:**
-    1. the smoke test on `data/cal-r2` dev-000/dev-001 (about $1–2);
-    2. pin the rendered prompts and write the pre-registration (the final review's Important point, written into
-       Task 5);
-    3. the 40-deal pilot (about $20–28);
-    4. the analysis and the write-up.
+  - **Smoke test done and prompts frozen (2026-10-09):** the run cost $2.12; every step answered and the limits held;
+    no prompt was changed. The pre-registration is `docs/results/debate-pilot-prereg.md`, and
+    `test_the_frozen_prompts_are_unchanged` pins the prompts. 451 tests pass.
+  - **Next (needs the user's OK):** the 40-deal pilot, about $20–28:
+    `.venv/bin/python -m acqlab.bench.debate --data data/pilot-r2u --confirm-claude`.
+    If it exits 2, rerun after the usage limit resets. Then run `scripts/debate_pilot.py` once and write the results up.
   - Stage 2 of the hidden-upside track ("genuine extra value") is decided after this pilot.
 - **Background to stage 1 (built 2026-10-07 to 10-08; the history follows):**
   - **Background:** a research note on agent teams versus one agent (`docs/research/agent-teams-research-2026-10-07.md`)
