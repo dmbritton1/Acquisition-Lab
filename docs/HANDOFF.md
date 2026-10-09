@@ -3,7 +3,7 @@
 *Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
 specs are the binding authority on design; this file is the source of truth for status and next steps.*
 
-## Resume here (2026-10-08)
+## Resume here (2026-10-09)
 
 A new session (possibly on the user's other Claude account) continues from this point.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
@@ -64,8 +64,23 @@ A new session (possibly on the user's other Claude account) continues from this 
     misses come from how often it says NO-GO, not from worse judgment.
   - Why each system misses: the team mostly never opened the settling document (9 of its 12 misses, often the board
     minutes). Single Claude mostly read the good news and still passed (5 of its 7 misses).
-- **Next:** the debate design (spec not written yet). Give the bull advocate a small reading budget, because the
-  team's failure is reading. Stage 2 ("genuine extra value", negative amounts) comes with it.
+- **Debate pilot: built, not yet run (2026-10-09).** Spec `docs/superpowers/specs/2026-10-09-debate-pilot-design.md`;
+  plan `docs/superpowers/plans/2026-10-09-debate-pilot.md`.
+  - Single Claude reads, then a bull argues for buying (it reads more with a small budget), a bear argues for passing,
+    and a referee who read nothing makes the call.
+    - `debate_x` reuses the s1b run and gives the bull 0.2·B on top.
+    - `debate_s` runs a new reader at 0.8·B and gives the bull the rest.
+  - Code: `acqlab/bench/debate.py` (runner) and `scripts/debate_pilot.py` (the one-shot analysis);
+    `referee.documents` was extracted, and the earlier pilots' prompts are pinned unchanged.
+  - Built subagent-driven (commits `00d35e7..8b01ffa`), with a review per task and a final review on Opus, which said
+    it is ready for the smoke test. 450 tests pass.
+  - **Next is the plan's Task 5, and each paid step needs the user's OK:**
+    1. the smoke test on `data/cal-r2` dev-000/dev-001 (about $1–2);
+    2. pin the rendered prompts and write the pre-registration (the final review's Important point, written into
+       Task 5);
+    3. the 40-deal pilot (about $20–28);
+    4. the analysis and the write-up.
+  - Stage 2 of the hidden-upside track ("genuine extra value") is decided after this pilot.
 - **Background to stage 1 (built 2026-10-07 to 10-08; the history follows):**
   - **Background:** a research note on agent teams versus one agent (`docs/research/agent-teams-research-2026-10-07.md`)
     explains why the team leans towards NO-GO. That lean is the question this pilot tests.
