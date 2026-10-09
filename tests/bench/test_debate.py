@@ -1,9 +1,13 @@
+import functools
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
-from acqlab.bench import debate
+from acqlab.agents.solver import RunTimeout, solve
+from acqlab.bench import debate, pilot
+from acqlab.generator.batch import AnswerKey
 
 
 def _row(tool, args=None, cost=0.0):
@@ -96,3 +100,138 @@ def test_every_prompt_carries_the_shared_rules():
 def test_no_step_reads_the_answer_key():
     source = Path(debate.__file__).read_text().split("def run(")[0]
     assert not any(word in source for word in ("AnswerKey", "truth", "model_validate"))
+
+
+# --- the systems and the runner ------------------------------------------------------------------------------------
+
+@pytest.fixture
+def fakes(monkeypatch, room):
+    """Every step replaced by one that writes a scripted trace (scripts[step]; none scripted = a timeout) and records
+    its arguments (calls[step])."""
+    f = {"scripts": {}, "calls": {}}
+
+    def run(*args, trace, **kw):
+        name = trace.name.split(".")[-2]
+        f["calls"][name] = (args, kw)
+        if name not in f["scripts"]:
+            raise RunTimeout("fake timeout")
+        trace.write_text("".join(json.dumps(r) + "\n" for r in f["scripts"][name]))
+        return {"total_cost_usd": 0.1, "usage": {"output_tokens": 5}, "modelUsage": {"claude-opus-5-5": {}},
+                "env_keys": ["HOME", "PATH"]}
+
+    for fn in ("draft", "bull", "bear", "judge"):
+        monkeypatch.setattr(debate, fn, run)
+    return f
+
+
+def _s1b(runs: Path, deal: str, trace: list[dict], status="ok"):
+    """A finished s1b run beside the debate's runs, as pilot.run writes one; the debate's runs directory too."""
+    for s in ("s1b", "debate_x"):
+        (runs / s).mkdir(parents=True, exist_ok=True)
+    (runs / "s1b" / f"{deal}.trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in trace))
+    (runs / "s1b" / f"{deal}.json").write_text(json.dumps({
+        "status": status, "tokens": {"output_tokens": 7}, "cost_usd": 0.2, "num_turns": 3, "duration_ms": 10,
+        "models": ["claude-opus-5-5"], "env_keys": ["HOME"]}))
+
+
+def test_x_reuses_the_s1b_run_and_gives_the_bull_a_fifth_on_top(fakes, room, docs, data, tmp_path):
+    runs = tmp_path / "runs"
+    _s1b(runs, "dev-000", _session(False, docs[:2], cost=9.0))
+    fakes["scripts"] |= {"bull": _session(True, docs[2:3], cost=4.0), "bear": _session(False),
+                         "referee": _session(True)}
+    trace, cli = debate.run_x(room, 20.0, "dev-000", runs / "debate_x" / "dev-000.json")
+    (_, left, read, view), _ = fakes["calls"]["bull"]
+    assert left == pytest.approx(4.0) and read == docs[:2] and "NO-GO" in view
+    assert "draft" not in fakes["calls"]  # no new reader
+    key = AnswerKey.model_validate_json((data / "truth" / "dev-000.json").read_text())
+    row = pilot.score(key, "debate_x", trace, cli, "ok")
+    assert row["pages"] == 22.0 and row["cost_usd"] == pytest.approx(0.5) and row["sessions"] == 4
+    assert row["tokens"]["output_tokens"] == 7 + 3 * 5 and row["models"] == ["claude-opus-5-5"]
+    assert {r["step"] for r in trace} == {"reader", "bull", "bear", "referee", "final"}
+    assert cli["calls"]["reader"]["go"] is False and cli["calls"]["referee"]["go"] is True
+    assert cli["step_cost"] == {"reader": 0.2, "bull": 0.1, "bear": 0.1, "referee": 0.1}
+
+
+def test_x_stops_without_a_finished_s1b_run(fakes, room, tmp_path):
+    with pytest.raises(FileNotFoundError, match="s1b"):
+        debate.run_x(room, 20.0, "dev-000", tmp_path / "runs" / "debate_x" / "dev-000.json")
+    assert not fakes["calls"]
+
+
+def test_x_counts_a_timed_out_s1b_run_as_a_timed_out_step(fakes, room, docs, tmp_path):
+    runs = tmp_path / "runs"
+    _s1b(runs, "dev-000", _session(None, docs[:1]), status="timeout")
+    fakes["scripts"] |= {"bull": _session(True), "bear": _session(False), "referee": _session(True)}
+    _, cli = debate.run_x(room, 20.0, "dev-000", runs / "debate_x" / "dev-000.json")
+    assert cli["timeouts"] == 1 and cli["calls"]["reader"] is None and cli["step_cost"]["reader"] is None
+
+
+def test_s_gives_the_reader_80_percent_and_the_bull_what_is_left(fakes, room, docs, tmp_path):
+    fakes["scripts"] |= {"reader": _session(True, docs[:3], cost=4.0), "bull": _session(True, docs[3:4], cost=4.0),
+                         "bear": _session(False), "referee": _session(False)}
+    trace, _ = debate.run_s(room, 20.0, "dev-000", tmp_path / "x.json")
+    assert fakes["calls"]["reader"][0][1] == pytest.approx(16.0)
+    (_, left, read, _), _ = fakes["calls"]["bull"]
+    assert left == pytest.approx(8.0) and read == docs[:3]
+    assert debate.spent(trace) <= 20.0
+
+
+def test_the_bear_and_referee_get_every_document_read_so_far(fakes, room, docs, tmp_path):
+    fakes["scripts"] |= {"reader": _session(True, docs[:2]), "bull": _session(True, [docs[1], docs[4]]),
+                         "bear": _session(False), "referee": _session(False)}
+    debate.run_s(room, 20.0, "dev-000", tmp_path / "x.json")
+    assert fakes["calls"]["bear"][0][1] == [docs[0], docs[1], docs[4]]
+    (_, read, views, deal), _ = fakes["calls"]["referee"]
+    assert read == [docs[0], docs[1], docs[4]] and deal == "dev-000" and set(views) == {"reader", "bull", "bear"}
+
+
+def test_a_missing_case_is_stated_and_the_debate_goes_on(fakes, room, docs, tmp_path):
+    fakes["scripts"] |= {"reader": _session(True, docs[:1]), "bear": _session(False), "referee": _session(False)}
+    trace, cli = debate.run_s(room, 20.0, "dev-000", tmp_path / "x.json")  # the bull timed out
+    assert "ended without submitting" in fakes["calls"]["bear"][0][3]
+    assert "ended without submitting" in fakes["calls"]["referee"][0][2]["bull"]
+    assert debate.call_of(trace)["go"] is False and cli["timeouts"] == 1 and cli["calls"]["bull"] is None
+
+
+def test_a_referee_without_a_call_leaves_the_deal_unanswered(fakes, room, data, tmp_path):
+    fakes["scripts"] |= {"reader": _session(True), "bull": _session(True), "bear": _session(False),
+                         "referee": [_row("evaluate", {"adjustments": {}})]}
+    trace, cli = debate.run_s(room, 20.0, "dev-000", tmp_path / "x.json")
+    key = AnswerKey.model_validate_json((data / "truth" / "dev-000.json").read_text())
+    row = pilot.score(key, "debate_s", trace, cli, "no_call")
+    assert not row["answered"] and row["go"] == key.truth.face_go
+    assert sum(r["tool"] == "submit" for r in trace) == 0 and sum(r["tool"] == "step_submit" for r in trace) == 3
+
+
+def test_the_runner_refuses_without_confirmation_and_rejects_unknown_systems(tmp_path):
+    assert debate.main(["--data", str(tmp_path)]) == 3
+    assert debate.main(["--data", str(tmp_path), "--systems", "debate_y", "--confirm-claude"]) == 1
+
+
+def test_claude_stopping_mid_deal_writes_no_row_and_exits_2(data, tmp_path, monkeypatch):
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+
+    def stop(*a, **kw):
+        raise debate.LLMUnavailable("usage limit")
+
+    monkeypatch.setitem(debate.RUN, "debate_s", stop)
+    assert debate.main(["--data", str(d), "--systems", "debate_s", "--split", "dev", "--confirm-claude"]) == 2
+    assert not list((d / "runs" / "debate_s").glob("*.json"))  # a rerun redoes the whole deal
+
+
+def test_both_systems_run_end_to_end_with_the_fake_claude(data, tmp_path, fake_claude, monkeypatch):
+    monkeypatch.setenv("FAKE_CLAUDE", "ok")
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+    pilot.run(d, 2, ["s1b"], solver=functools.partial(solve, claude=fake_claude), split="dev")
+    rows = debate.run(d, list(debate.SYSTEMS), split="dev", deals=["dev-001"], claude=fake_claude)
+    assert [(r["system"], r["deal"]) for r in rows] == [("debate_x", "dev-001"), ("debate_s", "dev-001")]
+    for r in rows:
+        limit = r["budget"] * (1.2 if r["system"] == "debate_x" else 1.0)
+        trace = debate.referee.rows(d / "runs" / r["system"] / "dev-001.trace.jsonl")
+        assert r["answered"] and r["sessions"] == 4 and r["pages"] <= limit + 1e-9
+        assert r["prompts"] == debate.PROMPT_SHA and set(r["calls"]) == {"reader", "bull", "bear", "referee"}
+        assert [s for s in dict.fromkeys(x["step"] for x in trace)] == ["reader", "bull", "bear", "referee", "final"]
+    assert not (d / "runs" / "debate_x" / "dev-000.json").exists()  # --deals limits the run
+    assert debate.run(d, list(debate.SYSTEMS), split="dev", deals=["dev-001"], claude=fake_claude) == []

@@ -9,6 +9,7 @@ tool server, which enforces its budget. No step reads the answer key; scoring do
 Runs go to <data>/runs/<system>/<deal>.json, the combined trace beside it (each step's own trace too); finished runs
 are skipped. Exit codes: 0 done; 1 an unknown system; 2 Claude stopped (rerun later to resume); 3 refused (no
 --confirm-claude)."""
+import argparse
 import hashlib
 import json
 import random
@@ -17,6 +18,8 @@ from pathlib import Path
 from acqlab.agents.knowledge import GUIDE
 from acqlab.agents.solver import run_session
 from acqlab.bench import referee
+from acqlab.bench.recon import call_of, combine, draft, spent, step
+from acqlab.llm import LLMUnavailable
 
 READER_SHARE, BULL_SHARE = 0.8, 0.2  # spec §1
 SYSTEMS = ("debate_x", "debate_s")
@@ -145,3 +148,108 @@ def bear(room: Path, read: list[str], reader: str, case: str, *, trace: Path, **
 def judge(room: Path, read: list[str], views: dict[str, str], deal: str, *, trace: Path, **kw) -> dict:
     sys_, user = judge_prompts(room, read, views, deal)
     return run_session(room, 0, trace, user, sys_, JUDGE_TOOLS, [], **kw)
+
+
+# --- the systems ---------------------------------------------------------------------------------------------------
+
+def debate(room: Path, deal: str, out: Path, reader: tuple[list[dict], dict | None], left: float,
+           **kw) -> tuple[list[dict], dict]:
+    """Spec §2 after the reader: the bull with `left` units, the bear, then the referee, whose call is final (none if
+    it gave none, so scoring treats the deal as unanswered)."""
+    read = referee.opened(reader[0])
+    views = {"reader": referee.solo_view(reader[0])}
+    pro = step("bull", out.with_suffix(".bull.jsonl"), bull, room, left, read, views["reader"], **kw)
+    read = list(dict.fromkeys(read + referee.opened(pro[0])))
+    views["bull"] = referee.solo_view(pro[0])
+    con = step("bear", out.with_suffix(".bear.jsonl"), bear, room, read, views["reader"], views["bull"], **kw)
+    views["bear"] = referee.solo_view(con[0])
+    ref = step("referee", out.with_suffix(".referee.jsonl"), judge, room, read, views, deal, **kw)
+    steps = {"reader": reader, "bull": pro, "bear": con, "referee": ref}
+    trace, cli = combine([r for rows, _ in steps.values() for r in rows], [c for _, c in steps.values()],
+                         call_of(ref[0]))
+    return trace, cli | {"calls": {k: call_of(rows) for k, (rows, _) in steps.items()},
+                         "step_cost": {k: c and c.get("total_cost_usd") for k, (_, c) in steps.items()}}
+
+
+def reused(row: dict) -> dict | None:
+    """An s1b row as a CLI result, for combine; None if that run timed out."""
+    if row["status"] == "timeout":
+        return None
+    return {"usage": row["tokens"], "total_cost_usd": row["cost_usd"], "num_turns": row["num_turns"],
+            "duration_ms": row["duration_ms"], "modelUsage": {m: {} for m in row["models"]},
+            "env_keys": row["env_keys"]}
+
+
+def run_x(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[list[dict], dict]:
+    """debate_x: the deal's finished s1b run is the reader, unchanged; the bull gets 0.2 of the budget on top."""
+    path = out.parents[1] / "s1b" / f"{deal}.json"
+    if not (path.exists() and path.with_suffix(".trace.jsonl").exists()):
+        raise FileNotFoundError(f"debate_x/{deal}: no finished s1b run to reuse at {path}")
+    row = json.loads(path.read_text())
+    rows = [r | {"step": "reader"} for r in referee.rows(path.with_suffix(".trace.jsonl"))]
+    return debate(room, deal, out, (rows, reused(row)), BULL_SHARE * budget, **kw)
+
+
+def run_s(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[list[dict], dict]:
+    """debate_s: a new reader at 0.8 of the budget; the bull gets what it left, so the deal never exceeds its budget."""
+    reader = step("reader", out.with_suffix(".reader.jsonl"), draft, room, READER_SHARE * budget, **kw)
+    return debate(room, deal, out, reader, max(0.0, budget - spent(reader[0])), **kw)
+
+
+RUN = {"debate_x": run_x, "debate_s": run_s}
+
+
+# --- the runner ----------------------------------------------------------------------------------------------------
+
+def run(data: Path, systems: list[str], split: str = "test", deals: list[str] | None = None, **kw) -> list[dict]:
+    """Every missing run of these systems on the split's deals (or just `deals`); raises LLMUnavailable to stop."""
+    from acqlab.bench.pilot import score  # scoring reads the answer key, after the final call
+    from acqlab.generator.batch import AnswerKey
+    out = []
+    for deal in deals or json.loads((data / "splits.json").read_text())[split]:
+        room = data / "deals" / deal / "room"
+        budget = float(json.loads((room / "index.json").read_text())["default_budget"])
+        for name in systems:
+            path = data / "runs" / name / f"{deal}.json"
+            if path.exists():
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            trace, cli = RUN[name](room, budget, deal, path, **kw)
+            path.with_suffix(".trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in trace))
+            key = AnswerKey.model_validate_json((data / "truth" / f"{deal}.json").read_text())
+            assert key.budget == budget, f"{deal}: the room's budget is not the answer key's"
+            row = score(key, name, trace, cli, "ok" if call_of(trace) else "no_call") | {
+                "rep": 0, "budget": budget, "spent": spent(trace), "calls": cli["calls"],
+                "step_cost": cli["step_cost"], "prompts": PROMPT_SHA}
+            path.write_text(json.dumps(row, indent=2))
+            out.append(row)
+            print(f"{name} {deal}: answered={row['answered']} correct={row['correct']} regret {row['regret']:.3f} "
+                  f"pages {row['pages']:g}/{budget:g}")
+    return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--data", type=Path, required=True)
+    ap.add_argument("--systems", default=",".join(SYSTEMS))
+    ap.add_argument("--split", default="test")
+    ap.add_argument("--deals", default="", help="comma-separated deal ids (default: the whole split)")
+    ap.add_argument("--confirm-claude", action="store_true", help="required: this spends real Claude usage")
+    args = ap.parse_args(argv)
+    systems = [s for s in args.systems.split(",") if s]
+    if bad := [s for s in systems if s not in RUN]:
+        print(f"Unknown systems {bad}: choose from {list(RUN)}")
+        return 1
+    if not args.confirm_claude:
+        print("Refusing: pass --confirm-claude to spend real Claude usage")
+        return 3
+    try:
+        run(args.data, systems, args.split, [d for d in args.deals.split(",") if d] or None)
+    except LLMUnavailable as e:
+        print(f"Claude stopped: {e}. Rerun to resume.")
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
