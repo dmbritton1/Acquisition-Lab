@@ -3,9 +3,18 @@
 *Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
 specs are the binding authority on design; this file is the source of truth for status and next steps.*
 
-## Resume here (2026-10-09, evening)
+## Resume here (2026-10-10)
 
 A new session (possibly on the user's other Claude account) continues from this point.
+- **Current track: the Haiku team** (spec `docs/superpowers/specs/2026-10-10-haiku-team-design.md`, plan
+  `docs/superpowers/plans/2026-10-10-haiku-team.md`). Built and tested: the runner (`acqlab/bench/haiku.py`), the
+  practice scorecard (`scripts/haiku_practice.py`) and the one-shot final analysis (`scripts/haiku_team.py`). The 30
+  practice deals are in `data/practice-r2u` (seed 640000) and the base rates in `acqlab/bench/base_rates.json`.
+- **Next: the smoke test, then up to 8 practice rounds** (one OK from the user covers the practice phase, capped at
+  $15). Log each round in `docs/results/haiku-team-tuning-log.md`. Then freeze the winner (set `haiku.FINAL`, pin its
+  prompts with a fingerprint test, commit `docs/results/haiku-team-prereg.md`), then the final test on
+  `data/test-r2` and `data/pilot-r2u` after the user's OK (about $5–10).
+- **After that:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
   2026-09-26 (at `4896dbb`): its worktree `plan-4b-calibration-round-1-5f0549` was detached by something else, so

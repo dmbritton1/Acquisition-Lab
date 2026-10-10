@@ -237,3 +237,10 @@ def test_base_rates_are_the_share_of_deals_where_each_problem_is_real(data, tmp_
         assert out["rates"][t] == pytest.approx(sum(real) / len(real))
     with pytest.raises(haiku.Refused, match="practice deals only"):
         haiku.base_rates([d, tmp_path / "pilot-r2u"])
+
+
+def test_the_committed_base_rates_come_from_the_90_practice_deals_only():
+    from acqlab.generator.traps import TRAPS
+    out = json.loads(haiku.RATES.read_text())
+    assert set(out["rates"]) == set(TRAPS) and all(0 < r < 1 for r in out["rates"].values())
+    assert len(out["deals"]) == 90 and {d.split("/")[0] for d in out["deals"]} == set(haiku.PRACTICE)
