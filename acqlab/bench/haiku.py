@@ -3,8 +3,9 @@ Haiku, tuned on practice deals and tested once on held-out deals against single 
 the model is switched at run time (on_haiku), never by editing acqlab/agents. No step reads the answer key; scoring
 does, after the final call.
 
-    uv run python -m acqlab.bench.haiku --data data/cal-r2 --systems haiku_solo,haiku_team --confirm-claude
+    uv run python -m acqlab.bench.haiku --data data/cal-r2 --systems haiku_solo,haiku_lean --confirm-claude
     uv run python -m acqlab.bench.haiku --data data/test-r2 --split test --systems haiku_solo --final --confirm-claude
+    uv run python -m acqlab.bench.haiku --base-rates     # spec §3, from the practice deals' answer keys (free)
 
 Runs go to <data>/runs/<system>/<deal>.json, the trace beside it (each step's own trace too); finished runs are
 skipped. Exit codes: 0 done; 1 an unknown system; 2 Claude stopped (rerun later to resume); 3 refused (no
@@ -12,19 +13,22 @@ skipped. Exit codes: 0 done; 1 an unknown system; 2 Claude stopped (rerun later 
 import argparse
 import hashlib
 import json
+import statistics
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from acqlab.agents import panel, panel_prompts, prompts, solver
-from acqlab.bench.recon import call_of, draft, spent, step
+from acqlab.bench import referee
+from acqlab.bench.recon import SECOND_SYSTEM, call_of, combine, draft, notes_record, second, spent, step
 from acqlab.llm import LLMUnavailable
 
 MODEL = "claude-haiku-5-5"
 TEST_SETS = ("test-r2", "pilot-r2u")  # spec §2: held out until the freeze
 PRACTICE = ("cal-r2", "heldout-r2", "practice-r2u")  # spec §3: the 90 practice deals
 FINAL: str | None = None  # the frozen winner, set at the freeze (spec §4); until then no held-out run is allowed
+RATES = Path(__file__).with_name("base_rates.json")
 
 
 class Refused(Exception):
@@ -49,6 +53,43 @@ def on_haiku(effort: str | None = None):
         solver.command = original
 
 
+# --- pricing open issues at realistic rates (spec §3) --------------------------------------------------------------
+
+def load_rates() -> dict[str, float]:
+    return json.loads(RATES.read_text())["rates"]
+
+
+def calibrated_record(room: Path, trace: list[dict], rates: dict[str, float], w: float):
+    """recon.notes_record with each open issue's chance pulled toward its base rate: w·chance + (1 − w)·rate. A
+    settled issue (chance 1) is unchanged."""
+    def pull(r: dict) -> dict:
+        a = r["args"]
+        if r["tool"] != "note_issue" or r.get("refused") or float(a["chance"]) >= 1:
+            return r
+        return r | {"args": a | {"chance": w * float(a["chance"]) + (1 - w) * rates[a["type"]]}}
+
+    return notes_record(room, [pull(r) for r in trace])
+
+
+def calibrated_call(room: Path, trace: list[dict], rates: dict[str, float], w: float) -> dict | None:
+    """The engine's call on a pricer's calibrated notes; None if the pricer never submitted."""
+    if call_of(trace) is None:
+        return None
+    go, wa = calibrated_record(room, trace, rates, w).decide()
+    return {"go": bool(go), "walk_away": float(wa), "reason": "the engine, on calibrated notes"}
+
+
+def vote(calls: list[dict | None]) -> dict | None:
+    """The majority of the engine calls given (a tie is NO-GO, the cautious call, as S3's vote is) at the median
+    walk-away; None if no pricer gave a call."""
+    ok = [c for c in calls if c]
+    if not ok:
+        return None
+    gos = sum(c["go"] for c in ok)
+    return {"go": 2 * gos > len(ok), "walk_away": float(statistics.median(c["walk_away"] for c in ok)),
+            "reason": f"the engine's majority: {gos} of {len(ok)} GO"}
+
+
 # --- the candidates ------------------------------------------------------------------------------------------------
 
 def team(room: Path, budget: float, *, trace: Path, **kw) -> dict:
@@ -63,6 +104,21 @@ def run_solo(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[lis
 
 def run_team(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[list[dict], dict | None]:
     return step("team", out.with_suffix(".team.jsonl"), team, room, budget, **kw)
+
+
+def run_lean(room: Path, budget: float, deal: str, out: Path, *, w: float, pricers: int,
+             rates: dict[str, float] | None = None, **kw) -> tuple[list[dict], dict]:
+    """Spec §3: one reader at the full budget, then `pricers` second opinions on the documents it read; the engine
+    prices each one's calibrated notes, and the majority of those calls is final."""
+    rates = rates or load_rates()
+    reader = step("reader", out.with_suffix(".reader.jsonl"), draft, room, budget, **kw)
+    read = referee.opened(reader[0])
+    priced = [step(f"pricer{i}", out.with_suffix(f".pricer{i}.jsonl"), second, room, read, **kw)
+              for i in range(1, pricers + 1)]
+    calls = [calibrated_call(room, rows, rates, w) for rows, _ in priced]
+    steps = [reader, *priced]
+    trace, cli = combine([r for rows, _ in steps for r in rows], [c for _, c in steps], vote(calls))
+    return trace, cli | {"calls": {"reader": call_of(reader[0])} | {f"pricer{i}": c for i, c in enumerate(calls, 1)}}
 
 
 SOLO = (prompts.system_prompt(False),)
@@ -80,6 +136,7 @@ class Candidate:
 CANDIDATES = {
     "haiku_solo": Candidate(run_solo, SOLO),
     "haiku_team": Candidate(run_team, TEAM),
+    "haiku_lean": Candidate(run_lean, SOLO + (SECOND_SYSTEM,), settings={"w": 0.5, "pricers": 3}),
 }
 
 
@@ -132,19 +189,40 @@ def run(data: Path, systems: list[str], split: str = "dev", deals: list[str] | N
     return out
 
 
+def base_rates(dirs: list[Path]) -> dict:
+    """Spec §3: for each issue type, the share of these deals where the problem is really there (amount > 0), read
+    from their answer keys, with the deals used. Refuses a held-out set."""
+    from acqlab.generator.batch import AnswerKey
+    from acqlab.generator.traps import TRAPS
+    if bad := [d.name for d in dirs if d.resolve().name in TEST_SETS]:
+        raise Refused(f"base rates come from practice deals only, not {bad}")
+    keys = {f"{d.name}/{p.stem}": AnswerKey.model_validate_json(p.read_text())
+            for d in dirs for p in sorted((d / "truth").glob("*.json"))}
+    real = {t: [f.amount > 0 for k in keys.values() for f in k.truth.facts if f.trap == t] for t in TRAPS}
+    return {"rates": {t: sum(v) / len(v) for t, v in real.items()}, "deals": sorted(keys)}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--data", type=Path, required=True)
-    ap.add_argument("--systems", default="haiku_solo,haiku_team")
+    ap.add_argument("--data", type=Path)
+    ap.add_argument("--systems", default="haiku_solo,haiku_team,haiku_lean")
     ap.add_argument("--split", default="dev")
     ap.add_argument("--deals", default="", help="comma-separated deal ids (default: the whole split)")
     ap.add_argument("--final", action="store_true", help="the final test on a held-out set (after the freeze)")
     ap.add_argument("--confirm-claude", action="store_true", help="required: this spends real Claude usage")
+    ap.add_argument("--base-rates", action="store_true", help=f"write {RATES.name} from the practice deals")
     args = ap.parse_args(argv)
+    if args.base_rates:
+        root = Path(__file__).resolve().parents[2] / "data"
+        RATES.write_text(json.dumps(base_rates([root / d for d in PRACTICE]), indent=2) + "\n")
+        print(f"wrote {RATES}")
+        return 0
     systems = [s for s in args.systems.split(",") if s]
     if bad := [s for s in systems if s not in CANDIDATES]:
         print(f"Unknown systems {bad}: choose from {list(CANDIDATES)}")
         return 1
+    if args.data is None:
+        ap.error("--data is required")
     try:
         refuse(args.data, systems, args.split, args.final)
     except Refused as e:
