@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import statistics
+import subprocess
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ TEST_SETS = ("test-r2", "pilot-r2u")  # spec §2: held out until the freeze
 PRACTICE = ("cal-r2", "heldout-r2", "practice-r2u")  # spec §3: the 90 practice deals
 FINAL: str | None = None  # the frozen winner, set at the freeze (spec §4); until then no held-out run is allowed
 RATES = Path(__file__).with_name("base_rates.json")
+MIN_CLI = (2, 1, 291)  # spec §1
 
 
 class Refused(Exception):
@@ -51,6 +53,20 @@ def on_haiku(effort: str | None = None):
         yield
     finally:
         solver.command = original
+
+
+def cli_version() -> str:
+    """The Claude Code CLI's version as `claude --version` prints it first (e.g. "2.1.291"); "" if it prints
+    nothing."""
+    out = subprocess.run([solver.claude_bin(), "--version"], capture_output=True, text=True, timeout=30).stdout
+    return out.split()[0] if out.split() else ""
+
+
+def too_old(version: str) -> bool:
+    try:
+        return tuple(int(x) for x in version.split(".")) < MIN_CLI
+    except ValueError:
+        return True
 
 
 # --- pricing open issues at realistic rates (spec §3) --------------------------------------------------------------
@@ -141,7 +157,11 @@ CANDIDATES = {
 
 
 def prompt_sha(name: str) -> str:
-    return hashlib.sha256("\x00".join(CANDIDATES[name].prompts).encode()).hexdigest()
+    """The candidate's fingerprint, recorded in every row as "prompts": its system prompts plus its run function,
+    effort and settings, so a change to any of them is a new fingerprint."""
+    c = CANDIDATES[name]
+    setup = json.dumps({"run": c.run.__name__, "effort": c.effort, "settings": c.settings}, sort_keys=True)
+    return hashlib.sha256("\x00".join((*c.prompts, setup)).encode()).hexdigest()
 
 
 # --- the runner ----------------------------------------------------------------------------------------------------
@@ -151,6 +171,8 @@ def refuse(data: Path, systems: list[str], split: str, final: bool) -> None:
     if (data.resolve().name in TEST_SETS or split == "test") and not final:
         raise Refused(f"{data.name} ({split}) is held out for the final test; tuning never runs on it")
     if final:
+        if split != "test":
+            raise Refused(f"the final test runs on the test split, not {split}")
         if FINAL is None:
             raise Refused("no frozen winner yet: haiku.FINAL is set at the freeze")
         if bad := [s for s in systems if s not in ("haiku_solo", "haiku_team", FINAL)]:
@@ -158,7 +180,7 @@ def refuse(data: Path, systems: list[str], split: str, final: bool) -> None:
 
 
 def run(data: Path, systems: list[str], split: str = "dev", deals: list[str] | None = None, final: bool = False,
-        **kw) -> list[dict]:
+        *, cli: str | None = None, **kw) -> list[dict]:
     """Every missing run of these candidates on the split's deals (or just `deals`); raises LLMUnavailable to stop."""
     from acqlab.bench.pilot import score  # scoring reads the answer key, after the final call
     from acqlab.generator.batch import AnswerKey
@@ -174,15 +196,17 @@ def run(data: Path, systems: list[str], split: str = "dev", deals: list[str] | N
             path.parent.mkdir(parents=True, exist_ok=True)
             c = CANDIDATES[name]
             with on_haiku(c.effort):
-                trace, cli = c.run(room, budget, deal, path, **c.settings, **kw)
+                trace, result = c.run(room, budget, deal, path, **c.settings, **kw)
             path.with_suffix(".trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in trace))
             key = AnswerKey.model_validate_json((data / "truth" / f"{deal}.json").read_text())
             assert key.budget == budget, f"{deal}: the room's budget is not the answer key's"
-            status = "timeout" if cli is None else "ok" if call_of(trace) else "no_call"
-            row = score(key, name, trace, cli, status) | {
-                "rep": 0, "budget": budget, "spent": spent(trace), "calls": (cli or {}).get("calls"),
-                "effort": c.effort, "settings": c.settings, "prompts": prompt_sha(name)}
-            path.write_text(json.dumps(row, indent=2))
+            status = "timeout" if result is None else "ok" if call_of(trace) else "no_call"
+            row = score(key, name, trace, result, status) | {
+                "rep": 0, "budget": budget, "spent": spent(trace), "calls": (result or {}).get("calls"),
+                "effort": c.effort, "settings": c.settings, "prompts": prompt_sha(name), "cli": cli}
+            tmp = path.with_suffix(".json.tmp")  # written whole, then renamed: a killed run leaves no half row
+            tmp.write_text(json.dumps(row, indent=2))
+            tmp.replace(path)
             out.append(row)
             print(f"{name} {deal}: answered={row['answered']} correct={row['correct']} regret {row['regret']:.3f} "
                   f"pages {row['pages']:g}/{budget:g} ${row['cost_usd'] or 0:.3f}")
@@ -232,7 +256,15 @@ def main(argv: list[str] | None = None) -> int:
         print("Refusing: pass --confirm-claude to spend real Claude usage")
         return 3
     try:
-        run(args.data, systems, args.split, [d for d in args.deals.split(",") if d] or None, args.final)
+        version = cli_version()
+    except (OSError, subprocess.TimeoutExpired) as e:
+        print(f"Refusing: the claude CLI could not report its version: {e}")
+        return 3
+    if too_old(version):
+        print(f"Refusing: claude CLI {version or '(unknown)'} is older than {'.'.join(map(str, MIN_CLI))}")
+        return 3
+    try:
+        run(args.data, systems, args.split, [d for d in args.deals.split(",") if d] or None, args.final, cli=version)
     except LLMUnavailable as e:
         print(f"Claude stopped: {e}. Rerun to resume.")
         return 2

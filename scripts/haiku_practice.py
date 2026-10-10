@@ -23,7 +23,9 @@ def card(rows: list[dict]) -> dict:
     """upside_pilot.stats plus the health counts: deals over budget (Haiku rows record spent) and the models seen."""
     if not rows:
         return {"n": 0}
-    return stats(rows) | {"over_budget": sum(r["spent"] > r["budget"] + EPS for r in rows if "spent" in r),
+    return stats(rows) | {"session_timeouts": sum(r["timeouts"] for r in rows),
+                          "total_cost": float(sum(r["cost_usd"] or 0 for r in rows)),
+                          "over_budget": sum(r["spent"] > r["budget"] + EPS for r in rows if "spent" in r),
                           "models": sorted({m for r in rows for m in r["models"]})}
 
 
@@ -53,7 +55,7 @@ def keeps(new: dict, old: dict) -> bool:
 
 def table(card_by: dict) -> str:
     head = f"{'system':14s} {'set':13s} {'n':>3s} {'regret':>7s} {'right':>6s} {'fGO':>4s} {'fNOGO':>5s} " \
-           f"{'$/deal':>7s} {'pages':>6s} {'sess':>5s} {'noans':>5s} {'t/o':>4s} {'over':>4s}"
+           f"{'$/deal':>7s} {'pages':>6s} {'sess':>5s} {'noans':>5s} {'t/o':>4s} {'over':>4s} {'st/o':>4s} {'$total':>7s}"
     lines = [head]
     for name, e in card_by.items():
         for label, c in [("all", e["all"]), *e["sets"].items(), *[(f"case:{k}", v) for k, v in e["by_case"].items()]]:
@@ -62,7 +64,8 @@ def table(card_by: dict) -> str:
             cost = f"{c['cost']:.4f}" if c["cost"] is not None else "-"
             lines.append(f"{name:14s} {label:13s} {c['n']:3d} {c['regret']:7.4f} {c['correct']:6.1%} "
                          f"{c['false_go']:4d} {c['false_nogo']:5d} {cost:>7s} {c['pages']:6.1f} "
-                         f"{c['sessions']:5.1f} {c['no_answer']:5d} {c['timeouts']:4d} {c['over_budget']:4d}")
+                         f"{c['sessions']:5.1f} {c['no_answer']:5d} {c['timeouts']:4d} {c['over_budget']:4d} "
+                         f"{c['session_timeouts']:4d} {c['total_cost']:7.3f}")
         lines.append(f"{name:14s} missing runs: {e['missing']}; models: {e['all'].get('models', [])}")
     return "\n".join(lines)
 

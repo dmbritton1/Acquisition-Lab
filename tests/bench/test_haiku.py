@@ -84,6 +84,8 @@ def test_the_held_out_sets_are_refused_before_the_freeze(tmp_path, monkeypatch):
     monkeypatch.setattr(haiku, "FINAL", "haiku_team")
     with pytest.raises(haiku.Refused, match="haiku_solo, haiku_team and haiku_team"):
         haiku.run(tmp_path / "test-r2", ["haiku_team", "haiku_other"], split="test", final=True)
+    with pytest.raises(haiku.Refused, match="test split"):
+        haiku.run(tmp_path / "test-r2", ["haiku_team"], split="dev", final=True)
     assert haiku.main(["--data", str(tmp_path / "pilot-r2u"), "--split", "test", "--confirm-claude"]) == 3
 
 
@@ -100,6 +102,7 @@ def test_claude_stopping_mid_deal_writes_no_row_and_exits_2(data, tmp_path, monk
         raise haiku.LLMUnavailable("usage limit")
 
     monkeypatch.setitem(haiku.CANDIDATES, "haiku_solo", haiku.Candidate(stop, ()))
+    monkeypatch.setattr(haiku, "cli_version", lambda: "2.1.291")
     assert haiku.main(["--data", str(d), "--systems", "haiku_solo", "--confirm-claude"]) == 2
     assert not list((d / "runs" / "haiku_solo").glob("*.json"))
 
@@ -135,6 +138,32 @@ def test_a_timed_out_solo_run_is_scored_as_a_timeout(data, tmp_path, monkeypatch
 def test_each_candidate_records_its_own_prompt_fingerprint():
     shas = {n: haiku.prompt_sha(n) for n in haiku.CANDIDATES}
     assert len(set(shas.values())) == len(shas) and all(len(s) == 64 for s in shas.values())
+
+
+def test_a_settings_or_effort_change_is_a_new_fingerprint(monkeypatch):
+    lean = haiku.CANDIDATES["haiku_lean"]
+    monkeypatch.setitem(haiku.CANDIDATES, "lean_w", haiku.Candidate(lean.run, lean.prompts,
+                                                                     settings={"w": 0.3, "pricers": 3}))
+    monkeypatch.setitem(haiku.CANDIDATES, "lean_low", haiku.Candidate(lean.run, lean.prompts, effort="low",
+                                                                       settings=lean.settings))
+    shas = {haiku.prompt_sha(n) for n in ("haiku_lean", "lean_w", "lean_low")}
+    assert len(shas) == 3
+
+
+def test_the_runner_refuses_an_old_cli_and_records_the_version(data, tmp_path, monkeypatch):
+    d = tmp_path / "d"
+    shutil.copytree(data, d)
+    monkeypatch.setattr(haiku, "cli_version", lambda: "2.1.280")
+    assert haiku.main(["--data", str(d), "--systems", "haiku_solo", "--confirm-claude"]) == 3
+    assert haiku.too_old("garbage") and not haiku.too_old("2.1.291") and not haiku.too_old("2.2.0")
+
+    def solo(room, budget, deal, out, **kw):
+        return [_submit(True)], {"total_cost_usd": 0.01, "modelUsage": {"claude-haiku-5-5": {}}}
+
+    monkeypatch.setitem(haiku.CANDIDATES, "haiku_solo", haiku.Candidate(solo, ()))
+    [row] = haiku.run(d, ["haiku_solo"], deals=["dev-000"], cli="2.1.291")
+    assert row["cli"] == "2.1.291"
+    assert not list((d / "runs" / "haiku_solo").glob("*.tmp"))  # item 5: the row write leaves no temp file
 
 
 def test_no_step_reads_the_answer_key():

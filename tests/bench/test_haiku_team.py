@@ -85,6 +85,7 @@ def test_the_analysis_reads_a_finished_final_test(finished, tmp_path):
     assert set(every_set["cost_ratio"]) == {f"{o}/{h}" for o in ("s1b", "s4")
                                             for h in ("haiku_solo", "haiku_team", "haiku_lean")}
     solo = every_set["systems"]["haiku_solo"]["all"]
+    assert solo["session_timeouts"] == 0
     assert solo["correct"] == 0 and solo["refused_calls"] == 10 and "decoy_pages" in solo
     assert sum(c["n"] for c in every_set["systems"]["s1b"]["by_case"].values()) == 10
     path = tmp_path / "x.json"

@@ -50,6 +50,7 @@ def test_the_scorecard_covers_every_practice_deal_by_set_and_type(practice, tmp_
     cards = SCRIPT["scorecard"](root, ["right", "wrong", "partial"])
     assert cards["right"]["all"]["n"] == 9 and cards["right"]["all"]["regret"] == 0 and cards["right"]["missing"] == 0
     assert cards["right"]["sets"]["practice-r2u"]["n"] == 5 and cards["right"]["all"]["models"] == ["claude-haiku-5-5"]
+    assert cards["right"]["all"]["total_cost"] == pytest.approx(0.09) and cards["right"]["all"]["session_timeouts"] == 0
     assert cards["wrong"]["all"]["correct"] == 0 and cards["wrong"]["all"]["over_budget"] == 9
     assert sum(c["n"] for c in cards["right"]["by_case"].values()) == 9
     assert cards["partial"]["missing"] == 8

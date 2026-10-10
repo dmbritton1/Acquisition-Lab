@@ -63,7 +63,8 @@ def check(by: dict[str, dict[str, dict]], ks: dict, name: str) -> None:
 def card(rows: list[dict], refused: list[int]) -> dict:
     if not rows:
         return {"n": 0}
-    return stats(rows) | {"decoy_pages": float(np.mean([r["decoy_pages"] for r in rows])),
+    return stats(rows) | {"session_timeouts": sum(r["timeouts"] for r in rows),
+                          "decoy_pages": float(np.mean([r["decoy_pages"] for r in rows])),
                           "over_budget": sum(r["spent"] > r["budget"] + EPS for r in rows if "spent" in r),
                           "refused_calls": int(sum(refused))}
 
