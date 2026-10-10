@@ -1,0 +1,711 @@
+{
+  "deals": 40,
+  "reading": "debate doesn't help",
+  "mechanics": {
+    "debate_x": {
+      "n": 40,
+      "answered": 40,
+      "over_limit": 0,
+      "passes": true
+    },
+    "debate_s": {
+      "n": 40,
+      "answered": 40,
+      "over_limit": 0,
+      "passes": true
+    }
+  },
+  "missing_traces": {
+    "debate_x": [],
+    "debate_s": []
+  },
+  "systems": {
+    "s1b": {
+      "relief": {
+        "n": 16,
+        "regret": 0.014754778058229294,
+        "correct": 0.5625,
+        "false_go": 0,
+        "false_nogo": 7,
+        "pages": 19.625,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.141296325,
+        "sessions": 1.0,
+        "decoy_pages": 0.1875
+      },
+      "confirmed": {
+        "n": 8,
+        "regret": 0.0,
+        "correct": 1.0,
+        "false_go": 0,
+        "false_nogo": 0,
+        "pages": 15.0,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.11331464999999999,
+        "sessions": 1.0,
+        "decoy_pages": 0.0
+      },
+      "ordinary": {
+        "n": 16,
+        "regret": 0.006353663788246451,
+        "correct": 0.8125,
+        "false_go": 1,
+        "false_nogo": 2,
+        "pages": 18.6875,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.1387521875,
+        "sessions": 1.0,
+        "decoy_pages": 2.875
+      },
+      "all": {
+        "n": 40,
+        "regret": 0.008443376738590299,
+        "correct": 0.75,
+        "false_go": 1,
+        "false_nogo": 9,
+        "pages": 18.325,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.134682335,
+        "sessions": 1.0,
+        "decoy_pages": 1.225
+      }
+    },
+    "s4": {
+      "relief": {
+        "n": 16,
+        "regret": 0.021468377569635995,
+        "correct": 0.25,
+        "false_go": 0,
+        "false_nogo": 12,
+        "pages": 22.9375,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5232106125,
+        "sessions": 10.8125,
+        "decoy_pages": 0.1875
+      },
+      "confirmed": {
+        "n": 8,
+        "regret": 0.0,
+        "correct": 1.0,
+        "false_go": 0,
+        "false_nogo": 0,
+        "pages": 22.0,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.469886075,
+        "sessions": 9.75,
+        "decoy_pages": 0.0
+      },
+      "ordinary": {
+        "n": 16,
+        "regret": 0.012203122827826658,
+        "correct": 0.8125,
+        "false_go": 0,
+        "false_nogo": 3,
+        "pages": 21.6875,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5316929125,
+        "sessions": 10.875,
+        "decoy_pages": 2.0625
+      },
+      "all": {
+        "n": 40,
+        "regret": 0.013468600158985062,
+        "correct": 0.625,
+        "false_go": 0,
+        "false_nogo": 15,
+        "pages": 22.25,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.515938625,
+        "sessions": 10.625,
+        "decoy_pages": 0.9
+      }
+    },
+    "debate_x": {
+      "relief": {
+        "n": 16,
+        "regret": 0.01581246217195928,
+        "correct": 0.5,
+        "false_go": 0,
+        "false_nogo": 8,
+        "pages": 21.1875,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5589261375,
+        "sessions": 4.0,
+        "decoy_pages": 0.1875
+      },
+      "confirmed": {
+        "n": 8,
+        "regret": 0.0,
+        "correct": 1.0,
+        "false_go": 0,
+        "false_nogo": 0,
+        "pages": 16.625,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.46652119999999997,
+        "sessions": 4.0,
+        "decoy_pages": 0.0
+      },
+      "ordinary": {
+        "n": 16,
+        "regret": 0.006353663788246451,
+        "correct": 0.8125,
+        "false_go": 1,
+        "false_nogo": 2,
+        "pages": 21.25,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5556053624999999,
+        "sessions": 4.0,
+        "decoy_pages": 2.875
+      },
+      "all": {
+        "n": 40,
+        "regret": 0.008866450384082292,
+        "correct": 0.725,
+        "false_go": 1,
+        "false_nogo": 10,
+        "pages": 20.3,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5391168399999999,
+        "sessions": 4.0,
+        "decoy_pages": 1.225
+      }
+    },
+    "debate_s": {
+      "relief": {
+        "n": 16,
+        "regret": 0.020861189903851142,
+        "correct": 0.3125,
+        "false_go": 0,
+        "false_nogo": 11,
+        "pages": 19.5,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5246443000000001,
+        "sessions": 4.0,
+        "decoy_pages": 0.0
+      },
+      "confirmed": {
+        "n": 8,
+        "regret": 0.0,
+        "correct": 1.0,
+        "false_go": 0,
+        "false_nogo": 0,
+        "pages": 16.0,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.4736524,
+        "sessions": 4.0,
+        "decoy_pages": 0.0
+      },
+      "ordinary": {
+        "n": 16,
+        "regret": 0.006353663788246451,
+        "correct": 0.8125,
+        "false_go": 1,
+        "false_nogo": 2,
+        "pages": 16.125,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5106619375,
+        "sessions": 4.0,
+        "decoy_pages": 0.6875
+      },
+      "all": {
+        "n": 40,
+        "regret": 0.010885941476839037,
+        "correct": 0.65,
+        "false_go": 1,
+        "false_nogo": 13,
+        "pages": 17.45,
+        "no_answer": 0,
+        "timeouts": 0,
+        "cost": 0.5088529749999999,
+        "sessions": 4.0,
+        "decoy_pages": 0.275
+      }
+    }
+  },
+  "versus": {
+    "debate_x": {
+      "s1b": {
+        "n": 40,
+        "diff": 0.0004230736454919937,
+        "ci95": [
+          0.0,
+          0.0012692209364759811
+        ],
+        "by_case": {
+          "clean": {
+            "n": 2,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "decoy": {
+            "n": 5,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "flip": {
+            "n": 1,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "interaction": {
+            "n": 3,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "unresolvable": {
+            "n": 5,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "relief": {
+            "n": 16,
+            "diff": 0.0010576841137299843,
+            "ci95": [
+              0.0,
+              0.003173052341189953
+            ]
+          },
+          "confirmed": {
+            "n": 8,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "won": 0,
+        "lost": 1,
+        "tied": 39
+      },
+      "s4": {
+        "n": 40,
+        "diff": -0.0046021497749027685,
+        "ci95": [
+          -0.012203031429448535,
+          0.0015210043465100841
+        ],
+        "by_case": {
+          "clean": {
+            "n": 2,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "decoy": {
+            "n": 5,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "flip": {
+            "n": 1,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "interaction": {
+            "n": 3,
+            "diff": 0.008250460377426471,
+            "ci95": [
+              0.0,
+              0.024751381132279413
+            ]
+          },
+          "unresolvable": {
+            "n": 5,
+            "diff": -0.023668545153112546,
+            "ci95": [
+              -0.07100563545933765,
+              0.0
+            ]
+          },
+          "relief": {
+            "n": 16,
+            "diff": -0.005655915397676715,
+            "ci95": [
+              -0.015660077377107097,
+              0.0037186153167103734
+            ]
+          },
+          "confirmed": {
+            "n": 8,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "won": 6,
+        "lost": 2,
+        "tied": 32
+      }
+    },
+    "debate_s": {
+      "s1b": {
+        "n": 40,
+        "diff": 0.0024425647382487385,
+        "ci95": [
+          5.212919671626214e-05,
+          0.005617221550070537
+        ],
+        "by_case": {
+          "clean": {
+            "n": 2,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "decoy": {
+            "n": 5,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "flip": {
+            "n": 1,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "interaction": {
+            "n": 3,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "unresolvable": {
+            "n": 5,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "relief": {
+            "n": 16,
+            "diff": 0.006106411845621847,
+            "ci95": [
+              0.0002606459835813107,
+              0.013787439891702837
+            ]
+          },
+          "confirmed": {
+            "n": 8,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "won": 0,
+        "lost": 4,
+        "tied": 36
+      },
+      "s4": {
+        "n": 40,
+        "diff": -0.0025826586821460244,
+        "ci95": [
+          -0.010618085784482385,
+          0.0036792757348345978
+        ],
+        "by_case": {
+          "clean": {
+            "n": 2,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "decoy": {
+            "n": 5,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "flip": {
+            "n": 1,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "interaction": {
+            "n": 3,
+            "diff": 0.008250460377426471,
+            "ci95": [
+              0.0,
+              0.024751381132279413
+            ]
+          },
+          "unresolvable": {
+            "n": 5,
+            "diff": -0.023668545153112546,
+            "ci95": [
+              -0.07100563545933765,
+              0.0
+            ]
+          },
+          "relief": {
+            "n": 16,
+            "diff": -0.000607187665784853,
+            "ci95": [
+              -0.01035581773456621,
+              0.01066573671953823
+            ]
+          },
+          "confirmed": {
+            "n": 8,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "won": 5,
+        "lost": 4,
+        "tied": 31
+      }
+    }
+  },
+  "x_minus_s": {
+    "n": 40,
+    "diff": -0.002019491092756745,
+    "ci95": [
+      -0.005236293900633508,
+      0.0005674652349363606
+    ],
+    "by_case": {
+      "clean": {
+        "n": 2,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "decoy": {
+        "n": 5,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "flip": {
+        "n": 1,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "interaction": {
+        "n": 3,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "unresolvable": {
+        "n": 5,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "relief": {
+        "n": 16,
+        "diff": -0.0050487277318918625,
+        "ci95": [
+          -0.013222805722303808,
+          0.0011580171037595909
+        ]
+      },
+      "confirmed": {
+        "n": 8,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "won": 4,
+    "lost": 1,
+    "tied": 35
+  },
+  "overturned": {
+    "debate_x": {
+      "all": {
+        "nogo_to_go_right": 0,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 0,
+        "go_to_nogo_wrong": 1
+      },
+      "relief": {
+        "nogo_to_go_right": 0,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 0,
+        "go_to_nogo_wrong": 1
+      },
+      "confirmed": {
+        "nogo_to_go_right": 0,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 0,
+        "go_to_nogo_wrong": 0
+      },
+      "ordinary": {
+        "nogo_to_go_right": 0,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 0,
+        "go_to_nogo_wrong": 0
+      },
+      "no_reader_call": 0,
+      "no_referee_call": 0
+    },
+    "debate_s": {
+      "all": {
+        "nogo_to_go_right": 1,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 2,
+        "go_to_nogo_wrong": 1
+      },
+      "relief": {
+        "nogo_to_go_right": 0,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 0,
+        "go_to_nogo_wrong": 1
+      },
+      "confirmed": {
+        "nogo_to_go_right": 0,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 0,
+        "go_to_nogo_wrong": 0
+      },
+      "ordinary": {
+        "nogo_to_go_right": 1,
+        "nogo_to_go_wrong": 0,
+        "go_to_nogo_right": 2,
+        "go_to_nogo_wrong": 0
+      },
+      "no_reader_call": 0,
+      "no_referee_call": 0
+    }
+  },
+  "bull_found": {
+    "debate_x": 0,
+    "debate_s": 1
+  },
+  "steps": {
+    "debate_x": {
+      "reader": {
+        "cost": 0.134682335,
+        "pages": 18.325,
+        "no_call": 0,
+        "timeouts": 0
+      },
+      "bull": {
+        "cost": 0.158153645,
+        "pages": 1.975,
+        "no_call": 0,
+        "timeouts": 0
+      },
+      "bear": {
+        "cost": 0.148576095,
+        "pages": 0.0,
+        "no_call": 0,
+        "timeouts": 0
+      },
+      "referee": {
+        "cost": 0.097704765,
+        "pages": 0.0,
+        "no_call": 0,
+        "timeouts": 0
+      }
+    },
+    "debate_s": {
+      "reader": {
+        "cost": 0.12228893,
+        "pages": 13.725,
+        "no_call": 0,
+        "timeouts": 0
+      },
+      "bull": {
+        "cost": 0.155703475,
+        "pages": 3.725,
+        "no_call": 0,
+        "timeouts": 0
+      },
+      "bear": {
+        "cost": 0.140504895,
+        "pages": 0.0,
+        "no_call": 0,
+        "timeouts": 0
+      },
+      "referee": {
+        "cost": 0.090355675,
+        "pages": 0.0,
+        "no_call": 0,
+        "timeouts": 0
+      }
+    }
+  },
+  "step_timeouts": {
+    "debate_x": 0,
+    "debate_s": 0
+  }
+}

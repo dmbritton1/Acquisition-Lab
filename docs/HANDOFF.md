@@ -3,7 +3,7 @@
 *Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
 specs are the binding authority on design; this file is the source of truth for status and next steps.*
 
-## Resume here (2026-10-09)
+## Resume here (2026-10-09, evening)
 
 A new session (possibly on the user's other Claude account) continues from this point.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
@@ -64,23 +64,26 @@ A new session (possibly on the user's other Claude account) continues from this 
     misses come from how often it says NO-GO, not from worse judgment.
   - Why each system misses: the team mostly never opened the settling document (9 of its 12 misses, often the board
     minutes). Single Claude mostly read the good news and still passed (5 of its 7 misses).
-- **Debate pilot: built, not yet run (2026-10-09).** Spec `docs/superpowers/specs/2026-10-09-debate-pilot-design.md`;
-  plan `docs/superpowers/plans/2026-10-09-debate-pilot.md`.
-  - Single Claude reads, then a bull argues for buying (it reads more with a small budget), a bear argues for passing,
-    and a referee who read nothing makes the call.
-    - `debate_x` reuses the s1b run and gives the bull 0.2·B on top.
-    - `debate_s` runs a new reader at 0.8·B and gives the bull the rest.
-  - Code: `acqlab/bench/debate.py` (runner) and `scripts/debate_pilot.py` (the one-shot analysis);
-    `referee.documents` was extracted, and the earlier pilots' prompts are pinned unchanged.
-  - Built subagent-driven (commits `00d35e7..8b01ffa`), with a review per task and a final review on Opus, which said
-    it is ready for the smoke test. 450 tests pass.
-  - **Smoke test done and prompts frozen (2026-10-09):** the run cost $2.12; every step answered and the limits held;
-    no prompt was changed. The pre-registration is `docs/results/debate-pilot-prereg.md`, and
-    `test_the_frozen_prompts_are_unchanged` pins the prompts. 451 tests pass.
-  - **Next (needs the user's OK):** the 40-deal pilot, about $20–28:
-    `.venv/bin/python -m acqlab.bench.debate --data data/pilot-r2u --confirm-claude`.
-    If it exits 2, rerun after the usage limit resets. Then run `scripts/debate_pilot.py` once and write the results up.
-  - Stage 2 of the hidden-upside track ("genuine extra value") is decided after this pilot.
+- **Debate pilot: done (2026-10-09). Reading: "debate doesn't help", so the debate track stops.**
+  - Results are in `docs/results/debate-pilot.md`, with the numbers in `debate-pilot.json`. The pre-registration is
+    `docs/results/debate-pilot-prereg.md`. The new runs cost $36.53, plus $2.12 for the smoke test.
+  - Mean regret over the 40 deals:
+
+    | System | Regret |
+    |---|---|
+    | Single Claude | 0.0084 |
+    | Debate, extra pages (`debate_x`) | 0.0089 |
+    | Debate, same budget (`debate_s`) | 0.0109 |
+    | The team | 0.0135 |
+
+  - **Checks:** the mechanics passed, and no false GO on any confirmed deal.
+  - **Why it didn't help (exploratory):**
+    - The referee sided with the reader on 39 of 40 deals (`debate_x`) and 36 of 40 (`debate_s`).
+    - On the relief deals the reader wrongly passed, the honest bull mostly agreed to pass, and the referee turned
+      none of them to GO.
+    - At the same budget, the 0.2·B given to the bull is worth more as the reader's own reading.
+  - **Code:** `acqlab/bench/debate.py` and `scripts/debate_pilot.py`. 451 tests pass.
+- **Next:** Plan 7 (the demo and slides). Stage 2 of the hidden-upside track ("genuine extra value") comes after it.
 - **Background to stage 1 (built 2026-10-07 to 10-08; the history follows):**
   - **Background:** a research note on agent teams versus one agent (`docs/research/agent-teams-research-2026-10-07.md`)
     explains why the team leans towards NO-GO. That lean is the question this pilot tests.
