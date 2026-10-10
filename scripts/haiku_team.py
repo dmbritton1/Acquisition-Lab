@@ -93,6 +93,10 @@ def analyse(root: Path) -> dict:
         ks = keys(root / name, "test")
         by[name] = {s: load(root / name, s) for s in names}
         check(by[name], ks, name)
+        lost = [f"{name}/{s}/{d}" for s in names for d in ks
+                if not (root / name / "runs" / s / f"{d}.trace.jsonl").exists()]
+        if lost:
+            raise ValueError(f"runs without a trace: {lost}")
         refused[name] = {s: {d: sum(bool(x.get("refused")) for x in trace_rows(root / name / "runs" / s /
                                                                                  f"{d}.trace.jsonl"))
                              for d in ks} for s in names}

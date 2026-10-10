@@ -123,3 +123,11 @@ def test_the_analysis_refuses_a_missing_deal_another_model_or_unfrozen_prompts(f
     write(finished / "test-r2", "haiku_lean", "test-003", True, prompts="old")
     with pytest.raises(ValueError, match="frozen prompts.*test-r2/haiku_lean/test-003"):
         SCRIPT["analyse"](finished)
+
+
+def test_the_analysis_refuses_a_run_without_its_trace(finished, tmp_path):
+    (finished / "test-r2" / "runs" / "haiku_team" / "test-004.trace.jsonl").unlink()
+    with pytest.raises(ValueError, match="without a trace.*test-r2/haiku_team/test-004"):
+        SCRIPT["analyse"](finished)
+    assert SCRIPT["main"](["--root", str(finished), "--out", str(tmp_path / "x.json")]) == 1
+    assert not (tmp_path / "x.json").exists()
