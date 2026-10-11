@@ -83,3 +83,15 @@ def test_main_prints_the_scorecard_and_the_keep_verdict(practice, tmp_path, caps
     assert "old" in capsys.readouterr().out
     assert SCRIPT["main"](["--root", str(root), "--keep", "new", "--over", "old"]) == 0
     assert capsys.readouterr().out.rstrip().endswith("keep new over old: True")
+
+
+def test_old_single_claude_rows_without_session_counts_still_score(practice, tmp_path):
+    """data/cal-r2's s1b rows predate the sessions and timeouts fields: a single run is one session."""
+    root = tmp_path / "p"
+    shutil.copytree(practice, root)
+    write(root / "cal-r2", "s1b", "dev-000", True)
+    path = root / "cal-r2" / "runs" / "s1b" / "dev-000.json"
+    row = json.loads(path.read_text())
+    path.write_text(json.dumps({k: v for k, v in row.items() if k not in ("sessions", "timeouts")}))
+    c = SCRIPT["scorecard"](root, ["s1b"])["s1b"]["all"]
+    assert c["n"] == 1 and c["sessions"] == 1 and c["session_timeouts"] == 0

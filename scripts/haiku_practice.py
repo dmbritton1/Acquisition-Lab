@@ -34,7 +34,9 @@ def scorecard(root: Path, systems: list[str]) -> dict:
     deals = {s: json.loads((root / s / "splits.json").read_text())["dev"] for s in haiku.PRACTICE}
     out = {}
     for name in systems:
-        by = {s: {d: r for d, r in load(root / s, name).items() if d in deals[s]} for s in haiku.PRACTICE}
+        # data/cal-r2's s1b rows predate the sessions and timeouts fields; a single run is one session
+        by = {s: {d: {"sessions": 1, "timeouts": 0} | r for d, r in load(root / s, name).items() if d in deals[s]}
+              for s in haiku.PRACTICE}
         rows = [r for s in haiku.PRACTICE for r in by[s].values()]
         out[name] = {"all": card(rows), "missing": sum(len(deals[s]) - len(by[s]) for s in haiku.PRACTICE),
                      "sets": {s: card(list(by[s].values())) for s in haiku.PRACTICE},
