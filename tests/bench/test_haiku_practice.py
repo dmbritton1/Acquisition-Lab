@@ -27,7 +27,8 @@ def practice(tmp_path_factory, data):
 def write(d: Path, system: str, deal: str, go: bool, cost: float = 0.01, spent: float | None = None) -> None:
     key = AnswerKey.model_validate_json((d / "truth" / f"{deal}.json").read_text())
     trace = [{"tool": "submit", "args": {"go": go, "walk_away": 1.0, "reason": ""}, "refused": False, "cost": 0.0}]
-    cli = {"total_cost_usd": cost, "sessions": 1, "modelUsage": {"claude-haiku-5-5": {}}}
+    cli = {"total_cost_usd": cost, "sessions": 1, "modelUsage": {"claude-haiku-5-5": {}},
+           "usage": {"output_tokens": 20_000}}  # $0.01 at Haiku's list price
     row = pilot.score(key, system, trace, cli, "ok") | {"budget": key.budget, "spent": key.budget if spent is None
                                                         else spent}
     (d / "runs" / system).mkdir(parents=True, exist_ok=True)
@@ -51,6 +52,8 @@ def test_the_scorecard_covers_every_practice_deal_by_set_and_type(practice, tmp_
     assert cards["right"]["all"]["n"] == 9 and cards["right"]["all"]["regret"] == 0 and cards["right"]["missing"] == 0
     assert cards["right"]["sets"]["practice-r2u"]["n"] == 5 and cards["right"]["all"]["models"] == ["claude-haiku-5-5"]
     assert cards["right"]["all"]["total_cost"] == pytest.approx(0.09) and cards["right"]["all"]["session_timeouts"] == 0
+    assert cards["right"]["all"]["list_cost"] == pytest.approx(0.01)
+    assert cards["right"]["all"]["list_total"] == pytest.approx(0.09)
     assert cards["wrong"]["all"]["correct"] == 0 and cards["wrong"]["all"]["over_budget"] == 9
     assert sum(c["n"] for c in cards["right"]["by_case"].values()) == 9
     assert cards["partial"]["missing"] == 8

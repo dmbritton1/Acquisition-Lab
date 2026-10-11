@@ -28,8 +28,9 @@ def write(d: Path, system: str, deal: str, go: bool, model: str | None = None, c
     opus = system in ("s1b", "s4")
     trace = [{"tool": "open_document", "args": {"doc_id": "x"}, "refused": True, "cost": 0.0}] * refused + [
         {"tool": "submit", "args": {"go": go, "walk_away": 1.0, "reason": ""}, "refused": False, "cost": 0.0}]
-    cli = {"total_cost_usd": cost if cost is not None else 0.1 if opus else 0.01, "sessions": 1,
-           "modelUsage": {model or (OPUS if opus else haiku.MODEL): {}}}
+    cli = {"total_cost_usd": cost if cost is not None else 1.0, "sessions": 1,
+           "modelUsage": {model or (OPUS if opus else haiku.MODEL): {}},
+           "usage": {"output_tokens": 5_000 if opus else 20_000}}  # list price: Opus $0.10, Haiku $0.01
     row = pilot.score(key, system, trace, cli, "ok")
     if not opus:
         row |= {"budget": key.budget, "spent": 1.0, "prompts": prompts or haiku.prompt_sha(system)}
@@ -85,7 +86,7 @@ def test_the_analysis_reads_a_finished_final_test(finished, tmp_path):
     assert set(every_set["cost_ratio"]) == {f"{o}/{h}" for o in ("s1b", "s4")
                                             for h in ("haiku_solo", "haiku_team", "haiku_lean")}
     solo = every_set["systems"]["haiku_solo"]["all"]
-    assert solo["session_timeouts"] == 0
+    assert solo["session_timeouts"] == 0 and solo["list_cost"] == pytest.approx(0.01)
     assert solo["correct"] == 0 and solo["refused_calls"] == 10 and "decoy_pages" in solo
     assert sum(c["n"] for c in every_set["systems"]["s1b"]["by_case"].values()) == 10
     path = tmp_path / "x.json"

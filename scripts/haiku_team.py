@@ -63,7 +63,9 @@ def check(by: dict[str, dict[str, dict]], ks: dict, name: str) -> None:
 def card(rows: list[dict], refused: list[int]) -> dict:
     if not rows:
         return {"n": 0}
+    listed = [c for r in rows if (c := haiku.list_cost(r)) is not None]
     return stats(rows) | {"session_timeouts": sum(r["timeouts"] for r in rows),
+                          "list_cost": sum(listed) / len(listed) if listed else None,  # the user's cost basis
                           "decoy_pages": float(np.mean([r["decoy_pages"] for r in rows])),
                           "over_budget": sum(r["spent"] > r["budget"] + EPS for r in rows if "spent" in r),
                           "refused_calls": int(sum(refused))}
@@ -72,7 +74,7 @@ def card(rows: list[dict], refused: list[int]) -> dict:
 def one_set(by: dict[str, dict[str, dict]], refused: dict[str, dict[str, int]], winner: str) -> dict:
     """Everything spec §5 reports for one deal set (by: system -> deal -> row)."""
     cmp = {f"{a}-{b}": versus(by[a], by[b]) for a, b in pairs(winner)}
-    cost = {s: c for s in by if (c := card(list(by[s].values()), [0])["cost"])}
+    cost = {s: c for s in by if (c := card(list(by[s].values()), [0])["list_cost"])}  # list price, from tokens
     ids = sorted(next(iter(by.values())))
     cases = sorted({by["s1b"][d]["case_type"] for d in ids})
     return {

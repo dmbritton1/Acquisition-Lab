@@ -124,7 +124,7 @@ and deals better / worse / tied, on the 160, the 40 and all 200:
 | wholly above zero | "**worse** than single Opus" |
 | includes zero | "**no clear difference**: at most X worse", where X is the range's upper end |
 
-Each verdict is stated with the cost ratio (single Opus's cost per deal ÷ the winner's). If the sets disagree, the
+Each verdict is stated with the cost ratio (single Opus's cost per deal ÷ the winner's). **Cost basis (amended 2026-10-11, the user's choice):** every row is priced from its token counts at the published list prices (`haiku.PRICES`, `haiku.list_cost`), because CLI 2.1.291 doesn't recognise `claude-haiku-5-5` and prices it at about Opus rates; the CLI's own figure is kept in each row. If the sets disagree, the
 write-up says so and gives both.
 
 **Also reported, per system:**

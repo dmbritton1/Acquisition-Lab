@@ -31,6 +31,21 @@ PRACTICE = ("cal-r2", "heldout-r2", "practice-r2u")  # spec §3: the 90 practice
 FINAL: str | None = None  # the frozen winner, set at the freeze (spec §4); until then no held-out run is allowed
 RATES = Path(__file__).with_name("base_rates.json")
 MIN_CLI = (2, 1, 291)  # spec §1
+# $ per million tokens at the published list prices. The CLI prices claude-haiku-5-5 as an unknown model (at about
+# Opus rates), so costs are compared from token counts instead (the user's ruling, 2026-10-11). Cache writes are
+# priced at the 1-hour rate (2x input), the cache the CLI writes.
+# ponytail: Haiku's long-prompt tier (5x above 100K tokens per request) can't be seen in a run's summed tokens
+PRICES = {"claude-haiku-5-5": {"input_tokens": 0.10, "output_tokens": 0.50, "cache_read_input_tokens": 0.01,
+                               "cache_creation_input_tokens": 0.20},
+          "claude-opus-5-5": {"input_tokens": 4.0, "output_tokens": 20.0, "cache_read_input_tokens": 0.40,
+                              "cache_creation_input_tokens": 8.0}}
+
+
+def list_cost(row: dict) -> float | None:
+    """A run's cost from its token counts at PRICES; None unless it ran on exactly one priced model."""
+    if len(row["models"]) != 1 or row["models"][0] not in PRICES:
+        return None
+    return sum(row["tokens"][k] * p for k, p in PRICES[row["models"][0]].items()) / 1e6
 
 
 class Refused(Exception):

@@ -166,6 +166,15 @@ def test_the_runner_refuses_an_old_cli_and_records_the_version(data, tmp_path, m
     assert not list((d / "runs" / "haiku_solo").glob("*.tmp"))  # item 5: the row write leaves no temp file
 
 
+def test_list_cost_prices_tokens_at_published_rates():
+    tokens = {"input_tokens": 1_000_000, "output_tokens": 1_000_000, "cache_read_input_tokens": 1_000_000,
+              "cache_creation_input_tokens": 1_000_000}
+    assert haiku.list_cost({"models": ["claude-haiku-5-5"], "tokens": tokens}) == pytest.approx(0.10 + 0.50 + 0.01 + 0.20)
+    assert haiku.list_cost({"models": ["claude-opus-5-5"], "tokens": tokens}) == pytest.approx(4 + 20 + 0.40 + 8)
+    assert haiku.list_cost({"models": [], "tokens": tokens}) is None  # a run with no CLI result
+    assert haiku.list_cost({"models": ["claude-opus-5-5", "claude-haiku-5-5"], "tokens": tokens}) is None
+
+
 def test_no_step_reads_the_answer_key():
     source = Path(haiku.__file__).read_text().split("def run(")[0]
     assert not any(word in source for word in ("AnswerKey", "truth", "model_validate"))

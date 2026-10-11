@@ -23,8 +23,10 @@ def card(rows: list[dict]) -> dict:
     """upside_pilot.stats plus the health counts: deals over budget (Haiku rows record spent) and the models seen."""
     if not rows:
         return {"n": 0}
+    listed = [c for r in rows if (c := haiku.list_cost(r)) is not None]
     return stats(rows) | {"session_timeouts": sum(r["timeouts"] for r in rows),
                           "total_cost": float(sum(r["cost_usd"] or 0 for r in rows)),
+                          "list_cost": sum(listed) / len(listed) if listed else None, "list_total": sum(listed),
                           "over_budget": sum(r["spent"] > r["budget"] + EPS for r in rows if "spent" in r),
                           "models": sorted({m for r in rows for m in r["models"]})}
 
@@ -63,11 +65,11 @@ def table(card_by: dict) -> str:
         for label, c in [("all", e["all"]), *e["sets"].items(), *[(f"case:{k}", v) for k, v in e["by_case"].items()]]:
             if not c["n"]:
                 continue
-            cost = f"{c['cost']:.4f}" if c["cost"] is not None else "-"
+            cost = f"{c['list_cost']:.4f}" if c["list_cost"] is not None else "-"  # list price, from tokens
             lines.append(f"{name:14s} {label:13s} {c['n']:3d} {c['regret']:7.4f} {c['correct']:6.1%} "
                          f"{c['false_go']:4d} {c['false_nogo']:5d} {cost:>7s} {c['pages']:6.1f} "
                          f"{c['sessions']:5.1f} {c['no_answer']:5d} {c['timeouts']:4d} {c['over_budget']:4d} "
-                         f"{c['session_timeouts']:4d} {c['total_cost']:7.3f}")
+                         f"{c['session_timeouts']:4d} {c['list_total']:7.3f}")
         lines.append(f"{name:14s} missing runs: {e['missing']}; models: {e['all'].get('models', [])}")
     return "\n".join(lines)
 
