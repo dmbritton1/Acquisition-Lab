@@ -115,4 +115,37 @@ prices (smoke rows included): single Haiku $0.67, the team $2.49, lean $2.14.
 - **The change:** `w` goes from 0.5 to 0, so every open chance is the base rate. Prompts and everything else are
   unchanged.
 - **How it is judged:** run for real on the 90 deals, not judged from the replay, because the spec says rerun.
+- **Run:** 2026-10-11, $2.09.
+
+| System (90 practice deals) | Regret | Correct | False GO | False NO-GO |
+|---|---|---|---|---|
+| `haiku_lean_zero` (parent) | 0.0207 | 61.1% | 5 | 30 |
+| **`haiku_lean_zero_w0`** | **0.0164** | 63.3% | 6 | 27 |
+
+- **Kept.** The keep rule returns True. Relief false NO-GOs stay at 12 and confirmed false GOs stay at 0.
+- **The replay predicted it:** 0.0165 against 0.0164 as run.
+- **By set:**
+
+  | Set | Haiku | Single Opus | Opus team |
+  |---|---|---|---|
+  | cal-r2 | 0.0130 | 0.0195 | 0.0076 |
+  | heldout-r2 | 0.0144 | 0.0078 | 0.0105 |
+  | **The 60 r2 deals** | **0.0137** | **0.0136** | |
+  | practice-r2u | 0.0220 | (no runs) | (no runs) |
+
+- **Running total:** $9.49 of $15.
+
+## Round 3: the reader settles a disclosed exposure first (`haiku_lean_flag`)
+
+- **Diagnosis of the 12 relief deals:** `haiku_lean_zero_w0` got all 12 wrong (false NO-GO).
+  - **8 of 12:** the reader never opened the settling document (`board_minutes` or `audited`, often 2 pages), so
+    the pricers priced the flagged item near the teaser's "up to $X".
+  - **3 of 12:** the pricers settled the flagged item exactly at its true size, yet the other open issues, at base
+    rates, still tipped the call.
+  - **1 of 12:** concentration was settled at the true size by only one pricer.
+- **The change:** one bullet added to the reader's system prompt (`haiku.FLAG_RULE`): "When the teaser discloses an
+  exposure ("up to $X"), that figure is the seller's worst case, not the actual amount: make settling its actual
+  size your first reading priority. Search for it and read the documents that mention it, short ones first."
+  - It names no document types.
+  - Everything else is as in `haiku_lean_zero_w0`.
 - **Status:** running.

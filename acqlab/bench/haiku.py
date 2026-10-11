@@ -22,6 +22,8 @@ from pathlib import Path
 
 from acqlab.agents import panel, panel_prompts, prompts, solver
 from acqlab.agents.knowledge import GUIDE
+from acqlab.agents.prompts import user_prompt
+from acqlab.agents.server import tool_names
 from acqlab.agents.solver import run_session
 from acqlab.bench import referee
 from acqlab.bench.recon import (SECOND_SYSTEM, call_of, combine, draft, notes_record, second, second_prompts, spent,
@@ -140,6 +142,9 @@ def run_team(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[lis
     return step("team", out.with_suffix(".team.jsonl"), team, room, budget, **kw)
 
 
+SOLO_SYSTEM = prompts.system_prompt(False)
+
+
 # Tuning round 1 (docs/results/haiku-team-tuning-log.md): in round 0 the pricers left 385 issues open (at chance 0.27
 # on average) that a document they had showed to be zero, and the engine priced those phantom risks into NO-GOs.
 ZERO_RULE = ("A document that checks an issue and finds no problem settles it at zero: chance 1, low 0 and high 0 "
@@ -154,12 +159,27 @@ def second_zero(room: Path, read: list[str], *, trace: Path, **kw) -> dict:
     return run_session(room, 0, trace, user, SECOND_ZERO.format(guide=GUIDE), ["note_issue", "submit"], [], **kw)
 
 
+# Tuning round 3: on 8 of the 12 relief deals the reader never opened the document that settles the exposure the
+# teaser discloses (often a 2-page one), so the pricers priced it at the seller's worst case.
+FLAG_RULE = ("- When the teaser discloses an exposure (\"up to $X\"), that figure is the seller's worst case, not the "
+             "actual amount: make settling its actual size your first reading priority. Search for it and read the "
+             "documents that mention it, short ones first.\n")
+READER_FLAG = SOLO_SYSTEM.replace("- When you have enough, call submit", f"{FLAG_RULE}- When you have enough, call submit")
+
+
+def draft_flag(room: Path, budget: float, *, trace: Path, **kw) -> dict:
+    """Single Claude (solver.solve's user prompt, tools and budget) with the flag rule added to its system prompt."""
+    teaser = json.loads((room / "index.json").read_text())["teaser"]
+    return run_session(room, budget, trace, user_prompt(teaser, budget), READER_FLAG, tool_names(False), [], **kw)
+
+
 def run_lean(room: Path, budget: float, deal: str, out: Path, *, w: float, pricers: int, zero: bool = False,
-             rates: dict[str, float] | None = None, **kw) -> tuple[list[dict], dict]:
-    """Spec §3: one reader at the full budget, then `pricers` second opinions on the documents it read (with the zero
-    rule if `zero`); the engine prices each one's calibrated notes, and the majority of those calls is final."""
+             flag_first: bool = False, rates: dict[str, float] | None = None, **kw) -> tuple[list[dict], dict]:
+    """Spec §3: one reader at the full budget (with the flag rule if `flag_first`), then `pricers` second opinions on
+    the documents it read (with the zero rule if `zero`); the engine prices each one's calibrated notes, and the
+    majority of those calls is final."""
     rates = rates or load_rates()
-    reader = step("reader", out.with_suffix(".reader.jsonl"), draft, room, budget, **kw)
+    reader = step("reader", out.with_suffix(".reader.jsonl"), draft_flag if flag_first else draft, room, budget, **kw)
     read = referee.opened(reader[0])
     price = second_zero if zero else second
     priced = [step(f"pricer{i}", out.with_suffix(f".pricer{i}.jsonl"), price, room, read, **kw)
@@ -170,7 +190,7 @@ def run_lean(room: Path, budget: float, deal: str, out: Path, *, w: float, price
     return trace, cli | {"calls": {"reader": call_of(reader[0])} | {f"pricer{i}": c for i, c in enumerate(calls, 1)}}
 
 
-SOLO = (prompts.system_prompt(False),)
+SOLO = (SOLO_SYSTEM,)
 TEAM = (panel_prompts.LEAD, panel_prompts.INVESTIGATOR, panel_prompts.CHALLENGER)
 
 
@@ -189,6 +209,9 @@ CANDIDATES = {
     "haiku_lean_zero": Candidate(run_lean, SOLO + (SECOND_ZERO,), settings={"w": 0.5, "pricers": 3, "zero": True}),
     # round 2: open issues priced at the base rate (a free replay of round 1's notes gave 0.0165 against 0.0207)
     "haiku_lean_zero_w0": Candidate(run_lean, SOLO + (SECOND_ZERO,), settings={"w": 0.0, "pricers": 3, "zero": True}),
+    # round 3: the reader settles a disclosed exposure first
+    "haiku_lean_flag": Candidate(run_lean, (READER_FLAG, SECOND_ZERO),
+                                 settings={"w": 0.0, "pricers": 3, "zero": True, "flag_first": True}),
 }
 
 

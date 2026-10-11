@@ -318,3 +318,33 @@ def test_round_2_prices_open_issues_at_the_base_rate():
     zero, w0 = haiku.CANDIDATES["haiku_lean_zero"], haiku.CANDIDATES["haiku_lean_zero_w0"]
     assert w0.settings == zero.settings | {"w": 0.0} and w0.prompts == zero.prompts and w0.run is zero.run
     assert haiku.prompt_sha("haiku_lean_zero_w0") != haiku.prompt_sha("haiku_lean_zero")
+
+
+# --- tuning round 3: the reader settles a disclosed exposure first -------------------------------------------------
+
+def test_the_flag_reader_adds_one_instruction_and_otherwise_matches_single_claude(room, tmp_path, monkeypatch):
+    from acqlab.agents.prompts import user_prompt
+    from acqlab.agents.server import tool_names
+    assert haiku.READER_FLAG.replace(haiku.FLAG_RULE, "") == haiku.SOLO[0] and "worst case" in haiku.FLAG_RULE
+    seen = {}
+    monkeypatch.setattr(haiku, "run_session", lambda *a, **kw: seen.update(a=a, kw=kw) or {})
+    haiku.draft_flag(room, 21.0, trace=tmp_path / "t.jsonl", claude="x")
+    room_, budget, trace, user, system, tools, server_args = seen["a"]
+    teaser = json.loads((room / "index.json").read_text())["teaser"]
+    assert budget == 21.0 and user == user_prompt(teaser, 21.0) and system == haiku.READER_FLAG
+    assert tools == tool_names(False) and server_args == [] and seen["kw"] == {"claude": "x"}
+
+
+def test_lean_flag_reads_with_the_flag_reader(fakes, room, tmp_path, monkeypatch):
+    def boom(*a, **kw):
+        raise AssertionError("the plain reader must not run")
+
+    monkeypatch.setattr(haiku, "draft_flag", haiku.draft)  # the fake session
+    monkeypatch.setattr(haiku, "draft", boom)
+    monkeypatch.setattr(haiku, "second_zero", haiku.second)
+    fakes["scripts"] |= {"reader": [_submit(True)], **{f"pricer{i}": [_submit()] for i in (1, 2, 3)}}
+    lean = haiku.CANDIDATES["haiku_lean_flag"]
+    _, cli = haiku.run_lean(room, 20.0, "dev-000", tmp_path / "x.json", rates=RATES, **lean.settings)
+    assert cli["sessions"] == 4 and fakes["calls"]["reader"][0][1] == 20.0
+    assert lean.settings == haiku.CANDIDATES["haiku_lean_zero_w0"].settings | {"flag_first": True}
+    assert lean.prompts == (haiku.READER_FLAG, haiku.SECOND_ZERO)
