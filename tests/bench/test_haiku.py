@@ -282,3 +282,33 @@ def test_the_committed_base_rates_come_from_the_90_practice_deals_only():
     out = json.loads(haiku.RATES.read_text())
     assert set(out["rates"]) == set(TRAPS) and all(0 < r < 1 for r in out["rates"].values())
     assert len(out["deals"]) == 90 and {d.split("/")[0] for d in out["deals"]} == set(haiku.PRACTICE)
+
+
+# --- tuning round 1: pricers settle an issue at zero when a document finds no problem ------------------------------
+
+def test_the_zero_rule_adds_one_sentence_to_the_pricers_prompt(room, docs, tmp_path, monkeypatch):
+    from acqlab.bench.recon import SECOND_SYSTEM, second_prompts
+    sentence = haiku.ZERO_RULE + " "
+    assert "settles it at zero" in haiku.SECOND_ZERO and haiku.SECOND_ZERO.replace(sentence, "") == SECOND_SYSTEM
+    seen = {}
+    monkeypatch.setattr(haiku, "run_session", lambda *a, **kw: seen.update(a=a, kw=kw) or {})
+    haiku.second_zero(room, docs[:2], trace=tmp_path / "t.jsonl", claude="x")
+    room_, budget, trace, user, system, tools, server_args = seen["a"]
+    assert budget == 0 and tools == ["note_issue", "submit"] and server_args == [] and seen["kw"] == {"claude": "x"}
+    assert user == second_prompts(room, docs[:2])[1] and "settles it at zero" in system and haiku.GUIDE in system
+
+
+def test_lean_zero_prices_with_the_zero_rule_and_keeps_lean_s_fingerprint(fakes, room, docs, tmp_path, monkeypatch):
+    def boom(*a, **kw):
+        raise AssertionError("the original pricer must not run")
+
+    monkeypatch.setattr(haiku, "second_zero", haiku.second)  # the fake session
+    monkeypatch.setattr(haiku, "second", boom)
+    fakes["scripts"] |= {"reader": [_submit(True)], **{f"pricer{i}": [_note("nwc", 1.0, 0, 0), _submit()]
+                                                         for i in (1, 2, 3)}}
+    lean = haiku.CANDIDATES["haiku_lean_zero"]
+    trace, cli = haiku.run_lean(room, 20.0, "dev-000", tmp_path / "x.json", rates=RATES, **lean.settings)
+    assert cli["sessions"] == 4 and haiku.call_of(trace) is not None
+    assert lean.settings == {"w": 0.5, "pricers": 3, "zero": True}
+    assert lean.prompts == haiku.SOLO + (haiku.SECOND_ZERO,)
+    assert haiku.CANDIDATES["haiku_lean"].settings == {"w": 0.5, "pricers": 3}  # round 0's rows stay valid

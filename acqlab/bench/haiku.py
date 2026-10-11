@@ -21,8 +21,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from acqlab.agents import panel, panel_prompts, prompts, solver
+from acqlab.agents.knowledge import GUIDE
+from acqlab.agents.solver import run_session
 from acqlab.bench import referee
-from acqlab.bench.recon import SECOND_SYSTEM, call_of, combine, draft, notes_record, second, spent, step
+from acqlab.bench.recon import (SECOND_SYSTEM, call_of, combine, draft, notes_record, second, second_prompts, spent,
+                                step)
 from acqlab.llm import LLMUnavailable
 
 MODEL = "claude-haiku-5-5"
@@ -137,14 +140,29 @@ def run_team(room: Path, budget: float, deal: str, out: Path, **kw) -> tuple[lis
     return step("team", out.with_suffix(".team.jsonl"), team, room, budget, **kw)
 
 
-def run_lean(room: Path, budget: float, deal: str, out: Path, *, w: float, pricers: int,
+# Tuning round 1 (docs/results/haiku-team-tuning-log.md): in round 0 the pricers left 385 issues open (at chance 0.27
+# on average) that a document they had showed to be zero, and the engine priced those phantom risks into NO-GOs.
+ZERO_RULE = ("A document that checks an issue and finds no problem settles it at zero: chance 1, low 0 and high 0 "
+             "(the seller's own claims in the CIM never settle anything).")
+SECOND_ZERO = SECOND_SYSTEM.replace("Where the documents say nothing either way",
+                                    f"{ZERO_RULE} Where the documents say nothing either way")
+
+
+def second_zero(room: Path, read: list[str], *, trace: Path, **kw) -> dict:
+    """recon.second with the zero rule: the same documents and user prompt, no reading budget."""
+    _, user = second_prompts(room, read)
+    return run_session(room, 0, trace, user, SECOND_ZERO.format(guide=GUIDE), ["note_issue", "submit"], [], **kw)
+
+
+def run_lean(room: Path, budget: float, deal: str, out: Path, *, w: float, pricers: int, zero: bool = False,
              rates: dict[str, float] | None = None, **kw) -> tuple[list[dict], dict]:
-    """Spec §3: one reader at the full budget, then `pricers` second opinions on the documents it read; the engine
-    prices each one's calibrated notes, and the majority of those calls is final."""
+    """Spec §3: one reader at the full budget, then `pricers` second opinions on the documents it read (with the zero
+    rule if `zero`); the engine prices each one's calibrated notes, and the majority of those calls is final."""
     rates = rates or load_rates()
     reader = step("reader", out.with_suffix(".reader.jsonl"), draft, room, budget, **kw)
     read = referee.opened(reader[0])
-    priced = [step(f"pricer{i}", out.with_suffix(f".pricer{i}.jsonl"), second, room, read, **kw)
+    price = second_zero if zero else second
+    priced = [step(f"pricer{i}", out.with_suffix(f".pricer{i}.jsonl"), price, room, read, **kw)
               for i in range(1, pricers + 1)]
     calls = [calibrated_call(room, rows, rates, w) for rows, _ in priced]
     steps = [reader, *priced]
@@ -168,6 +186,7 @@ CANDIDATES = {
     "haiku_solo": Candidate(run_solo, SOLO),
     "haiku_team": Candidate(run_team, TEAM),
     "haiku_lean": Candidate(run_lean, SOLO + (SECOND_SYSTEM,), settings={"w": 0.5, "pricers": 3}),
+    "haiku_lean_zero": Candidate(run_lean, SOLO + (SECOND_ZERO,), settings={"w": 0.5, "pricers": 3, "zero": True}),
 }
 
 
