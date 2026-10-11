@@ -76,4 +76,23 @@ prices (smoke rows included): single Haiku $0.67, the team $2.49, lean $2.14.
   and finds no problem settles it at zero: chance 1, low 0 and high 0 (the seller's own claims in the CIM never
   settle anything)."
 - **Unchanged:** everything else, including `w` = 0.5, the 3 pricers and the reader.
-- **Status:** running on the 90 practice deals.
+- **Run:** 2026-10-11, $2.10. A network drop (ENOTFOUND) stopped it after 12 deals. It was resumed with a
+  retry loop, and the finished deals were skipped.
+
+| System (90 practice deals) | Regret | Correct | False GO | False NO-GO | $/deal |
+|---|---|---|---|---|---|
+| `haiku_lean` (parent) | 0.0238 | 55.6% | 6 | 34 | 0.024 |
+| **`haiku_lean_zero`** | **0.0207** (0.02068) | 61.1% | 5 | 30 | 0.023 |
+| `haiku_team` (round-0 best) | 0.0207 (0.02074) | 60.0% | 4 | 32 | 0.028 |
+
+- **Kept.** `scripts/haiku_practice.py --keep haiku_lean_zero --over haiku_lean` returns True:
+  - regret falls from 0.0238 to 0.0207;
+  - relief false NO-GOs stay at 12 of 12;
+  - confirmed false GOs stay at 0.
+- **By set:**
+  - cal-r2 improves from 0.0213 to 0.0158.
+  - practice-r2u improves from 0.0233 to 0.0204.
+  - heldout-r2 barely moves, from 0.0268 to 0.0258.
+- **The new best by a hair:** `haiku_lean_zero` now edges past `haiku_team`.
+- **Still the main problem:** relief deals, where it gets 0 of 12 right.
+- **Running total:** $7.40 of $15 (smoke test, round 0 and round 1).
