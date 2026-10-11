@@ -1,3 +1,4 @@
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -69,6 +70,7 @@ def test_on_haiku_restores_opus_after_an_error():
 # --- the runner and its refusals -----------------------------------------------------------------------------------
 
 def test_the_held_out_sets_are_refused_before_the_freeze(tmp_path, monkeypatch):
+    monkeypatch.setattr(haiku, "FINAL", None)  # as before the freeze
     for name in haiku.TEST_SETS:
         with pytest.raises(haiku.Refused, match="held out"):
             haiku.run(tmp_path / name, ["haiku_solo"], split="dev")
@@ -348,3 +350,28 @@ def test_lean_flag_reads_with_the_flag_reader(fakes, room, tmp_path, monkeypatch
     assert cli["sessions"] == 4 and fakes["calls"]["reader"][0][1] == 20.0
     assert lean.settings == haiku.CANDIDATES["haiku_lean_zero_w0"].settings | {"flag_first": True}
     assert lean.prompts == (haiku.READER_FLAG, haiku.SECOND_ZERO)
+
+
+# --- the freeze (docs/results/haiku-team-prereg.md) ----------------------------------------------------------------
+
+def _rendered(room):
+    """Every prompt the frozen winner's steps send on a fixed room: the reader's and a pricer's (system, user)."""
+    from acqlab.agents.prompts import user_prompt
+    from acqlab.bench.recon import second_prompts
+    teaser = json.loads((room / "index.json").read_text())["teaser"]
+    reader = (haiku.SOLO_SYSTEM, user_prompt(teaser, 20))
+    pricer = (haiku.SECOND_ZERO.format(guide=haiku.GUIDE), second_prompts(room, ["qoe", "legal", "audited"])[1])
+    return [hashlib.sha256("\x00".join(p).encode()).hexdigest() for p in (reader, pricer)]
+
+
+def test_the_frozen_winner_and_its_prompts_are_unchanged(s4_fake_run):
+    room, _ = s4_fake_run
+    assert haiku.FINAL == "haiku_lean_zero_w0"
+    assert {n: haiku.prompt_sha(n) for n in ("haiku_solo", "haiku_team", haiku.FINAL)} == {
+        "haiku_solo": "61a5b3c4b56351dbde8482c919746f86c3ce7b252dd50635950677f35f2a61a1",
+        "haiku_team": "8cc19f35fa1749bd54212d4593562b3ba995a593a5541a5e8d666e91d03d5372",
+        "haiku_lean_zero_w0": "e46bcea53f89772f2616b3bd43f6d77c8519929e698fd558b0da4aef05763feb"}
+    assert hashlib.sha256(haiku.RATES.read_bytes()).hexdigest() == \
+        "88a261b3d60411b17081c9b9c9a445ae6c8dcffa94e21d2d0f7d3728c8435616"
+    assert _rendered(room) == ["768614d8b453c4ba1b9dfea119e2d1c036fbb06d7e4f47ebd01fd6b42058b9d6",
+                               "a0b6e914355b122f9c2ebb41744ae11a8c9728c4dc005b96443a41a9f4fa1ffb"]

@@ -148,4 +148,37 @@ prices (smoke rows included): single Haiku $0.67, the team $2.49, lean $2.14.
   size your first reading priority. Search for it and read the documents that mention it, short ones first."
   - It names no document types.
   - Everything else is as in `haiku_lean_zero_w0`.
-- **Status:** running.
+- **Run:** 2026-10-11, $2.13.
+
+| System (90 practice deals) | Regret | Correct | False GO | False NO-GO | Relief right |
+|---|---|---|---|---|---|
+| **`haiku_lean_zero_w0`** (parent) | **0.0164** | 63.3% | 6 | 27 | 0 of 12 |
+| `haiku_lean_flag` | 0.0192 | 64.4% | 7 | 25 | 1 of 12 |
+
+- **Reverted.** The keep rule returns False, because regret rose.
+- **Why it failed:**
+  - The reader searched for the flagged item, as told, and now opened the settling document on 2 more relief deals.
+    But even then the pricers sometimes left the item open at the teaser's bound. On dev-012, for example, the chance
+    stayed 0.85 with a top of $43.8M, against a true $4.1M.
+  - Elsewhere it got worse: cal-r2 went from 0.0130 to 0.0193, apparently because reading the flag first cost reading
+    elsewhere.
+- **Running total:** $11.62 of $15.
+
+## Stop and freeze (2026-10-11)
+
+- **Tuning stopped after round 3, with 4 of the 8 allowed rounds used.**
+  - The $3.38 left covers at most one more round.
+  - Round 3 showed how easily a plausible change is noise or harm on 90 deals.
+  - Another round raises the risk of fitting the practice deals more than it promises a gain.
+- **The winner is `haiku_lean_zero_w0`,** the lowest practice regret of all candidates (0.0164):
+
+  | Candidate | Practice regret |
+  |---|---|
+  | `haiku_lean_zero_w0` | **0.0164** |
+  | `haiku_lean_flag` | 0.0192 |
+  | `haiku_lean_zero` | 0.0207 |
+  | `haiku_team` | 0.0207 |
+  | `haiku_lean` | 0.0238 |
+  | `haiku_solo` | 0.0309 |
+
+- **The freeze:** `docs/results/haiku-team-prereg.md`.

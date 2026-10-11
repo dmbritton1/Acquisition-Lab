@@ -33,7 +33,7 @@ from acqlab.llm import LLMUnavailable
 MODEL = "claude-haiku-5-5"
 TEST_SETS = ("test-r2", "pilot-r2u")  # spec §2: held out until the freeze
 PRACTICE = ("cal-r2", "heldout-r2", "practice-r2u")  # spec §3: the 90 practice deals
-FINAL: str | None = None  # the frozen winner, set at the freeze (spec §4); until then no held-out run is allowed
+FINAL: str | None = "haiku_lean_zero_w0"  # the frozen winner (spec §4; docs/results/haiku-team-prereg.md)
 RATES = Path(__file__).with_name("base_rates.json")
 MIN_CLI = (2, 1, 291)  # spec §1
 # $ per million tokens at the published list prices. The CLI prices claude-haiku-5-5 as an unknown model (at about
