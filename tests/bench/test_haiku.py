@@ -312,3 +312,9 @@ def test_lean_zero_prices_with_the_zero_rule_and_keeps_lean_s_fingerprint(fakes,
     assert lean.settings == {"w": 0.5, "pricers": 3, "zero": True}
     assert lean.prompts == haiku.SOLO + (haiku.SECOND_ZERO,)
     assert haiku.CANDIDATES["haiku_lean"].settings == {"w": 0.5, "pricers": 3}  # round 0's rows stay valid
+
+
+def test_round_2_prices_open_issues_at_the_base_rate():
+    zero, w0 = haiku.CANDIDATES["haiku_lean_zero"], haiku.CANDIDATES["haiku_lean_zero_w0"]
+    assert w0.settings == zero.settings | {"w": 0.0} and w0.prompts == zero.prompts and w0.run is zero.run
+    assert haiku.prompt_sha("haiku_lean_zero_w0") != haiku.prompt_sha("haiku_lean_zero")

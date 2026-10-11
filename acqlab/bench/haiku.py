@@ -187,6 +187,8 @@ CANDIDATES = {
     "haiku_team": Candidate(run_team, TEAM),
     "haiku_lean": Candidate(run_lean, SOLO + (SECOND_SYSTEM,), settings={"w": 0.5, "pricers": 3}),
     "haiku_lean_zero": Candidate(run_lean, SOLO + (SECOND_ZERO,), settings={"w": 0.5, "pricers": 3, "zero": True}),
+    # round 2: open issues priced at the base rate (a free replay of round 1's notes gave 0.0165 against 0.0207)
+    "haiku_lean_zero_w0": Candidate(run_lean, SOLO + (SECOND_ZERO,), settings={"w": 0.0, "pricers": 3, "zero": True}),
 }
 
 

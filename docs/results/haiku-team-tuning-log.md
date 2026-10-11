@@ -96,3 +96,23 @@ prices (smoke rows included): single Haiku $0.67, the team $2.49, lean $2.14.
 - **The new best by a hair:** `haiku_lean_zero` now edges past `haiku_team`.
 - **Still the main problem:** relief deals, where it gets 0 of 12 right.
 - **Running total:** $7.40 of $15 (smoke test, round 0 and round 1).
+
+## Round 2: open issues at the base rate (`haiku_lean_zero_w0`)
+
+- **Diagnosis of `haiku_lean_zero`'s 30 false NO-GOs:** the open notes were still too high.
+  - 96 notes were left open where a document the pricers had showed zero.
+  - 171 notes were open on issues no one read; they are zero in truth.
+- **The relief deals:** the reader never opened the settling document on 7 of the 12.
+- **A free replay of round 1's notes:**
+
+  | Variant | Regret | Correct | False GO | False NO-GO |
+  |---|---|---|---|---|
+  | `w` = 0.5 (as run) | 0.0207 | 61.1% | 5 | 30 |
+  | `w` = 0 | 0.0165 | 64.4% | 6 | 26 |
+  | Open notes dropped | 0.0176 | | 22 | 2 |
+
+  Dropping the open notes was rejected for its 22 false GOs.
+- **The change:** `w` goes from 0.5 to 0, so every open chance is the base rate. Prompts and everything else are
+  unchanged.
+- **How it is judged:** run for real on the 90 deals, not judged from the replay, because the spec says rerun.
+- **Status:** running.
