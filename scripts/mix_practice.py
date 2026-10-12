@@ -103,8 +103,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.over:
             ap.error("--keep needs --over")
         from haiku_practice import keeps, scorecard as haiku_scorecard
-        cards = haiku_scorecard(args.root, [args.keep, args.over])
-        print(f"keep {args.keep} over {args.over}: {keeps(cards[args.keep], cards[args.over])}")
+        keep, over = mix.ALIASES.get(args.keep, args.keep), mix.ALIASES.get(args.over, args.over)
+        cards = haiku_scorecard(args.root, [keep, over])
+        print(f"keep {args.keep} over {args.over}: {keeps(cards[keep], cards[over])}")
         return 0
     card = scorecard(args.root)
     print(table(card, picks(card)))

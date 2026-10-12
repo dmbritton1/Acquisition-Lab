@@ -79,3 +79,8 @@ def test_main_prints_the_table_and_the_picks(finished, capsys):
     out = capsys.readouterr().out
     assert "frontier picks (*): ['cascade:mix_haiku_solo>mix_opus_low@flag', 'mix_haiku_solo']" in out
     assert "(partial)" in out
+
+
+def test_keep_reads_an_aliased_candidate_under_its_haiku_track_name(finished, capsys):
+    assert SCRIPT["main"](["--root", str(finished), "--keep", "mix_opus_low", "--over", "mix_haiku_solo"]) == 0
+    assert capsys.readouterr().out.strip() == "keep mix_opus_low over mix_haiku_solo: True"
