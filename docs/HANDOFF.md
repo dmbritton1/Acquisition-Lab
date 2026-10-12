@@ -13,14 +13,15 @@ A new session (possibly on the user's other Claude account) continues from this 
   `data/mix-test-r2` (80) and `data/mix-test-r2u` (20). Next: the user's OK for the practice phase ($50 cap), then
   freeze up to 4 frontier mixes (`mix.FINAL`, fingerprint test, `docs/results/mix-prereg.md`), then the final test
   after another OK (about $110).
-- **Current track: the Haiku team** (spec `docs/superpowers/specs/2026-10-10-haiku-team-design.md`, plan
-  `docs/superpowers/plans/2026-10-10-haiku-team.md`). Built and tested: the runner (`acqlab/bench/haiku.py`), the
-  practice scorecard (`scripts/haiku_practice.py`) and the one-shot final analysis (`scripts/haiku_team.py`). The 30
-  practice deals are in `data/practice-r2u` (seed 640000) and the base rates in `acqlab/bench/base_rates.json`.
-- **Next: the smoke test, then up to 8 practice rounds** (one OK from the user covers the practice phase, capped at
-  $15). Log each round in `docs/results/haiku-team-tuning-log.md`. Then freeze the winner (set `haiku.FINAL`, pin its
-  prompts with a fingerprint test, commit `docs/results/haiku-team-prereg.md`), then the final test on
-  `data/test-r2` and `data/pilot-r2u` after the user's OK (about $5–10).
+- **Done: the Haiku team** (spec `docs/superpowers/specs/2026-10-10-haiku-team-design.md`). Final result in
+  `docs/results/haiku-team.md` (numbers in `haiku-team.json`, run once 2026-10-12): the frozen winner
+  `haiku_lean_zero_w0` shows no clear difference from single Opus on 200 held-out deals (at most 0.0092 worse) at a
+  fifth of the cost, is worse on the 40 `r2u` deals alone, is worse than the Opus team, and adds nothing over single
+  Haiku (same regret, a third of the cost).
+- **Mixed-models practice phase under way** (the user's OK on 2026-10-11 for $66: the $50 cap plus $16 for `s4` on
+  `practice-r2u`). The user launches paid runs from their own terminal (the auto-mode classifier blocks Claude from
+  starting them); logs and the exit-2-only retry script are in `data/mix-logs/`. Next: `scripts/mix_practice.py`,
+  log round 0 in `docs/results/mix-tuning-log.md`.
 - **After that:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on

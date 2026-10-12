@@ -1,0 +1,2824 @@
+{
+  "winner": "haiku_lean_zero_w0",
+  "systems": [
+    "s1b",
+    "s4",
+    "haiku_solo",
+    "haiku_team",
+    "haiku_lean_zero_w0"
+  ],
+  "verdicts": {
+    "test-r2": "no clear difference: at most 0.0102 worse",
+    "pilot-r2u": "worse",
+    "all": "no clear difference: at most 0.0092 worse"
+  },
+  "sets_agree": false,
+  "sets": {
+    "test-r2": {
+      "n": 160,
+      "verdict": "no clear difference: at most 0.0102 worse",
+      "versus": {
+        "haiku_lean_zero_w0-s1b": {
+          "n": 160,
+          "diff": 0.0037440092907450413,
+          "ci95": [
+            -0.0033626084329505088,
+            0.010246682792371812
+          ],
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "diff": 0.014208692172222844,
+              "ci95": [
+                -0.00161155885068138,
+                0.029253881023887953
+              ]
+            },
+            "decoy": {
+              "n": 37,
+              "diff": 0.00800675728681781,
+              "ci95": [
+                0.0013597222270707965,
+                0.015999719532724284
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.009550595816684585,
+              "ci95": [
+                -0.003747359388434134,
+                0.03239914683848789
+              ]
+            },
+            "interaction": {
+              "n": 43,
+              "diff": 0.0007450347417824688,
+              "ci95": [
+                -0.018223962899895356,
+                0.02053194114764223
+              ]
+            },
+            "unresolvable": {
+              "n": 42,
+              "diff": -0.005078051744469231,
+              "ci95": [
+                -0.015681576686606788,
+                0.004427319495468577
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 16,
+          "lost": 33,
+          "tied": 111
+        },
+        "haiku_lean_zero_w0-s4": {
+          "n": 160,
+          "diff": 0.007561673571800244,
+          "ci95": [
+            0.0023368050916816423,
+            0.012921417727250572
+          ],
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "diff": 0.009856158185938695,
+              "ci95": [
+                0.0009836077077855258,
+                0.021307524228215174
+              ]
+            },
+            "decoy": {
+              "n": 37,
+              "diff": -0.0008292918612529047,
+              "ci95": [
+                -0.009180884922214121,
+                0.0072909014733146425
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.010799715612829296,
+              "ci95": [
+                0.0,
+                0.03239914683848789
+              ]
+            },
+            "interaction": {
+              "n": 43,
+              "diff": 0.018134655411265188,
+              "ci95": [
+                0.003645965883467296,
+                0.03457138585021661
+              ]
+            },
+            "unresolvable": {
+              "n": 42,
+              "diff": 0.0017834449400389511,
+              "ci95": [
+                -0.003260023022519081,
+                0.007189556668171353
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 8,
+          "lost": 27,
+          "tied": 125
+        },
+        "haiku_lean_zero_w0-haiku_solo": {
+          "n": 160,
+          "diff": 0.001512020978827004,
+          "ci95": [
+            -0.005684158851801264,
+            0.008097497803583967
+          ],
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "diff": -0.008841734948964624,
+              "ci95": [
+                -0.025418272258901843,
+                0.007178687426422231
+              ]
+            },
+            "decoy": {
+              "n": 37,
+              "diff": -0.013325797674111933,
+              "ci95": [
+                -0.027972449390530535,
+                -0.0004996459225229239
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.019372538979142744,
+              "ci95": [
+                0.0,
+                0.047317901324598934
+              ]
+            },
+            "interaction": {
+              "n": 43,
+              "diff": 0.018203249274982247,
+              "ci95": [
+                -0.00041550432343105795,
+                0.03603292864299764
+              ]
+            },
+            "unresolvable": {
+              "n": 42,
+              "diff": -0.0011987430320573114,
+              "ci95": [
+                -0.004280188590865486,
+                0.0011097121520191097
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 14,
+          "lost": 19,
+          "tied": 127
+        },
+        "haiku_team-s4": {
+          "n": 160,
+          "diff": 0.00492713345902134,
+          "ci95": [
+            0.000383179436392154,
+            0.009723013358883804
+          ],
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "diff": 0.012594350696019805,
+              "ci95": [
+                -0.003843919369329723,
+                0.032583317799378515
+              ]
+            },
+            "decoy": {
+              "n": 37,
+              "diff": 0.008422956774125148,
+              "ci95": [
+                -0.0020833951839630163,
+                0.01884223621648154
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 43,
+              "diff": 0.002000602888860818,
+              "ci95": [
+                -0.007684137655041371,
+                0.012906268489890871
+              ]
+            },
+            "unresolvable": {
+              "n": 42,
+              "diff": 0.0015050692972203275,
+              "ci95": [
+                -0.0025971608098500406,
+                0.005945414684485833
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 8,
+          "lost": 20,
+          "tied": 132
+        }
+      },
+      "cost_ratio": {
+        "s1b/haiku_solo": 17.412986594501998,
+        "s1b/haiku_team": 4.650002778436045,
+        "s1b/haiku_lean_zero_w0": 5.520570941039789,
+        "s4/haiku_solo": 70.15740822603911,
+        "s4/haiku_team": 18.73499077303366,
+        "s4/haiku_lean_zero_w0": 22.242534159741837
+      },
+      "systems": {
+        "s1b": {
+          "all": {
+            "n": 160,
+            "regret": 0.01259515005759489,
+            "correct": 0.76875,
+            "false_go": 28,
+            "false_nogo": 9,
+            "pages": 19.025,
+            "no_answer": 1,
+            "timeouts": 0,
+            "cost": 0.13046362125,
+            "sessions": 1.0,
+            "session_timeouts": 0,
+            "list_cost": 0.13039470250000001,
+            "decoy_pages": 1.04375,
+            "over_budget": 0,
+            "refused_calls": 19
+          },
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "regret": 0.005974489703263841,
+              "correct": 0.8846153846153846,
+              "false_go": 0,
+              "false_nogo": 3,
+              "pages": 18.384615384615383,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.12244808461538464,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.12244808461538462,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 3
+            },
+            "decoy": {
+              "n": 37,
+              "regret": 0.00117054152310995,
+              "correct": 0.9459459459459459,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 19.81081081081081,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.13905032972972972,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.1387639891891892,
+              "decoy_pages": 4.27027027027027,
+              "over_budget": 0,
+              "refused_calls": 3
+            },
+            "flip": {
+              "n": 12,
+              "regret": 0.00982194316245816,
+              "correct": 0.8333333333333334,
+              "false_go": 2,
+              "false_nogo": 0,
+              "pages": 16.416666666666668,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.11584165,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.11584165,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "interaction": {
+              "n": 43,
+              "regret": 0.026878171136525266,
+              "correct": 0.5581395348837209,
+              "false_go": 19,
+              "false_nogo": 0,
+              "pages": 18.790697674418606,
+              "no_answer": 1,
+              "timeouts": 0,
+              "cost": 0.1342361534883721,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.13422609767441862,
+              "decoy_pages": 0.16279069767441862,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "unresolvable": {
+              "n": 42,
+              "regret": 0.012927441994170721,
+              "correct": 0.7380952380952381,
+              "false_go": 7,
+              "false_nogo": 4,
+              "pages": 19.714285714285715,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.12817649047619045,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.12817649047619048,
+              "decoy_pages": 0.047619047619047616,
+              "over_budget": 0,
+              "refused_calls": 8
+            }
+          }
+        },
+        "s4": {
+          "all": {
+            "n": 160,
+            "regret": 0.008777485776539687,
+            "correct": 0.78125,
+            "false_go": 10,
+            "false_nogo": 25,
+            "pages": 22.50625,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.5253974975,
+            "sessions": 11.475,
+            "session_timeouts": 0,
+            "list_cost": 0.5253638900000001,
+            "decoy_pages": 1.525,
+            "over_budget": 0,
+            "refused_calls": 1
+          },
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "regret": 0.010327023689547991,
+              "correct": 0.7307692307692307,
+              "false_go": 0,
+              "false_nogo": 7,
+              "pages": 22.576923076923077,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5186700461538462,
+              "sessions": 11.423076923076923,
+              "session_timeouts": 0,
+              "list_cost": 0.5186700461538462,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 37,
+              "regret": 0.010006590671180666,
+              "correct": 0.7837837837837838,
+              "false_go": 0,
+              "false_nogo": 8,
+              "pages": 23.08108108108108,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5540107945945947,
+              "sessions": 11.864864864864865,
+              "session_timeouts": 0,
+              "list_cost": 0.5540107945945946,
+              "decoy_pages": 5.54054054054054,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "flip": {
+              "n": 12,
+              "regret": 0.008572823366313447,
+              "correct": 0.9166666666666666,
+              "false_go": 1,
+              "false_nogo": 0,
+              "pages": 22.25,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.49885430000000003,
+              "sessions": 11.083333333333334,
+              "session_timeouts": 0,
+              "list_cost": 0.49885430000000003,
+              "decoy_pages": 0.3333333333333333,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "interaction": {
+              "n": 43,
+              "regret": 0.009488550467042547,
+              "correct": 0.813953488372093,
+              "false_go": 8,
+              "false_nogo": 0,
+              "pages": 22.023255813953487,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5162786139534884,
+              "sessions": 11.30232558139535,
+              "session_timeouts": 0,
+              "list_cost": 0.5162786139534884,
+              "decoy_pages": 0.6046511627906976,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "unresolvable": {
+              "n": 42,
+              "regret": 0.00606594530966254,
+              "correct": 0.7380952380952381,
+              "false_go": 1,
+              "false_nogo": 10,
+              "pages": 22.523809523809526,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5212749285714285,
+              "sessions": 11.452380952380953,
+              "session_timeouts": 0,
+              "list_cost": 0.5211469,
+              "decoy_pages": 0.21428571428571427,
+              "over_budget": 0,
+              "refused_calls": 0
+            }
+          }
+        },
+        "haiku_solo": {
+          "all": {
+            "n": 160,
+            "regret": 0.014827138369512927,
+            "correct": 0.69375,
+            "false_go": 8,
+            "false_nogo": 41,
+            "pages": 19.8125,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.27815156375,
+            "sessions": 1.0,
+            "session_timeouts": 0,
+            "list_cost": 0.0074883594375,
+            "decoy_pages": 1.18125,
+            "over_budget": 0,
+            "refused_calls": 67
+          },
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "regret": 0.02902491682445131,
+              "correct": 0.46153846153846156,
+              "false_go": 0,
+              "false_nogo": 14,
+              "pages": 19.615384615384617,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.27550727692307697,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007398483076923077,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 8
+            },
+            "decoy": {
+              "n": 37,
+              "regret": 0.022503096484039697,
+              "correct": 0.5945945945945946,
+              "false_go": 0,
+              "false_nogo": 15,
+              "pages": 20.35135135135135,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.298211745945946,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.008050403513513514,
+              "decoy_pages": 4.45945945945946,
+              "over_budget": 0,
+              "refused_calls": 16
+            },
+            "flip": {
+              "n": 12,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 20.083333333333332,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.24787105,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0066468025,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "interaction": {
+              "n": 43,
+              "regret": 0.009419956603325485,
+              "correct": 0.8372093023255814,
+              "false_go": 7,
+              "false_nogo": 0,
+              "pages": 19.441860465116278,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.2794376883720931,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0075075030232558135,
+              "decoy_pages": 0.3023255813953488,
+              "over_budget": 0,
+              "refused_calls": 21
+            },
+            "unresolvable": {
+              "n": 42,
+              "regret": 0.009048133281758802,
+              "correct": 0.6904761904761905,
+              "false_go": 1,
+              "false_nogo": 12,
+              "pages": 19.761904761904763,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.2694512666666667,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007269708571428572,
+              "decoy_pages": 0.2619047619047619,
+              "over_budget": 0,
+              "refused_calls": 18
+            }
+          }
+        },
+        "haiku_team": {
+          "all": {
+            "n": 160,
+            "regret": 0.013704619235561027,
+            "correct": 0.70625,
+            "false_go": 10,
+            "false_nogo": 37,
+            "pages": 22.2875,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 1.096584945,
+            "sessions": 11.31875,
+            "session_timeouts": 0,
+            "list_cost": 0.02804185475,
+            "decoy_pages": 1.15,
+            "over_budget": 0,
+            "refused_calls": 40
+          },
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "regret": 0.022921374385567798,
+              "correct": 0.5769230769230769,
+              "false_go": 0,
+              "false_nogo": 11,
+              "pages": 22.53846153846154,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.0404320153846156,
+              "sessions": 11.038461538461538,
+              "session_timeouts": 0,
+              "list_cost": 0.02663815076923077,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 8
+            },
+            "decoy": {
+              "n": 37,
+              "regret": 0.018429547445305818,
+              "correct": 0.6216216216216216,
+              "false_go": 0,
+              "false_nogo": 14,
+              "pages": 22.72972972972973,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.143550989189189,
+              "sessions": 11.621621621621621,
+              "session_timeouts": 0,
+              "list_cost": 0.029258484594594597,
+              "decoy_pages": 4.135135135135135,
+              "over_budget": 0,
+              "refused_calls": 12
+            },
+            "flip": {
+              "n": 12,
+              "regret": 0.008572823366313447,
+              "correct": 0.9166666666666666,
+              "false_go": 1,
+              "false_nogo": 0,
+              "pages": 21.416666666666668,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.03338635,
+              "sessions": 10.583333333333334,
+              "session_timeouts": 0,
+              "list_cost": 0.026414434166666667,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 2
+            },
+            "interaction": {
+              "n": 43,
+              "regret": 0.011489153355903364,
+              "correct": 0.813953488372093,
+              "false_go": 8,
+              "false_nogo": 0,
+              "pages": 21.953488372093023,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.1018138744186046,
+              "sessions": 11.209302325581396,
+              "session_timeouts": 0,
+              "list_cost": 0.028161186744186047,
+              "decoy_pages": 0.627906976744186,
+              "over_budget": 0,
+              "refused_calls": 7
+            },
+            "unresolvable": {
+              "n": 42,
+              "regret": 0.007571014606882867,
+              "correct": 0.6904761904761905,
+              "false_go": 1,
+              "false_nogo": 12,
+              "pages": 22.333333333333332,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.1026747476190475,
+              "sessions": 11.547619047619047,
+              "session_timeouts": 0,
+              "list_cost": 0.028181825476190477,
+              "decoy_pages": 0.09523809523809523,
+              "over_budget": 0,
+              "refused_calls": 11
+            }
+          }
+        },
+        "haiku_lean_zero_w0": {
+          "all": {
+            "n": 160,
+            "regret": 0.016339159348339932,
+            "correct": 0.6625,
+            "false_go": 22,
+            "false_nogo": 32,
+            "pages": 19.775,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.8889958387500002,
+            "sessions": 4.0,
+            "session_timeouts": 0,
+            "list_cost": 0.0236197856875,
+            "decoy_pages": 0.99375,
+            "over_budget": 0,
+            "refused_calls": 72
+          },
+          "by_case": {
+            "clean": {
+              "n": 26,
+              "regret": 0.020183181875486685,
+              "correct": 0.5384615384615384,
+              "false_go": 0,
+              "false_nogo": 12,
+              "pages": 19.73076923076923,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8883125384615386,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023572888461538464,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 13
+            },
+            "decoy": {
+              "n": 37,
+              "regret": 0.00917729880992776,
+              "correct": 0.7567567567567568,
+              "false_go": 0,
+              "false_nogo": 9,
+              "pages": 20.243243243243242,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8897829513513515,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.02367622054054054,
+              "decoy_pages": 3.675675675675676,
+              "over_budget": 0,
+              "refused_calls": 22
+            },
+            "flip": {
+              "n": 12,
+              "regret": 0.019372538979142744,
+              "correct": 0.8333333333333334,
+              "false_go": 2,
+              "false_nogo": 0,
+              "pages": 19.75,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8344556833333333,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0221116175,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 2
+            },
+            "interaction": {
+              "n": 43,
+              "regret": 0.027623205878307733,
+              "correct": 0.5581395348837209,
+              "false_go": 19,
+              "false_nogo": 0,
+              "pages": 19.325581395348838,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.9042931023255814,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.02403028069767442,
+              "decoy_pages": 0.4883720930232558,
+              "over_budget": 0,
+              "refused_calls": 20
+            },
+            "unresolvable": {
+              "n": 42,
+              "regret": 0.00784939024970149,
+              "correct": 0.7142857142857143,
+              "false_go": 1,
+              "false_nogo": 11,
+              "pages": 19.857142857142858,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8886468428571428,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023609737380952383,
+              "decoy_pages": 0.047619047619047616,
+              "over_budget": 0,
+              "refused_calls": 15
+            }
+          }
+        }
+      }
+    },
+    "pilot-r2u": {
+      "n": 40,
+      "verdict": "worse",
+      "versus": {
+        "haiku_lean_zero_w0-s1b": {
+          "n": 40,
+          "diff": 0.004537881265436843,
+          "ci95": [
+            0.0013432239210756144,
+            0.008324370076607407
+          ],
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 5,
+              "diff": 0.0036249544476950786,
+              "ci95": [
+                0.0,
+                0.010874863343085236
+              ]
+            },
+            "flip": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 5,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": 0.010211904898687396,
+              "ci95": [
+                0.003215558066334541,
+                0.017986615619264554
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 0,
+          "lost": 8,
+          "tied": 32
+        },
+        "haiku_lean_zero_w0-s4": {
+          "n": 40,
+          "diff": -0.00048734215495792007,
+          "ci95": [
+            -0.008545134957733621,
+            0.00552371034536024
+          ],
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 5,
+              "diff": 0.0036249544476950786,
+              "ci95": [
+                0.0,
+                0.010874863343085236
+              ]
+            },
+            "flip": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 3,
+              "diff": 0.008250460377426471,
+              "ci95": [
+                0.0,
+                0.024751381132279413
+              ]
+            },
+            "unresolvable": {
+              "n": 5,
+              "diff": -0.023668545153112546,
+              "ci95": [
+                -0.07100563545933765,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": 0.0034983053872806964,
+              "ci95": [
+                -0.004536312442382862,
+                0.012282417022484664
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 2,
+          "lost": 5,
+          "tied": 33
+        },
+        "haiku_lean_zero_w0-haiku_solo": {
+          "n": 40,
+          "diff": -0.005359229436139127,
+          "ci95": [
+            -0.013199296782071606,
+            0.0006209009233086665
+          ],
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 5,
+              "diff": -0.007897984273609307,
+              "ci95": [
+                -0.03456881616391315,
+                0.010874863343085236
+              ]
+            },
+            "flip": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 3,
+              "diff": 0.008250460377426471,
+              "ci95": [
+                0.0,
+                0.024751381132279413
+              ]
+            },
+            "unresolvable": {
+              "n": 5,
+              "diff": -0.03246472366695359,
+              "ci95": [
+                -0.07980181397317868,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": -0.0023316886796893757,
+              "ci95": [
+                -0.006995066039068127,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 4,
+          "lost": 2,
+          "tied": 34
+        },
+        "haiku_team-s4": {
+          "n": 40,
+          "diff": 0.002945540721474178,
+          "ci95": [
+            0.0,
+            0.007396254824259487
+          ],
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 5,
+              "diff": 0.011522938721304384,
+              "ci95": [
+                0.0,
+                0.03456881616391315
+              ]
+            },
+            "flip": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 5,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": 0.0037629334532778254,
+              "ci95": [
+                0.0,
+                0.011288800359833477
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 0,
+          "lost": 2,
+          "tied": 38
+        }
+      },
+      "cost_ratio": {
+        "s1b/haiku_solo": 17.806146411766075,
+        "s1b/haiku_team": 4.980008301472229,
+        "s1b/haiku_lean_zero_w0": 5.719877447337444,
+        "s4/haiku_solo": 68.21145992334684,
+        "s4/haiku_team": 19.077324695552445,
+        "s4/haiku_lean_zero_w0": 21.911601884150517
+      },
+      "systems": {
+        "s1b": {
+          "all": {
+            "n": 40,
+            "regret": 0.008443376738590299,
+            "correct": 0.75,
+            "false_go": 1,
+            "false_nogo": 9,
+            "pages": 18.325,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.134682335,
+            "sessions": 1.0,
+            "session_timeouts": 0,
+            "list_cost": 0.134682335,
+            "decoy_pages": 1.225,
+            "over_budget": 0,
+            "refused_calls": 4
+          },
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "regret": 0.0384536197398319,
+              "correct": 0.0,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 17.5,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.1356499,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.1356499,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 15.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.11331464999999999,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.11331465,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 5,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.6,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.13728375999999998,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.13728376,
+              "decoy_pages": 7.2,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "flip": {
+              "n": 1,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 15.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.14132640000000002,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.1413264,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "interaction": {
+              "n": 3,
+              "regret": 0.008250460377426471,
+              "correct": 0.6666666666666666,
+              "false_go": 1,
+              "false_nogo": 0,
+              "pages": 18.666666666666668,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.14162180000000002,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.1416218,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.014754778058229294,
+              "correct": 0.5625,
+              "false_go": 0,
+              "false_nogo": 7,
+              "pages": 19.625,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.141296325,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.141296325,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 2
+            },
+            "unresolvable": {
+              "n": 5,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.13922492000000003,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.13922492,
+              "decoy_pages": 2.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            }
+          }
+        },
+        "s4": {
+          "all": {
+            "n": 40,
+            "regret": 0.013468600158985062,
+            "correct": 0.625,
+            "false_go": 0,
+            "false_nogo": 15,
+            "pages": 22.25,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.515938625,
+            "sessions": 10.625,
+            "session_timeouts": 0,
+            "list_cost": 0.515938625,
+            "decoy_pages": 0.9,
+            "over_budget": 0,
+            "refused_calls": 0
+          },
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "regret": 0.0384536197398319,
+              "correct": 0.0,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5388415,
+              "sessions": 11.5,
+              "session_timeouts": 0,
+              "list_cost": 0.5388415,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.469886075,
+              "sessions": 9.75,
+              "session_timeouts": 0,
+              "list_cost": 0.469886075,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 5,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.54793452,
+              "sessions": 10.6,
+              "session_timeouts": 0,
+              "list_cost": 0.54793452,
+              "decoy_pages": 6.6,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "flip": {
+              "n": 1,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.519134,
+              "sessions": 12.0,
+              "session_timeouts": 0,
+              "list_cost": 0.519134,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "interaction": {
+              "n": 3,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 21.333333333333332,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.4772211333333333,
+              "sessions": 9.666666666666666,
+              "session_timeouts": 0,
+              "list_cost": 0.4772211333333334,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.021468377569635995,
+              "correct": 0.25,
+              "false_go": 0,
+              "false_nogo": 12,
+              "pages": 22.9375,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5232106125,
+              "sessions": 10.8125,
+              "session_timeouts": 0,
+              "list_cost": 0.5232106125,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "unresolvable": {
+              "n": 5,
+              "regret": 0.023668545153112546,
+              "correct": 0.8,
+              "false_go": 0,
+              "false_nogo": 1,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5477867200000001,
+              "sessions": 11.4,
+              "session_timeouts": 0,
+              "list_cost": 0.54778672,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            }
+          }
+        },
+        "haiku_solo": {
+          "all": {
+            "n": 40,
+            "regret": 0.018340487440166267,
+            "correct": 0.5,
+            "false_go": 0,
+            "false_nogo": 20,
+            "pages": 18.975,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.28116283,
+            "sessions": 1.0,
+            "session_timeouts": 0,
+            "list_cost": 0.007563811500000001,
+            "decoy_pages": 0.525,
+            "over_budget": 0,
+            "refused_calls": 15
+          },
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "regret": 0.0384536197398319,
+              "correct": 0.0,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 18.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.27339410000000003,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0073136550000000005,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 18.625,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.2898899,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007793307500000001,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "decoy": {
+              "n": 5,
+              "regret": 0.011522938721304384,
+              "correct": 0.8,
+              "false_go": 0,
+              "false_nogo": 1,
+              "pages": 18.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.31028143999999996,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.008412892,
+              "decoy_pages": 2.2,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "flip": {
+              "n": 1,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 14.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.2710396,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.00726808,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "interaction": {
+              "n": 3,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 17.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.25442966666666667,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0067849500000000005,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.02729837163660607,
+              "correct": 0.0625,
+              "false_go": 0,
+              "false_nogo": 15,
+              "pages": 20.25,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.27637928749999996,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007419833125,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 5
+            },
+            "unresolvable": {
+              "n": 5,
+              "regret": 0.03246472366695359,
+              "correct": 0.6,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 19.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.27456028000000005,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007434794,
+              "decoy_pages": 2.0,
+              "over_budget": 0,
+              "refused_calls": 4
+            }
+          }
+        },
+        "haiku_team": {
+          "all": {
+            "n": 40,
+            "regret": 0.016414140880459237,
+            "correct": 0.575,
+            "false_go": 0,
+            "false_nogo": 17,
+            "pages": 22.1,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 1.05751816,
+            "sessions": 10.85,
+            "session_timeouts": 0,
+            "list_cost": 0.027044600499999998,
+            "decoy_pages": 0.9,
+            "over_budget": 0,
+            "refused_calls": 11
+          },
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "regret": 0.0384536197398319,
+              "correct": 0.0,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.1887519,
+              "sessions": 12.0,
+              "session_timeouts": 0,
+              "list_cost": 0.030424095000000005,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 22.25,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.0562287000000001,
+              "sessions": 10.25,
+              "session_timeouts": 0,
+              "list_cost": 0.02699321,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "decoy": {
+              "n": 5,
+              "regret": 0.011522938721304384,
+              "correct": 0.8,
+              "false_go": 0,
+              "false_nogo": 1,
+              "pages": 21.6,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.00371404,
+              "sessions": 10.6,
+              "session_timeouts": 0,
+              "list_cost": 0.025702482,
+              "decoy_pages": 6.6,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "flip": {
+              "n": 1,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.288078,
+              "sessions": 13.0,
+              "session_timeouts": 0,
+              "list_cost": 0.032979,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "interaction": {
+              "n": 3,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 21.333333333333332,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.9948797333333333,
+              "sessions": 10.333333333333334,
+              "session_timeouts": 0,
+              "list_cost": 0.02541425333333333,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.025231311022913823,
+              "correct": 0.1875,
+              "false_go": 0,
+              "false_nogo": 13,
+              "pages": 22.5,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.085924025,
+              "sessions": 11.375,
+              "session_timeouts": 0,
+              "list_cost": 0.027773370000000002,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 6
+            },
+            "unresolvable": {
+              "n": 5,
+              "regret": 0.023668545153112546,
+              "correct": 0.8,
+              "false_go": 0,
+              "false_nogo": 1,
+              "pages": 22.2,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.9614642400000001,
+              "sessions": 9.8,
+              "session_timeouts": 0,
+              "list_cost": 0.024576412,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            }
+          }
+        },
+        "haiku_lean_zero_w0": {
+          "all": {
+            "n": 40,
+            "regret": 0.01298125800402714,
+            "correct": 0.55,
+            "false_go": 1,
+            "false_nogo": 17,
+            "pages": 19.125,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.8875066449999999,
+            "sessions": 4.0,
+            "session_timeouts": 0,
+            "list_cost": 0.02354636725,
+            "decoy_pages": 0.875,
+            "over_budget": 0,
+            "refused_calls": 8
+          },
+          "by_case": {
+            "clean": {
+              "n": 2,
+              "regret": 0.0384536197398319,
+              "correct": 0.0,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 18.5,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8577199,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.022962395,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.875,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8750370000000001,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0232432375,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 5,
+              "regret": 0.0036249544476950786,
+              "correct": 0.8,
+              "false_go": 0,
+              "false_nogo": 1,
+              "pages": 19.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.87651936,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023303768,
+              "decoy_pages": 4.4,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "flip": {
+              "n": 1,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 18.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8279392,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.021740560000000003,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "interaction": {
+              "n": 3,
+              "regret": 0.008250460377426471,
+              "correct": 0.6666666666666666,
+              "false_go": 1,
+              "false_nogo": 0,
+              "pages": 16.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.7842142000000001,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.02074051,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.024966682956916692,
+              "correct": 0.125,
+              "false_go": 0,
+              "false_nogo": 14,
+              "pages": 20.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.9375721625,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.024800483125,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "unresolvable": {
+              "n": 5,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 17.6,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.84403936,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.022539068000000002,
+              "decoy_pages": 2.0,
+              "over_budget": 0,
+              "refused_calls": 3
+            }
+          }
+        }
+      }
+    },
+    "all": {
+      "n": 200,
+      "verdict": "no clear difference: at most 0.0092 worse",
+      "versus": {
+        "haiku_lean_zero_w0-s1b": {
+          "n": 200,
+          "diff": 0.0039027836856834015,
+          "ci95": [
+            -0.0013947267956033336,
+            0.00916228783653519
+          ],
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "diff": 0.013193785588492641,
+              "ci95": [
+                -0.001927648455664198,
+                0.02676743075859609
+              ]
+            },
+            "decoy": {
+              "n": 42,
+              "diff": 0.007485114091684152,
+              "ci95": [
+                0.001878312847167214,
+                0.01408163887958305
+              ]
+            },
+            "flip": {
+              "n": 13,
+              "diff": 0.00881593460001654,
+              "ci95": [
+                -0.0034591009739392002,
+                0.029906904773988822
+              ]
+            },
+            "interaction": {
+              "n": 46,
+              "diff": 0.0006964455194923072,
+              "ci95": [
+                -0.016992424427702338,
+                0.01729022459027143
+              ]
+            },
+            "unresolvable": {
+              "n": 47,
+              "diff": -0.004537833473781015,
+              "ci95": [
+                -0.014241395356601334,
+                0.003508015846565423
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": 0.010211904898687396,
+              "ci95": [
+                0.003215558066334541,
+                0.017986615619264554
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 16,
+          "lost": 41,
+          "tied": 143
+        },
+        "haiku_lean_zero_w0-s4": {
+          "n": 200,
+          "diff": 0.005951870426448611,
+          "ci95": [
+            0.001459629073377373,
+            0.010322365283574726
+          ],
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "diff": 0.009152146886943074,
+              "ci95": [
+                0.0009343314945344121,
+                0.0197640521947479
+              ]
+            },
+            "decoy": {
+              "n": 42,
+              "diff": -0.00029902444352100194,
+              "ci95": [
+                -0.007879422188324759,
+                0.006732588781137433
+              ]
+            },
+            "flip": {
+              "n": 13,
+              "diff": 0.009968968257996274,
+              "ci95": [
+                0.0,
+                0.029906904773988822
+              ]
+            },
+            "interaction": {
+              "n": 46,
+              "diff": 0.017490033996014835,
+              "ci95": [
+                0.00392901962683806,
+                0.031968417279314904
+              ]
+            },
+            "unresolvable": {
+              "n": 47,
+              "diff": -0.0009242135805090806,
+              "ci95": [
+                -0.007949267833124883,
+                0.00531766014108274
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": 0.0034983053872806964,
+              "ci95": [
+                -0.004536312442382862,
+                0.012282417022484664
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 10,
+          "lost": 32,
+          "tied": 158
+        },
+        "haiku_lean_zero_w0-haiku_solo": {
+          "n": 200,
+          "diff": 0.00013777089583377782,
+          "ci95": [
+            -0.005617280810625077,
+            0.005599269828659243
+          ],
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "diff": -0.008210182452610008,
+              "ci95": [
+                -0.023625188637203715,
+                0.00658801154446743
+              ]
+            },
+            "decoy": {
+              "n": 42,
+              "diff": -0.012679629412147337,
+              "ci95": [
+                -0.026503498850578545,
+                -0.0012130822431891022
+              ]
+            },
+            "flip": {
+              "n": 13,
+              "diff": 0.01788234367305484,
+              "ci95": [
+                0.0,
+                0.04367806276116825
+              ]
+            },
+            "interaction": {
+              "n": 46,
+              "diff": 0.017554154346880783,
+              "ci95": [
+                0.0010220563415881975,
+                0.03324521627404563
+              ]
+            },
+            "unresolvable": {
+              "n": 47,
+              "diff": -0.004524911184705852,
+              "ci95": [
+                -0.010648945645463861,
+                5.589399607654067e-05
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": -0.0023316886796893757,
+              "ci95": [
+                -0.006995066039068127,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 18,
+          "lost": 21,
+          "tied": 161
+        },
+        "haiku_team-s4": {
+          "n": 200,
+          "diff": 0.004530814911511908,
+          "ci95": [
+            0.0008290542113786833,
+            0.008549496600753059
+          ],
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "diff": 0.011694754217732679,
+              "ci95": [
+                -0.0028427310851678426,
+                0.02928639046916067
+              ]
+            },
+            "decoy": {
+              "n": 42,
+              "diff": 0.008792002244027439,
+              "ci95": [
+                4.1636280405951455e-05,
+                0.01896130675109872
+              ]
+            },
+            "flip": {
+              "n": 13,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 46,
+              "diff": 0.001870128787413373,
+              "ci95": [
+                -0.0069076654507620044,
+                0.011473561159017842
+              ]
+            },
+            "unresolvable": {
+              "n": 47,
+              "diff": 0.0013449555421968884,
+              "ci95": [
+                -0.0023208671066745046,
+                0.005297054756733312
+              ]
+            },
+            "relief": {
+              "n": 16,
+              "diff": 0.0037629334532778254,
+              "ci95": [
+                0.0,
+                0.011288800359833477
+              ]
+            },
+            "confirmed": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 8,
+          "lost": 22,
+          "tied": 170
+        }
+      },
+      "cost_ratio": {
+        "s1b/haiku_solo": 17.49225111433243,
+        "s1b/haiku_team": 4.714112670422111,
+        "s1b/haiku_lean_zero_w0": 5.560333058505741,
+        "s4/haiku_solo": 69.76508772161648,
+        "s4/haiku_team": 18.80149569269053,
+        "s4/haiku_lean_zero_w0": 22.176512391261852
+      },
+      "systems": {
+        "s1b": {
+          "all": {
+            "n": 200,
+            "regret": 0.011764795393793971,
+            "correct": 0.765,
+            "false_go": 29,
+            "false_nogo": 18,
+            "pages": 18.885,
+            "no_answer": 1,
+            "timeouts": 0,
+            "cost": 0.131307364,
+            "sessions": 1.0,
+            "session_timeouts": 0,
+            "list_cost": 0.131252229,
+            "decoy_pages": 1.08,
+            "over_budget": 0,
+            "refused_calls": 23
+          },
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "regret": 0.008294427563018703,
+              "correct": 0.8214285714285714,
+              "false_go": 0,
+              "false_nogo": 5,
+              "pages": 18.321428571428573,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.12339107142857145,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.12339107142857143,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 3
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 15.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.11331464999999999,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.11331465,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 42,
+              "regret": 0.001031191341787337,
+              "correct": 0.9523809523809523,
+              "false_go": 0,
+              "false_nogo": 2,
+              "pages": 19.785714285714285,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.1388400238095238,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.13858777142857143,
+              "decoy_pages": 4.619047619047619,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "flip": {
+              "n": 13,
+              "regret": 0.0090664090730383,
+              "correct": 0.8461538461538461,
+              "false_go": 2,
+              "false_nogo": 0,
+              "pages": 16.307692307692307,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.11780201538461539,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.11780201538461539,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 5
+            },
+            "interaction": {
+              "n": 46,
+              "regret": 0.02566332043484491,
+              "correct": 0.5652173913043478,
+              "false_go": 20,
+              "false_nogo": 0,
+              "pages": 18.782608695652176,
+              "no_answer": 1,
+              "timeouts": 0,
+              "cost": 0.1347178260869565,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.13470842608695652,
+              "decoy_pages": 0.15217391304347827,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.014754778058229294,
+              "correct": 0.5625,
+              "false_go": 0,
+              "false_nogo": 7,
+              "pages": 19.625,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.141296325,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.141296325,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 2
+            },
+            "unresolvable": {
+              "n": 47,
+              "regret": 0.011552182207556815,
+              "correct": 0.7659574468085106,
+              "false_go": 7,
+              "false_nogo": 4,
+              "pages": 19.638297872340427,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.12935185531914895,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.12935185531914895,
+              "decoy_pages": 0.2553191489361702,
+              "over_budget": 0,
+              "refused_calls": 8
+            }
+          }
+        },
+        "s4": {
+          "all": {
+            "n": 200,
+            "regret": 0.009715708653028761,
+            "correct": 0.75,
+            "false_go": 10,
+            "false_nogo": 40,
+            "pages": 22.455,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.523505723,
+            "sessions": 11.305,
+            "session_timeouts": 0,
+            "list_cost": 0.523478837,
+            "decoy_pages": 1.4,
+            "over_budget": 0,
+            "refused_calls": 1
+          },
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "regret": 0.012336066264568268,
+              "correct": 0.6785714285714286,
+              "false_go": 0,
+              "false_nogo": 9,
+              "pages": 22.535714285714285,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5201108642857143,
+              "sessions": 11.428571428571429,
+              "session_timeouts": 0,
+              "list_cost": 0.5201108642857143,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.469886075,
+              "sessions": 9.75,
+              "session_timeouts": 0,
+              "list_cost": 0.469886075,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 42,
+              "regret": 0.008815329876992493,
+              "correct": 0.8095238095238095,
+              "false_go": 0,
+              "false_nogo": 8,
+              "pages": 22.952380952380953,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5532874285714287,
+              "sessions": 11.714285714285714,
+              "session_timeouts": 0,
+              "list_cost": 0.5532874285714285,
+              "decoy_pages": 5.666666666666667,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "flip": {
+              "n": 13,
+              "regret": 0.007913375415058568,
+              "correct": 0.9230769230769231,
+              "false_go": 1,
+              "false_nogo": 0,
+              "pages": 22.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5004142769230769,
+              "sessions": 11.153846153846153,
+              "session_timeouts": 0,
+              "list_cost": 0.5004142769230769,
+              "decoy_pages": 0.3076923076923077,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "interaction": {
+              "n": 46,
+              "regret": 0.00886973195832238,
+              "correct": 0.8260869565217391,
+              "false_go": 8,
+              "false_nogo": 0,
+              "pages": 21.97826086956522,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5137313869565218,
+              "sessions": 11.195652173913043,
+              "session_timeouts": 0,
+              "list_cost": 0.5137313869565218,
+              "decoy_pages": 0.5652173913043478,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.021468377569635995,
+              "correct": 0.25,
+              "false_go": 0,
+              "false_nogo": 12,
+              "pages": 22.9375,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5232106125,
+              "sessions": 10.8125,
+              "session_timeouts": 0,
+              "list_cost": 0.5232106125,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "unresolvable": {
+              "n": 47,
+              "regret": 0.00793856231428488,
+              "correct": 0.7446808510638298,
+              "false_go": 1,
+              "false_nogo": 11,
+              "pages": 22.46808510638298,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.5240953319148935,
+              "sessions": 11.446808510638299,
+              "session_timeouts": 0,
+              "list_cost": 0.5239809234042553,
+              "decoy_pages": 0.19148936170212766,
+              "over_budget": 0,
+              "refused_calls": 0
+            }
+          }
+        },
+        "haiku_solo": {
+          "all": {
+            "n": 200,
+            "regret": 0.015529808183643596,
+            "correct": 0.655,
+            "false_go": 8,
+            "false_nogo": 61,
+            "pages": 19.645,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.278753817,
+            "sessions": 1.0,
+            "session_timeouts": 0,
+            "list_cost": 0.00750344985,
+            "decoy_pages": 1.05,
+            "over_budget": 0,
+            "refused_calls": 82
+          },
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "regret": 0.029698395604121353,
+              "correct": 0.42857142857142855,
+              "false_go": 0,
+              "false_nogo": 16,
+              "pages": 19.5,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.27535633571428575,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0073924239285714285,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 8
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 18.625,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.2898899,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007793307500000001,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 1
+            },
+            "decoy": {
+              "n": 42,
+              "regret": 0.021195934845618828,
+              "correct": 0.6190476190476191,
+              "false_go": 0,
+              "false_nogo": 16,
+              "pages": 20.071428571428573,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.29964861428571427,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.008093556904761904,
+              "decoy_pages": 4.190476190476191,
+              "over_budget": 0,
+              "refused_calls": 20
+            },
+            "flip": {
+              "n": 13,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.615384615384617,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.24965324615384615,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.006694593076923078,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "interaction": {
+              "n": 46,
+              "regret": 0.008805611607456432,
+              "correct": 0.8478260869565217,
+              "false_go": 7,
+              "false_nogo": 0,
+              "pages": 19.282608695652176,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.2778067304347827,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007460380000000001,
+              "decoy_pages": 0.2826086956521739,
+              "over_budget": 0,
+              "refused_calls": 22
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.02729837163660607,
+              "correct": 0.0625,
+              "false_go": 0,
+              "false_nogo": 15,
+              "pages": 20.25,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.27637928749999996,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.007419833125,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 5
+            },
+            "unresolvable": {
+              "n": 47,
+              "regret": 0.011539259918481651,
+              "correct": 0.6808510638297872,
+              "false_go": 1,
+              "false_nogo": 14,
+              "pages": 19.680851063829788,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.26999477872340427,
+              "sessions": 1.0,
+              "session_timeouts": 0,
+              "list_cost": 0.00728727085106383,
+              "decoy_pages": 0.44680851063829785,
+              "over_budget": 0,
+              "refused_calls": 22
+            }
+          }
+        },
+        "haiku_team": {
+          "all": {
+            "n": 200,
+            "regret": 0.01424652356454067,
+            "correct": 0.68,
+            "false_go": 10,
+            "false_nogo": 54,
+            "pages": 22.25,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 1.088771588,
+            "sessions": 11.225,
+            "session_timeouts": 0,
+            "list_cost": 0.0278424039,
+            "decoy_pages": 1.1,
+            "over_budget": 0,
+            "refused_calls": 51
+          },
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "regret": 0.02403082048230095,
+              "correct": 0.5357142857142857,
+              "false_go": 0,
+              "false_nogo": 13,
+              "pages": 22.5,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.051026292857143,
+              "sessions": 11.107142857142858,
+              "session_timeouts": 0,
+              "list_cost": 0.026908575357142858,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 8
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 22.25,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.0562287000000001,
+              "sessions": 10.25,
+              "session_timeouts": 0,
+              "list_cost": 0.02699321,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "decoy": {
+              "n": 42,
+              "regret": 0.01760733212101993,
+              "correct": 0.6428571428571429,
+              "false_go": 0,
+              "false_nogo": 15,
+              "pages": 22.595238095238095,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.1269037333333334,
+              "sessions": 11.5,
+              "session_timeouts": 0,
+              "list_cost": 0.028835150952380952,
+              "decoy_pages": 4.428571428571429,
+              "over_budget": 0,
+              "refused_calls": 12
+            },
+            "flip": {
+              "n": 13,
+              "regret": 0.007913375415058568,
+              "correct": 0.9230769230769231,
+              "false_go": 1,
+              "false_nogo": 0,
+              "pages": 21.23076923076923,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.0529780153846153,
+              "sessions": 10.76923076923077,
+              "session_timeouts": 0,
+              "list_cost": 0.02691940076923077,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 3
+            },
+            "interaction": {
+              "n": 46,
+              "regret": 0.010739860745735755,
+              "correct": 0.8260869565217391,
+              "false_go": 8,
+              "false_nogo": 0,
+              "pages": 21.91304347826087,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.094839908695652,
+              "sessions": 11.152173913043478,
+              "session_timeouts": 0,
+              "list_cost": 0.02798203891304348,
+              "decoy_pages": 0.5869565217391305,
+              "over_budget": 0,
+              "refused_calls": 7
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.025231311022913823,
+              "correct": 0.1875,
+              "false_go": 0,
+              "false_nogo": 13,
+              "pages": 22.5,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.085924025,
+              "sessions": 11.375,
+              "session_timeouts": 0,
+              "list_cost": 0.027773370000000002,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 6
+            },
+            "unresolvable": {
+              "n": 47,
+              "regret": 0.009283517856481769,
+              "correct": 0.7021276595744681,
+              "false_go": 1,
+              "false_nogo": 13,
+              "pages": 22.319148936170212,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 1.0876523531914892,
+              "sessions": 11.361702127659575,
+              "session_timeouts": 0,
+              "list_cost": 0.02779827085106383,
+              "decoy_pages": 0.0851063829787234,
+              "over_budget": 0,
+              "refused_calls": 11
+            }
+          }
+        },
+        "haiku_lean_zero_w0": {
+          "all": {
+            "n": 200,
+            "regret": 0.015667579079477374,
+            "correct": 0.64,
+            "false_go": 23,
+            "false_nogo": 49,
+            "pages": 19.645,
+            "no_answer": 0,
+            "timeouts": 0,
+            "cost": 0.888698,
+            "sessions": 4.0,
+            "session_timeouts": 0,
+            "list_cost": 0.023605102000000003,
+            "decoy_pages": 0.97,
+            "over_budget": 0,
+            "refused_calls": 80
+          },
+          "by_case": {
+            "clean": {
+              "n": 28,
+              "regret": 0.021488213151511344,
+              "correct": 0.5,
+              "false_go": 0,
+              "false_nogo": 14,
+              "pages": 19.642857142857142,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8861273500000001,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023529281785714284,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 13
+            },
+            "confirmed": {
+              "n": 8,
+              "regret": 0.0,
+              "correct": 1.0,
+              "false_go": 0,
+              "false_nogo": 0,
+              "pages": 19.875,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8750370000000001,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.0232432375,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 0
+            },
+            "decoy": {
+              "n": 42,
+              "regret": 0.008516305433471491,
+              "correct": 0.7619047619047619,
+              "false_go": 0,
+              "false_nogo": 10,
+              "pages": 20.095238095238095,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8882039523809524,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023631880952380953,
+              "decoy_pages": 3.761904761904762,
+              "over_budget": 0,
+              "refused_calls": 22
+            },
+            "flip": {
+              "n": 13,
+              "regret": 0.01788234367305484,
+              "correct": 0.8461538461538461,
+              "false_go": 2,
+              "false_nogo": 0,
+              "pages": 19.615384615384617,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8339544153846153,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.022083074615384616,
+              "decoy_pages": 0.0,
+              "over_budget": 0,
+              "refused_calls": 2
+            },
+            "interaction": {
+              "n": 46,
+              "regret": 0.02635976595433722,
+              "correct": 0.5652173913043478,
+              "false_go": 20,
+              "false_nogo": 0,
+              "pages": 19.108695652173914,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8964618695652173,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023815730434782606,
+              "decoy_pages": 0.45652173913043476,
+              "over_budget": 0,
+              "refused_calls": 21
+            },
+            "relief": {
+              "n": 16,
+              "regret": 0.024966682956916692,
+              "correct": 0.125,
+              "false_go": 0,
+              "false_nogo": 14,
+              "pages": 20.0,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.9375721625,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.024800483125,
+              "decoy_pages": 0.1875,
+              "over_budget": 0,
+              "refused_calls": 4
+            },
+            "unresolvable": {
+              "n": 47,
+              "regret": 0.0070143487337758,
+              "correct": 0.7446808510638298,
+              "false_go": 1,
+              "false_nogo": 11,
+              "pages": 19.617021276595743,
+              "no_answer": 0,
+              "timeouts": 0,
+              "cost": 0.8839013659574468,
+              "sessions": 4.0,
+              "session_timeouts": 0,
+              "list_cost": 0.023495836382978724,
+              "decoy_pages": 0.2553191489361702,
+              "over_budget": 0,
+              "refused_calls": 18
+            }
+          }
+        }
+      }
+    }
+  }
+}
