@@ -42,7 +42,7 @@ MIN_CLI = (2, 1, 291)  # spec §1
 # ponytail: Haiku's long-prompt tier (5x above 100K tokens per request) can't be seen in a run's summed tokens
 PRICES = {"claude-haiku-5-5": {"input_tokens": 0.10, "output_tokens": 0.50, "cache_read_input_tokens": 0.01,
                                "cache_creation_input_tokens": 0.20},
-          "claude-opus-5-5": {"input_tokens": 4.0, "output_tokens": 20.0, "cache_read_input_tokens": 0.40,
+          "claude-opus-5-5": {"input_tokens": 4.0, "output_tokens": 20.0, "cache_read_input_tokens": 0.20,
                               "cache_creation_input_tokens": 8.0}}
 
 

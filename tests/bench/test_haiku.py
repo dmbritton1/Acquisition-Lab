@@ -172,7 +172,7 @@ def test_list_cost_prices_tokens_at_published_rates():
     tokens = {"input_tokens": 1_000_000, "output_tokens": 1_000_000, "cache_read_input_tokens": 1_000_000,
               "cache_creation_input_tokens": 1_000_000}
     assert haiku.list_cost({"models": ["claude-haiku-5-5"], "tokens": tokens}) == pytest.approx(0.10 + 0.50 + 0.01 + 0.20)
-    assert haiku.list_cost({"models": ["claude-opus-5-5"], "tokens": tokens}) == pytest.approx(4 + 20 + 0.40 + 8)
+    assert haiku.list_cost({"models": ["claude-opus-5-5"], "tokens": tokens}) == pytest.approx(4 + 20 + 0.20 + 8)  # Opus 5.5 cache reads are $0.20
     assert haiku.list_cost({"models": [], "tokens": tokens}) is None  # a run with no CLI result
     assert haiku.list_cost({"models": ["claude-opus-5-5", "claude-haiku-5-5"], "tokens": tokens}) is None
 

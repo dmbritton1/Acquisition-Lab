@@ -113,3 +113,10 @@ It refuses to run, and writes nothing, if:
 - **The base rates are pooled** over r2 and r2u practice deals, as spec §3 sets.
 - **Haiku's long-prompt price tier** (5× above 100K tokens per request) can't be seen in a run's summed tokens.
   No practice session came near it.
+
+## Correction (2026-10-11, during the final test, before any analysis)
+
+`haiku.PRICES` priced Opus 5.5 cache reads at $0.40 per million tokens. The API reference lists $0.20, so this is
+fixed to $0.20. Priced this way, Opus rows now match the CLI's own Opus figures more closely: single Opus comes to
+about $0.13 per deal rather than $0.14. Only the cost ratios change: they fall by about 5–10%. No run, prompt or
+fingerprint changes.
