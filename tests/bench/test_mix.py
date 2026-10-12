@@ -1,3 +1,4 @@
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -184,6 +185,7 @@ def test_the_fresh_sets_are_refused_before_the_freeze(tmp_path, monkeypatch):
             mix.run(tmp_path / name, ["mix_opus_low"], split="dev")
     with pytest.raises(mix.Refused, match="held out"):
         mix.run(tmp_path / "cal-r2", ["mix_opus_low"], split="test")
+    monkeypatch.setattr(mix, "FINAL", ())  # as before the freeze
     with pytest.raises(mix.Refused, match="no frozen mixes"):
         mix.run(tmp_path / "mix-test-r2", ["mix_opus_low"], split="test", final=True)
     monkeypatch.setattr(mix, "FINAL", ("cascade:mix_haiku_solo>mix_opus_low@pass", "mix_h_opus1"))
@@ -239,3 +241,21 @@ def test_mixes_run_end_to_end_with_the_fake_claude(data, tmp_path, fake_claude, 
 def test_no_step_reads_the_answer_key():
     source = Path(mix.__file__).read_text().split("def run(")[0]
     assert not any(word in source for word in ("AnswerKey", "truth", "model_validate"))
+
+
+def test_the_frozen_mixes_and_their_prompts_are_unchanged():
+    """docs/results/mix-prereg.md: the four frozen picks, every part's fingerprint (prompts, run function, models,
+    effort, settings), the base rates, and the reader and pricer prompts shared with the frozen Haiku winner."""
+    assert mix.FINAL == ("cascade:mix_h_haiku3>s1b@flag|close:0.05", "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+                         "mix_haiku_solo", "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02")
+    assert {n: mix.fingerprint(n) for n in ("mix_haiku_solo", "mix_h_haiku3", "mix_h_opus1", "mix_opus_low",
+                                            "mix_sonnet_solo")} == {
+        "mix_haiku_solo": "30366a3396f627df4a932f2e52d005df643935dc84bd16936a40e49aa5de3139",
+        "mix_h_haiku3": "3a683445f29132a03a7bdea4e44bdd851e50b5def10d6eafeda136a7a0337467",
+        "mix_h_opus1": "25759ccd176989eeb463c8d36b6d89cc45fcc3b209a4f0c03f7b90425c8b2b67",
+        "mix_opus_low": "b9a9ba942a1ae58f07123971175568364c3bbbb34c275b9eb71d77fef0d97ba1",
+        "mix_sonnet_solo": "26d3fb60b190c82f35755b4fbbe86258140d5fb28e8ad321387f525973fd0e48"}
+    assert mix.CANDIDATES["mix_haiku_solo"].prompts == haiku.CANDIDATES["haiku_solo"].prompts
+    assert mix.CANDIDATES["mix_h_haiku3"].prompts == haiku.CANDIDATES["haiku_lean_zero_w0"].prompts
+    assert hashlib.sha256(haiku.RATES.read_bytes()).hexdigest() == \
+        "88a261b3d60411b17081c9b9c9a445ae6c8dcffa94e21d2d0f7d3728c8435616"

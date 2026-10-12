@@ -27,7 +27,9 @@ from acqlab.llm import LLMUnavailable
 
 OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 TEST_SETS = ("mix-test-r2", "mix-test-r2u")  # spec §1: fresh deals, held out until the freeze
-FINAL: tuple[str, ...] = ()  # the frozen mixes and cascades, set at the freeze (spec §2)
+# the frozen mixes and cascades (spec §1 picks; docs/results/mix-prereg.md)
+FINAL: tuple[str, ...] = ("cascade:mix_h_haiku3>s1b@flag|close:0.05", "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+                          "mix_haiku_solo", "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02")
 # $ per million tokens at list prices (spec §1); cache writes at the 1-hour rate, the cache the CLI writes
 PRICES = haiku.PRICES | {SONNET: {"input_tokens": 2.0, "output_tokens": 10.0, "cache_read_input_tokens": 0.20,
                                   "cache_creation_input_tokens": 4.0}}
