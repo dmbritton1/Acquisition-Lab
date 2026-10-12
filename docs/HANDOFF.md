@@ -6,6 +6,13 @@ specs are the binding authority on design; this file is the source of truth for 
 ## Resume here (2026-10-10)
 
 A new session (possibly on the user's other Claude account) continues from this point.
+
+- **Next track after the Haiku write-up: mixing Opus, Sonnet and Haiku** (spec
+  `docs/superpowers/specs/2026-10-11-mixed-models-design.md`, plan `docs/superpowers/plans/2026-10-11-mixed-models.md`).
+  Built: `acqlab/bench/mix.py`, `scripts/mix_practice.py`, `scripts/mix_final.py`; fresh held-out deals in
+  `data/mix-test-r2` (80) and `data/mix-test-r2u` (20). Next: the user's OK for the practice phase ($50 cap), then
+  freeze up to 4 frontier mixes (`mix.FINAL`, fingerprint test, `docs/results/mix-prereg.md`), then the final test
+  after another OK (about $110).
 - **Current track: the Haiku team** (spec `docs/superpowers/specs/2026-10-10-haiku-team-design.md`, plan
   `docs/superpowers/plans/2026-10-10-haiku-team.md`). Built and tested: the runner (`acqlab/bench/haiku.py`), the
   practice scorecard (`scripts/haiku_practice.py`) and the one-shot final analysis (`scripts/haiku_team.py`). The 30
