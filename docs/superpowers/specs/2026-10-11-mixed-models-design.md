@@ -46,6 +46,10 @@ the dev split. All design choices come from these deals only.
 **The frontier rule:**
 - Each candidate has a practice regret and a practice cost per deal.
 - The frontier is the set of candidates that no other candidate beats on both at once.
+  - It is computed over candidates scored on all 90 practice deals. A partial cascade, one that escalates to `s4` (see
+    §2), would be compared on fewer, easier deals, so it is shown but not eligible.
+  - Candidates with exactly the same point count once, as the simplest of them: a plain system before a cascade, then
+    by name. A cascade whose signal never fires is its cheap system again.
 - Up to 4 frontier candidates are frozen. The four always include:
   - the lowest-regret candidate cheaper than `s1b` on practice;
   - the lowest-regret candidate cheaper than `s4` on practice;
@@ -94,6 +98,7 @@ the dev split. All design choices come from these deals only.
 - **The strong systems:** `s1b`, `s4`, `mix_opus_low` and `mix_sonnet_solo`.
   - `s4` has no runs on `practice-r2u`, and running it there would cost about $16, which breaks the cap. So cascades
     that escalate to `s4` are scored on the 60 practice deals that have `s4` runs, and the scorecard flags them.
+- **A cheap run that never answered is always escalated.**
 - **The signals use public information only:**
   - **the cheap call is a pass;**
   - **the pricers disagree** (for pipelines with three pricers);
