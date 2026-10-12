@@ -62,6 +62,11 @@ def test_the_scorecard_scores_systems_and_cascades_and_flags_partial_ones(finish
     up = card["cascade:mix_haiku_solo>mix_opus_low@pass"]
     assert up["regret"] == 0 and up["escalated"] == 1 and up["cost"] == pytest.approx(0.01 + 0.05)
     assert card["cascade:mix_haiku_solo>s4@pass"]["partial"] and card["cascade:mix_haiku_solo>s4@pass"]["n"] == 4
+    assert "cascade:mix_opus_low>s1b@pass" in card and "cascade:mix_opus_low>s4@pass" in card  # CHEAP has mix_opus_low
+    assert card["s1b"]["no_answer"] == 0 and card["s1b"]["timeouts"] == 0 and card["s1b"]["models"] == [mix.OPUS]
+    assert card["mix_haiku_solo"]["models"] == [mix.HAIKU] \
+        and card["mix_haiku_solo"]["relief_false_nogo"] == 2
+    assert up["models"] == [mix.OPUS] and up["no_answer"] == 0 and up["confirmed_false_go"] == 0
     assert "mix_sonnet_solo" not in card and not any("mix_sonnet_solo" in n for n in card)  # never run
 
 
@@ -74,11 +79,19 @@ def test_the_frontier_picks_full_coverage_candidates_only(finished):
     assert card["mix_opus_low"]["regret"] == 0 and card["mix_opus_low"]["cost"] == pytest.approx(0.05)
 
 
+def test_a_rejected_variant_is_shown_but_never_picked(finished, monkeypatch):
+    card = SCRIPT["scorecard"](finished)
+    assert "mix_haiku_solo" in SCRIPT["picks"](card)
+    monkeypatch.setitem(SCRIPT["picks"].__globals__, "REJECTED", ("mix_haiku_solo",))
+    assert "mix_haiku_solo" not in SCRIPT["picks"](card)
+
+
 def test_main_prints_the_table_and_the_picks(finished, capsys):
     assert SCRIPT["main"](["--root", str(finished)]) == 0
     out = capsys.readouterr().out
     assert "frontier picks (*): ['cascade:mix_haiku_solo>mix_opus_low@flag', 'mix_haiku_solo']" in out
-    assert "(partial)" in out
+    assert "(partial)" in out and "rNOGO" in out and "noans" in out
+    assert "haiku,opus" in out  # the cascade's models, short names
 
 
 def test_keep_reads_an_aliased_candidate_under_its_haiku_track_name(finished, capsys):

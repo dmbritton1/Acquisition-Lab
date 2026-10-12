@@ -80,7 +80,7 @@ def test_a_pipeline_runs_each_step_on_its_own_model_and_prices_it_step_by_step(f
 def test_a_single_run_carries_its_effort_and_a_timeout_costs_nothing_known(fakes, room, tmp_path):
     rows, cli, steps = mix.run_single(room, 20.0, "dev-000", tmp_path / "x.json", model=mix.OPUS, effort="low")
     assert fakes["seen"]["solo"][:2] == ("claude-opus-5-5", "low") and cli is None
-    assert steps == [{"step": "solo", "models": [], "tokens": dict.fromkeys(mix.USAGE, 0)}]
+    assert steps == [{"step": "solo", "models": [], "tokens": dict.fromkeys(mix.USAGE, 0), "model_usage": {}}]
     assert mix.row_cost({"steps": steps}) == 0.0
 
 
@@ -99,6 +99,12 @@ def test_row_cost_raises_on_a_step_it_cannot_price_and_costs_a_timeout_step_noth
     with pytest.raises(ValueError):
         mix.row_cost({"steps": [mixed]})
     assert mix.row_cost({"steps": [{"step": "solo", "models": [], "tokens": tokens}]}) == 0.0
+
+
+def test_usage_keeps_the_raw_model_usage_so_an_unpriceable_row_can_be_priced_later():
+    cli = {"modelUsage": {"claude-opus-5-5": {"outputTokens": 7}}, "usage": {"output_tokens": 7}}
+    assert mix.usage("solo", cli)["model_usage"] == cli["modelUsage"]
+    assert mix.usage("solo", None)["model_usage"] == {}
 
 
 # --- cascades ------------------------------------------------------------------------------------------------------
@@ -131,6 +137,11 @@ def test_a_cascade_takes_the_strong_call_and_pays_for_it_only_when_it_escalates(
     assert up["escalated"] and up["go"] and up["regret"] == 0.0 and up["cost"] == pytest.approx(0.50 + 20.0)
     stay = mix.cascade(_run(go=True), strong, "pass", TEASER.replace("Seller discloses", "Seller notes"))
     assert not stay["escalated"] and stay["cost"] == pytest.approx(0.50)
+
+
+def test_the_frontier_merges_points_equal_up_to_float_order():
+    pts = {"a": (0.1 + 0.2, 0.3), "b": (0.3, 0.1 + 0.2), "cascade:a>c@pass": (0.3 + 1e-15, 0.3)}
+    assert mix.frontier({"a": pts["a"], "cascade:a>c@pass": pts["cascade:a>c@pass"]}, 1.0, 1.0) == ["a"]
 
 
 def test_cascade_names_parse():
@@ -184,6 +195,23 @@ def test_the_fresh_sets_are_refused_before_the_freeze(tmp_path, monkeypatch):
                      "--confirm-claude"]) == 3
     assert mix.main(["--data", str(tmp_path), "--systems", "mix_x", "--confirm-claude"]) == 1
     assert mix.main(["--data", str(tmp_path / "cal-r2"), "--systems", "mix_opus_low"]) == 3
+
+
+def test_an_unpriceable_step_stops_the_run_with_exit_3_not_2(data, monkeypatch, capsys):
+    def boom(*a, **kw):
+        raise ValueError("cannot price step pricer1 on ['x']")
+
+    monkeypatch.setattr(haiku, "cli_version", lambda: "2.1.291")
+    monkeypatch.setattr(mix, "run", boom)
+    assert mix.main(["--data", str(data), "--systems", "mix_opus_low", "--confirm-claude"]) == 3
+    assert "Not retried: fix pricing before rerunning." in capsys.readouterr().out
+
+
+def test_the_final_test_runs_only_on_the_fresh_sets(tmp_path, monkeypatch):
+    monkeypatch.setattr(mix, "FINAL", ("mix_opus_low",))
+    with pytest.raises(mix.Refused, match="fresh sets"):
+        mix.refuse(tmp_path / "cal-r2", ["mix_opus_low"], "test", True)
+    mix.refuse(tmp_path / "mix-test-r2u", ["mix_opus_low"], "test", True)
 
 
 def test_the_runner_refuses_an_old_cli(data, tmp_path, monkeypatch):

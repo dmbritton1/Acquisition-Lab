@@ -18,8 +18,9 @@ from upside_pilot import load
 
 ROOT = Path(__file__).resolve().parents[1] / "data"
 BASELINES = ("s1b", "s4")
-CHEAP = ("mix_haiku_solo", "mix_h_haiku3", "mix_h_sonnet3", "mix_h_opus1", "mix_sonnet_solo")
+CHEAP = ("mix_haiku_solo", "mix_h_haiku3", "mix_h_sonnet3", "mix_h_opus1", "mix_sonnet_solo", "mix_opus_low")
 STRONG = ("s1b", "s4", "mix_opus_low", "mix_sonnet_solo")
+REJECTED: tuple[str, ...] = ()  # tuning variants the keep rule rejected (spec §2); shown, never picked
 
 
 def rows(root: Path, name: str) -> dict[str, dict]:
@@ -40,7 +41,8 @@ def teasers(root: Path) -> dict[str, str]:
 
 def plain(rs: dict[str, dict]) -> dict[str, dict]:
     return {k: {"go": r["go"], "correct": r["correct"], "regret": r["regret"], "case_type": r["case_type"],
-                "cost": mix.row_cost(r) or 0.0, "escalated": False} for k, r in rs.items()}
+                "cost": mix.row_cost(r) or 0.0, "escalated": False, "answered": r["answered"],
+                "timeouts": r.get("timeouts", 0), "models": mix.models_in(r)} for k, r in rs.items()}
 
 
 def summary(results: dict[str, dict], total: int) -> dict:
@@ -53,6 +55,8 @@ def summary(results: dict[str, dict], total: int) -> dict:
             "false_nogo": sum(not x["go"] and not x["correct"] for x in v),
             "relief_false_nogo": sum(not x["go"] and not x["correct"] for x in v if x["case_type"] == "relief"),
             "confirmed_false_go": sum(x["go"] and not x["correct"] for x in v if x["case_type"] == "confirmed"),
+            "no_answer": sum(not x["answered"] for x in v), "timeouts": sum(x["timeouts"] for x in v),
+            "models": sorted({m for x in v for m in x["models"]}),
             "cost": float(np.mean([x["cost"] for x in v])), "escalated": float(np.mean([x["escalated"] for x in v]))}
 
 
@@ -73,22 +77,25 @@ def scorecard(root: Path) -> dict[str, dict]:
 
 
 def picks(card: dict[str, dict]) -> list[str]:
-    """Spec §1's frontier rule over the candidates and cascades scored on every practice deal (not the baselines, and
-    not a partial cascade, which would be compared on easier, fewer deals)."""
+    """Spec §1's frontier rule over the candidates and cascades scored on every practice deal (not the baselines, a
+    rejected variant or a partial cascade, which would be compared on easier, fewer deals)."""
     points = {n: (c["regret"], c["cost"]) for n, c in card.items()
-              if n not in BASELINES and c["n"] and not c["partial"]}
+              if n not in BASELINES and n not in REJECTED and c["n"] and not c["partial"]}
     return mix.frontier(points, card["s1b"]["cost"], card["s4"]["cost"])
 
 
 def table(card: dict[str, dict], chosen: list[str]) -> str:
     lines = [f"{'system':58s} {'n':>3s} {'regret':>7s} {'right':>6s} {'fGO':>4s} {'fNOGO':>5s} {'$/deal':>7s} "
-             f"{'up':>5s}"]
+             f"{'up':>5s} {'rNOGO':>5s} {'cfGO':>4s} {'noans':>5s} {'t/o':>3s}  models"]
     for n, c in sorted(card.items(), key=lambda kv: (kv[1].get("cost", 0), kv[0])):
         if not c["n"]:
             continue
         mark = (" *" if n in chosen else "") + (" (partial)" if c["partial"] else "")
         lines.append(f"{n:58s} {c['n']:3d} {c['regret']:7.4f} {c['correct']:6.1%} {c['false_go']:4d} "
-                     f"{c['false_nogo']:5d} {c['cost']:7.4f} {c['escalated']:5.0%}{mark}")
+                     f"{c['false_nogo']:5d} {c['cost']:7.4f} {c['escalated']:5.0%} "
+                     f"{c['relief_false_nogo']:5d} {c['confirmed_false_go']:4d} {c['no_answer']:5d} "
+                     f"{c['timeouts']:3d}  "
+                     f"{','.join(m.removeprefix('claude-').removesuffix('-5-5') for m in c['models'])}{mark}")
     lines.append(f"frontier picks (*): {chosen}")
     return "\n".join(lines)
 

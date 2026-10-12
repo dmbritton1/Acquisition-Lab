@@ -9,7 +9,8 @@ deal to a strong one on a public signal. The frozen code runs unchanged: each st
 Runs go to <data>/runs/<system>/<deal>.json, the trace beside it (each step's own trace too); finished runs are
 skipped. Each row records every step's models and tokens ("steps"), so a mixed run is priced step by step. Exit codes:
 0 done; 1 an unknown system; 2 Claude stopped (rerun later to resume); 3 refused (no --confirm-claude, an old CLI, a
-fresh test set before the freeze, or a system the final test does not run)."""
+fresh test set before the freeze, or a system the final test does not run) or stopped on a step it cannot price. Retry
+loops retry only on exit 2."""
 import argparse
 import hashlib
 import json
@@ -77,9 +78,10 @@ def row_cost(row: dict) -> float | None:
 
 
 def usage(name: str, cli: dict | None) -> dict:
-    """One step's models and tokens, as each row records them."""
+    """One step's models, tokens and raw per-model usage (so a row that cannot be priced now can be later)."""
     return {"step": name, "models": sorted((cli or {}).get("modelUsage", {})),
-            "tokens": {k: int((cli or {}).get("usage", {}).get(k, 0)) for k in USAGE}}
+            "tokens": {k: int((cli or {}).get("usage", {}).get(k, 0)) for k in USAGE},
+            "model_usage": (cli or {}).get("modelUsage", {})}
 
 
 # --- the systems ---------------------------------------------------------------------------------------------------
@@ -168,13 +170,19 @@ def fires(signal: str, row: dict, teaser: str) -> bool:
     return False
 
 
+def models_in(row: dict) -> list[str]:
+    """Every model a row ran on: its own list plus each step's."""
+    return sorted({*row["models"], *(m for s in row.get("steps", []) for m in s["models"])})
+
+
 def cascade(cheap: dict, strong: dict, signal: str, teaser: str) -> dict:
     """The cascade's result on one deal: the strong run's call when the signal fires, else the cheap run's; cost is
     the cheap run's plus the strong run's on escalated deals only."""
     up = fires(signal, cheap, teaser)
     used = strong if up else cheap
     return {"go": used["go"], "correct": used["correct"], "regret": used["regret"], "case_type": cheap["case_type"],
-            "cost": (row_cost(cheap) or 0.0) + ((row_cost(strong) or 0.0) if up else 0.0), "escalated": up}
+            "cost": (row_cost(cheap) or 0.0) + ((row_cost(strong) or 0.0) if up else 0.0), "escalated": up,
+            "answered": used["answered"], "timeouts": used.get("timeouts", 0), "models": models_in(used)}
 
 
 SIGNALS = ("pass", "split", "close:0.02", "close:0.05", "close:0.10", "flag", "split|close:0.05", "flag|close:0.05")
@@ -195,7 +203,7 @@ def frontier(points: dict[str, tuple[float, float]], s1b_cost: float, s4_cost: f
     system before a cascade, then by name."""
     first = {}
     for n in sorted(points, key=lambda n: (parse(n) is not None, n)):
-        first.setdefault(points[n], n)
+        first.setdefault((round(points[n][0], 12), round(points[n][1], 12)), n)
     points = {n: points[n] for n in first.values()}
     front = [n for n, (r, c) in points.items()
              if not any((r2 <= r and c2 <= c) and (r2 < r or c2 < c) for m, (r2, c2) in points.items() if m != n)]
@@ -220,6 +228,8 @@ def refuse(data: Path, systems: list[str], split: str, final: bool) -> None:
     if (data.resolve().name in TEST_SETS or split == "test") and not final:
         raise Refused(f"{data.name} ({split}) is held out for the final test; practice never runs on it")
     if final:
+        if data.resolve().name not in TEST_SETS:
+            raise Refused(f"the final test runs only on the fresh sets {list(TEST_SETS)}, not {data.name}")
         if split != "test":
             raise Refused(f"the final test runs on the test split, not {split}")
         if not FINAL:
@@ -296,6 +306,9 @@ def main(argv: list[str] | None = None) -> int:
     except LLMUnavailable as e:
         print(f"Claude stopped: {e}. Rerun to resume.")
         return 2
+    except ValueError as e:  # a step row_cost cannot price: stop the spend; retry loops retry only on exit 2
+        print(f"Stopped: {e}. Not retried: fix pricing before rerunning.")
+        return 3
     return 0
 
 

@@ -9,7 +9,8 @@ freeze; `acqlab/bench/mix.py` refuses them.
 **Rules:** round 0 runs the four building blocks (`mix_sonnet_solo`, `mix_opus_low`, `mix_h_opus1`,
 `mix_h_sonnet3`) and `s1b` on `practice-r2u`; cascades are scored from the rows. At most 3 more rounds, one change each,
 kept only if `scripts/mix_practice.py --keep <new> --over <parent>` says True. Cap: $50 for the practice phase, under
-one OK from the user.
+one OK from the user. A rejected variant is added to `REJECTED` in `scripts/mix_practice.py` (shown, never
+picked); a kept pipeline variant is added to `CHEAP`.
 
 ## Round 0
 
