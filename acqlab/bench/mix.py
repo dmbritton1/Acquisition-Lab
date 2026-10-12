@@ -60,10 +60,19 @@ def price(models: list[str], tokens: dict) -> float | None:
 
 
 def row_cost(row: dict) -> float | None:
-    """A run's cost: step by step when the row records its steps (a step that gave no CLI result costs nothing
-    known), else from its summed tokens (a single-model run, such as s1b or s4)."""
+    """A run's cost: step by step when the row records its steps, else from its summed tokens (a single-model run,
+    such as s1b or s4). A step with no models (a timeout, no CLI result) costs 0.0, nothing known; a step that ran on
+    models it cannot price alone (two or more, or one not in PRICES) raises ValueError rather than under-price."""
     if "steps" in row:
-        return sum(price(s["models"], s["tokens"]) or 0.0 for s in row["steps"])
+        total = 0.0
+        for s in row["steps"]:
+            if not s["models"]:
+                continue
+            c = price(s["models"], s["tokens"])
+            if c is None:
+                raise ValueError(f"cannot price step {s['step']} on {s['models']}")
+            total += c
+        return total
     return price(row["models"], row["tokens"])
 
 

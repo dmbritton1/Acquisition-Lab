@@ -92,6 +92,15 @@ def test_row_cost_prices_single_model_rows_from_their_summed_tokens():
     assert mix.row_cost({"models": [], "tokens": tokens}) is None
 
 
+def test_row_cost_raises_on_a_step_it_cannot_price_and_costs_a_timeout_step_nothing():
+    tokens = {"input_tokens": 1_000_000, "output_tokens": 0, "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0}
+    mixed = {"step": "pricer1", "models": ["claude-haiku-5-5", "claude-opus-5-5"], "tokens": tokens}
+    with pytest.raises(ValueError):
+        mix.row_cost({"steps": [mixed]})
+    assert mix.row_cost({"steps": [{"step": "solo", "models": [], "tokens": tokens}]}) == 0.0
+
+
 # --- cascades ------------------------------------------------------------------------------------------------------
 
 def _run(go=True, wa=1000.0, answered=True, calls=None, correct=True, regret=0.0, cost_tokens=1_000_000):
