@@ -7,22 +7,17 @@ specs are the binding authority on design; this file is the source of truth for 
 
 A new session (possibly on the user's other Claude account) continues from this point.
 
-- **Current track: mixing Opus, Sonnet and Haiku** (spec
-  `docs/superpowers/specs/2026-10-11-mixed-models-design.md`, plan `docs/superpowers/plans/2026-10-11-mixed-models.md`).
-  Built: `acqlab/bench/mix.py`, `scripts/mix_practice.py`, `scripts/mix_final.py`; fresh held-out deals in
-  `data/mix-test-r2` (80) and `data/mix-test-r2u` (20). After the practice phase
-  (below): freeze up to 4 frontier mixes (`mix.FINAL`, fingerprint test, `docs/results/mix-prereg.md`), then the final test
-  after another OK (about $110).
+- **Done: mixing Opus, Sonnet and Haiku** (spec `docs/superpowers/specs/2026-10-11-mixed-models-design.md`). Final
+  result in `docs/results/mix.md` (numbers in `mix.json`, run once 2026-10-14). On 100 fresh deals, the Haiku team
+  with single Opus on risky or close calls showed no clear difference from single Opus (at most 0.0016 worse) at 30%
+  less cost; a Haiku reader + Opus pricer with low-effort Opus on close calls showed no clear difference from the Opus
+  team (at most 0.0097 worse) at 28% of its cost. Spend: practice $56.70, final $98.00 (list prices).
 - **Done: the Haiku team** (spec `docs/superpowers/specs/2026-10-10-haiku-team-design.md`). Final result in
   `docs/results/haiku-team.md` (numbers in `haiku-team.json`, run once 2026-10-12): the frozen winner
   `haiku_lean_zero_w0` shows no clear difference from single Opus on 200 held-out deals (at most 0.0092 worse) at a
   fifth of the cost, is worse on the 40 `r2u` deals alone, is worse than the Opus team, and adds nothing over single
   Haiku (same regret, a third of the cost).
-- **Mixed-models practice phase under way** (the user's OK on 2026-10-11 for $66: the $50 cap plus $16 for `s4` on
-  `practice-r2u`). The user launches paid runs from their own terminal (the auto-mode classifier blocks Claude from
-  starting them); logs and the exit-2-only retry script are in `data/mix-logs/`. Next: `scripts/mix_practice.py`,
-  log round 0 in `docs/results/mix-tuning-log.md`.
-- **After that:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
+- **Next:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
   2026-09-26 (at `4896dbb`): its worktree `plan-4b-calibration-round-1-5f0549` was detached by something else, so
