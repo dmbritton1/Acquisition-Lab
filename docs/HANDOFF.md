@@ -17,6 +17,11 @@ A new session (possibly on the user's other Claude account) continues from this 
   `haiku_lean_zero_w0` shows no clear difference from single Opus on 200 held-out deals (at most 0.0092 worse) at a
   fifth of the cost, is worse on the 40 `r2u` deals alone, is worse than the Opus team, and adds nothing over single
   Haiku (same regret, a third of the cost).
+- **In progress: confirming the mix test's two leads** (pre-registration `docs/results/mix-confirm-prereg.md`,
+  2026-10-14). Lead 1, the Haiku reader + one Opus pricer alone (`mix_h_opus1`), runs on the 200 held-out deals that
+  already hold `s1b` and `s4` (`data/test-r2`, `data/pilot-r2u`; about $26); lead 2, the Haiku team alone, needs no
+  new runs. When both runs finish: `.venv/bin/python scripts/mix_confirm.py --out docs/results/mix-confirm.json`,
+  once, then write `docs/results/mix-confirm.md`.
 - **Next:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on

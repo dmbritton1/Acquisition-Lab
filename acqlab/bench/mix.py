@@ -5,6 +5,7 @@ deal to a strong one on a public signal. The frozen code runs unchanged: each st
 
     uv run python -m acqlab.bench.mix --data data/cal-r2 --systems mix_sonnet_solo,mix_opus_low --confirm-claude
     uv run python -m acqlab.bench.mix --data data/mix-test-r2 --split test --final --systems mix_opus_low --confirm-claude
+    uv run python -m acqlab.bench.mix --data data/test-r2 --split test --final --systems mix_h_opus1 --confirm-claude
 
 Runs go to <data>/runs/<system>/<deal>.json, the trace beside it (each step's own trace too); finished runs are
 skipped. Each row records every step's models and tokens ("steps"), so a mixed run is priced step by step. Exit codes:
@@ -30,6 +31,10 @@ TEST_SETS = ("mix-test-r2", "mix-test-r2u")  # spec §1: fresh deals, held out u
 # the frozen mixes and cascades (spec §1 picks; docs/results/mix-prereg.md)
 FINAL: tuple[str, ...] = ("cascade:mix_h_haiku3>s1b@flag|close:0.05", "cascade:mix_h_opus1>mix_opus_low@close:0.02",
                           "mix_haiku_solo", "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02")
+# the confirmation test of the final test's lead (docs/results/mix-confirm-prereg.md): the held-out sets that already
+# hold the frozen s1b and s4 runs, and the one system it adds to them
+CONFIRM_SETS = ("test-r2", "pilot-r2u")
+CONFIRM = ("mix_h_opus1",)
 # $ per million tokens at list prices (spec §1); cache writes at the 1-hour rate, the cache the CLI writes
 PRICES = haiku.PRICES | {SONNET: {"input_tokens": 2.0, "output_tokens": 10.0, "cache_read_input_tokens": 0.20,
                                   "cache_creation_input_tokens": 4.0}}
@@ -226,14 +231,19 @@ def frontier(points: dict[str, tuple[float, float]], s1b_cost: float, s4_cost: f
 
 def refuse(data: Path, systems: list[str], split: str, final: bool) -> None:
     """Spec §1: the fresh sets run only in the final test, and the final test runs only frozen mixes' parts and the
-    single-Haiku reference."""
+    single-Haiku reference; the confirmation sets run only the confirmation test's system."""
     if (data.resolve().name in TEST_SETS or split == "test") and not final:
         raise Refused(f"{data.name} ({split}) is held out for the final test; practice never runs on it")
     if final:
-        if data.resolve().name not in TEST_SETS:
-            raise Refused(f"the final test runs only on the fresh sets {list(TEST_SETS)}, not {data.name}")
         if split != "test":
             raise Refused(f"the final test runs on the test split, not {split}")
+        if data.resolve().name in CONFIRM_SETS:
+            if bad := [s for s in systems if s not in CONFIRM]:
+                raise Refused(f"the confirmation test runs only {list(CONFIRM)}, not {bad}")
+            return
+        if data.resolve().name not in TEST_SETS:
+            raise Refused(f"the final test runs only on the fresh sets {list(TEST_SETS)} or the confirmation sets "
+                          f"{list(CONFIRM_SETS)}, not {data.name}")
         if not FINAL:
             raise Refused("no frozen mixes yet: mix.FINAL is set at the freeze")
         parts = {"mix_haiku_solo"} | {p for n in FINAL for p in (parse(n)[:2] if parse(n) else (n,))}
@@ -280,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--systems", required=True)
     ap.add_argument("--split", default="dev")
     ap.add_argument("--deals", default="", help="comma-separated deal ids (default: the whole split)")
-    ap.add_argument("--final", action="store_true", help="the final test on a fresh set (after the freeze)")
+    ap.add_argument("--final", action="store_true", help="the final test on a fresh set (after the freeze), or the confirmation test")
     ap.add_argument("--confirm-claude", action="store_true", help="required: this spends real Claude usage")
     args = ap.parse_args(argv)
     systems = [s for s in args.systems.split(",") if s]

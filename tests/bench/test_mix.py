@@ -216,6 +216,21 @@ def test_the_final_test_runs_only_on_the_fresh_sets(tmp_path, monkeypatch):
     mix.refuse(tmp_path / "mix-test-r2u", ["mix_opus_low"], "test", True)
 
 
+def test_the_confirmation_test_adds_only_its_system_to_the_held_out_sets(tmp_path):
+    """docs/results/mix-confirm-prereg.md: mix_h_opus1 alone, on the test split of the two sets holding s1b and s4."""
+    assert (mix.CONFIRM_SETS, mix.CONFIRM) == (("test-r2", "pilot-r2u"), ("mix_h_opus1",))
+    for name in mix.CONFIRM_SETS:
+        mix.refuse(tmp_path / name, ["mix_h_opus1"], "test", True)
+        with pytest.raises(mix.Refused, match="held out"):
+            mix.refuse(tmp_path / name, ["mix_h_opus1"], "test", False)
+        with pytest.raises(mix.Refused, match="test split"):
+            mix.refuse(tmp_path / name, ["mix_h_opus1"], "dev", True)
+        with pytest.raises(mix.Refused, match="only \\['mix_h_opus1'\\], not \\['mix_opus_low'\\]"):
+            mix.refuse(tmp_path / name, ["mix_h_opus1", "mix_opus_low"], "test", True)
+    assert mix.main(["--data", str(tmp_path / "test-r2"), "--systems", "mix_h_haiku3", "--split", "test", "--final",
+                     "--confirm-claude"]) == 3
+
+
 def test_the_runner_refuses_an_old_cli(data, tmp_path, monkeypatch):
     monkeypatch.setattr(haiku, "cli_version", lambda: "2.1.280")
     assert mix.main(["--data", str(data), "--systems", "mix_opus_low", "--confirm-claude"]) == 3
