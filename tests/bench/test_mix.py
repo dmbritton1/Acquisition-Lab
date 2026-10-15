@@ -216,17 +216,20 @@ def test_the_final_test_runs_only_on_the_fresh_sets(tmp_path, monkeypatch):
     mix.refuse(tmp_path / "mix-test-r2u", ["mix_opus_low"], "test", True)
 
 
-def test_the_confirmation_test_adds_only_its_system_to_the_held_out_sets(tmp_path):
-    """docs/results/mix-confirm-prereg.md: mix_h_opus1 alone, on the test split of the two sets holding s1b and s4."""
-    assert (mix.CONFIRM_SETS, mix.CONFIRM) == (("test-r2", "pilot-r2u"), ("mix_h_opus1",))
+def test_the_held_out_sets_take_only_the_systems_added_to_them(tmp_path):
+    """docs/results/mix-confirm-prereg.md and mix-benchmark-prereg.md: mix_h_opus1, mix_opus_low and mix_sonnet_solo
+    only, on the test split of the two sets holding s1b and s4."""
+    assert (mix.CONFIRM_SETS, mix.CONFIRM) == (("test-r2", "pilot-r2u"),
+                                               ("mix_h_opus1", "mix_opus_low", "mix_sonnet_solo"))
     for name in mix.CONFIRM_SETS:
         mix.refuse(tmp_path / name, ["mix_h_opus1"], "test", True)
         with pytest.raises(mix.Refused, match="held out"):
             mix.refuse(tmp_path / name, ["mix_h_opus1"], "test", False)
         with pytest.raises(mix.Refused, match="test split"):
             mix.refuse(tmp_path / name, ["mix_h_opus1"], "dev", True)
-        with pytest.raises(mix.Refused, match="only \\['mix_h_opus1'\\], not \\['mix_opus_low'\\]"):
-            mix.refuse(tmp_path / name, ["mix_h_opus1", "mix_opus_low"], "test", True)
+        mix.refuse(tmp_path / name, ["mix_opus_low", "mix_sonnet_solo"], "test", True)
+        with pytest.raises(mix.Refused, match="not \\['mix_haiku_solo'\\]"):
+            mix.refuse(tmp_path / name, ["mix_h_opus1", "mix_haiku_solo"], "test", True)
     assert mix.main(["--data", str(tmp_path / "test-r2"), "--systems", "mix_h_haiku3", "--split", "test", "--final",
                      "--confirm-claude"]) == 3
 

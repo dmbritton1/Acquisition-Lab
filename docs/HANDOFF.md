@@ -22,6 +22,10 @@ A new session (possibly on the user's other Claude account) continues from this 
   worse, a quarter of the cost) but was worse on the 160 `r2` deals and no better than single Opus at the same cost;
   the Haiku team alone shows no clear difference from single Opus on 300 deals (at most 0.0062 worse) at a fifth of
   the cost. Both leads looked better on the 100 fresh deals than they are.
+- **In progress: the full benchmark on 300 deals** (pre-registration `docs/results/mix-benchmark-prereg.md`,
+  2026-10-15): `mix_sonnet_solo` and `mix_opus_low` run on `data/test-r2` and `data/pilot-r2u` (about $30); then
+  `.venv/bin/python scripts/mix_benchmark.py --out docs/results/mix-benchmark.json`, once, and write
+  `docs/results/mix-benchmark.md`.
 - **Next:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on

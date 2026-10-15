@@ -31,10 +31,11 @@ TEST_SETS = ("mix-test-r2", "mix-test-r2u")  # spec §1: fresh deals, held out u
 # the frozen mixes and cascades (spec §1 picks; docs/results/mix-prereg.md)
 FINAL: tuple[str, ...] = ("cascade:mix_h_haiku3>s1b@flag|close:0.05", "cascade:mix_h_opus1>mix_opus_low@close:0.02",
                           "mix_haiku_solo", "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02")
-# the confirmation test of the final test's lead (docs/results/mix-confirm-prereg.md): the held-out sets that already
-# hold the frozen s1b and s4 runs, and the one system it adds to them
+# the held-out sets that already hold the frozen s1b and s4 runs, and the systems added to them: the confirmation
+# test's lead (docs/results/mix-confirm-prereg.md), then the two parts the full benchmark still lacked
+# (docs/results/mix-benchmark-prereg.md)
 CONFIRM_SETS = ("test-r2", "pilot-r2u")
-CONFIRM = ("mix_h_opus1",)
+CONFIRM = ("mix_h_opus1", "mix_opus_low", "mix_sonnet_solo")
 # $ per million tokens at list prices (spec §1); cache writes at the 1-hour rate, the cache the CLI writes
 PRICES = haiku.PRICES | {SONNET: {"input_tokens": 2.0, "output_tokens": 10.0, "cache_read_input_tokens": 0.20,
                                   "cache_creation_input_tokens": 4.0}}
