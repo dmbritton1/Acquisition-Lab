@@ -65,6 +65,7 @@ a little worse on these deals than on practice, which helped the mixes' comparis
 ## Observations outside the pre-registered comparisons
 
 These come from the mixes' parts, run on the same deals; they were not frozen as mixes, so treat them as leads.
+Both were tested afterwards (`docs/results/mix-confirm.md`): each looked better here than it is.
 - **The Haiku reader + one Opus pricer, on its own,** scored 0.0096 at $0.128: level with the Opus team (0.0092) at a
   quarter of its cost. Handing its close calls to low-effort Opus (mix 2) made it worse on the 80 `r2` deals, because
   low-effort Opus makes many false GOs (20 of 100).
