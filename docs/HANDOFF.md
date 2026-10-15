@@ -17,7 +17,7 @@ A new session (possibly on the user's other Claude account) continues from this 
   `haiku_lean_zero_w0` shows no clear difference from single Opus on 200 held-out deals (at most 0.0092 worse) at a
   fifth of the cost, is worse on the 40 `r2u` deals alone, is worse than the Opus team, and adds nothing over single
   Haiku (same regret, a third of the cost).
-- **Done: the mix test's two leads** (`docs/results/mix-confirm.md`, run once 2026-10-15, $25.52). The Haiku reader +
+- **Done: the mix test's two leads** (`docs/results/mix-confirm.md`, run once 2026-10-15, $25.53). The Haiku reader +
   one Opus pricer alone passed the pre-registered rule against the Opus team on 200 held-out deals (at most 0.0091
   worse, a quarter of the cost) but was worse on the 160 `r2` deals and no better than single Opus at the same cost;
   the Haiku team alone shows no clear difference from single Opus on 300 deals (at most 0.0062 worse) at a fifth of

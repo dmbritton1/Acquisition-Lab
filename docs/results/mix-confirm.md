@@ -64,4 +64,4 @@ for the lowest cost, the Haiku team or single Haiku alone.
 - **One run per deal.** The run paused for a session limit and a short network outage; finished deals were kept, and
   every deal has one complete run.
 
-**Spend:** $25.52 at list prices (200 runs of `mix_h_opus1`).
+**Spend:** $25.53 at list prices (200 runs of `mix_h_opus1`).
