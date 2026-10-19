@@ -25,8 +25,15 @@ A new session (possibly on the user's other Claude account) continues from this 
 - **Done: the full benchmark on 300 deals** (`docs/results/mix-benchmark.md`, run once 2026-10-15, $29.98): every
   system and mix on the same 300 deals. The Opus team is the most accurate (0.0096); mix 1 matches single Opus most
   tightly (at most 0.0021 worse) at 69% of its cost but is the slowest; single Opus is the fast choice; the Haiku
-  systems are the cheapest and lean NO-GO. Use this table for Plan 7's slides.
-- **Next:** Plan 7 (the demo and slides), then stage 2 of the hidden-upside track.
+  systems are the cheapest and lean NO-GO.
+- **Plan 7 changed (user, 2026-10-18): no competition demo or slides, and the headline no longer has to beat single
+  Opus.** The goal is a product for PE analysts. Spec: `docs/superpowers/specs/2026-10-19-analyst-board-design.md`, the
+  analyst board. It is a local app for the first screen of a deal: Haiku reads the teaser and CIM and quotes the
+  numbers, code checks each quote (anything unchecked stays blank), Opus prices the worries, and the board shows the
+  call, flip sizes, pairs and an ask-the-seller list with live drags. The spec awaits the user's review; next is the
+  implementation plan (superpowers:writing-plans). The spec and this note were committed on branch
+  `claude/plan-7-demo-slides-b03003` (worktree `pensive-jang-8b3fd7`), one commit ahead of the plan-4b branch.
+- **Next:** the analyst board's plan, then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
   2026-09-26 (at `4896dbb`): its worktree `plan-4b-calibration-round-1-5f0549` was detached by something else, so
