@@ -7,7 +7,9 @@ import math
 import re
 import sys
 import tempfile
+import threading
 import traceback
+from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -28,6 +30,33 @@ STEPS = ("read", "price", "second")
 
 class NotFound(Exception):
     """An unknown deal, step or path."""
+
+
+class Refused(Exception):
+    """A request turned away with this status: a foreign page (403), a non-JSON POST (415) or a busy deal (409)."""
+
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
+LOCKS: dict[str, threading.Lock] = {}  # one per deal, made on first use
+LOCKS_GUARD = threading.Lock()
+SETTINGS_LOCK = threading.Lock()
+
+
+@contextmanager
+def _busy(deal: Path):
+    """Hold this deal's lock for a mutating request, or refuse with 409 at once if another one has it (so a double
+    click never bills a step twice and two writes never lose each other's update)."""
+    with LOCKS_GUARD:
+        lock = LOCKS.setdefault(deal.name, threading.Lock())
+    if not lock.acquire(blocking=False):
+        raise Refused(409, "a step is running for this deal; try again when it finishes")
+    try:
+        yield
+    finally:
+        lock.release()
 
 
 def _float(text: str) -> float:
@@ -58,13 +87,14 @@ def _upload(tmp: Path, key: str, f) -> Path:
     """Save one {"filename", "base64"} upload into tmp and return its path."""
     f = _obj(f, key)
     name, data = f.get("filename"), f.get("base64")
-    if not (isinstance(name, str) and name.lower().endswith(EXTENSIONS)):
+    suffix = Path(name).suffix.lower() if isinstance(name, str) else ""  # ".pdf" alone has no suffix
+    if suffix not in EXTENSIONS:
         raise ValueError(f"{key}: the file must be a .pdf, .md or .txt")
     try:
         raw = base64.b64decode(data, validate=True)
     except (binascii.Error, TypeError, ValueError) as e:
         raise ValueError(f"{key}: the file is not valid base64") from e
-    path = tmp / (key + Path(name).suffix.lower())
+    path = tmp / (key + suffix)
     path.write_bytes(raw)
     return path
 
@@ -90,12 +120,26 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _guard(self, method: str):
+        """Refuse a request from another web page: a Host that is not this server's (DNS rebinding), or a POST that
+        is not JSON (a cross-origin page can only send other types without a preflight, which is never answered)."""
+        port = self.server.server_address[1]
+        if self.headers.get("Host") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
+            raise Refused(403, "wrong Host header")
+        if method == "POST" and self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
+            raise Refused(415, "POST bodies must be application/json")
+
     def _serve(self, method: str):
+        ctype = "application/json"
         try:
+            self._guard(method)
             parts = [unquote(p) for p in urlsplit(self.path).path.strip("/").split("/")]
             if method == "GET" and parts == [""]:
-                return self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
-            status, out = 200, self._route(method, parts)
+                status, out, ctype = 200, PAGE.read_bytes(), "text/html; charset=utf-8"
+            else:
+                status, out = 200, self._route(method, parts)
+        except Refused as e:
+            status, out = e.status, {"error": str(e)}
         except NotFound:
             status, out = 404, {"error": "not found"}
         except (ValueError, Incomplete, Unreadable) as e:
@@ -105,7 +149,15 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             traceback.print_exc(file=sys.stderr)
             status, out = 500, {"error": "internal error"}
-        self._send(status, json.dumps(out).encode(), "application/json")
+        try:
+            body = out if isinstance(out, bytes) else json.dumps(out, allow_nan=False).encode()
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            status, ctype, body = 500, "application/json", b'{"error": "internal error"}'
+        try:
+            self._send(status, body, ctype)
+        except OSError:  # the page went away
+            pass
 
     def _body(self) -> dict:
         """The request body as a JSON object; no NaN, no infinities, whole numbers read as floats."""
@@ -135,20 +187,28 @@ class Handler(BaseHTTPRequestHandler):
             case "GET", ["deals", id_, "estimate", step] if step in STEPS:
                 return {"dollars": steps.estimate(self._deal(id_), step)}
             case "POST", ["deals", id_, "run", step] if step in STEPS:
-                return self._run(self._deal(id_), step)
+                return self._locked(self._run, id_, step)
             case "POST", ["deals", id_, "numbers"]:
-                return self._numbers(self._deal(id_))
+                return self._locked(self._numbers, id_)
             case "POST", ["deals", id_, "board"]:
-                return self._board(self._deal(id_))
+                return self._locked(self._board, id_)
         raise NotFound
+
+    def _locked(self, fn, id_: str, *args):
+        """Run a mutating deal route under the deal's lock."""
+        deal = self._deal(id_)
+        with _busy(deal):
+            return fn(deal, *args)
 
     def _settings(self) -> dict:
         """Validate the sections given, merge them over the saved ones, save."""
-        body, saved = self._body(), load(self.home / "settings.json", {})
-        for group, cls in (("financing", Financing), ("policy", Policy)):
-            if group in body:
-                saved[group] = cls(**_obj(body[group], group)).model_dump()
-        write(self.home / "settings.json", saved)
+        body = self._body()
+        with SETTINGS_LOCK:
+            saved = load(self.home / "settings.json", {})
+            for group, cls in (("financing", Financing), ("policy", Policy)):
+                if group in body:
+                    saved[group] = cls(**_obj(body[group], group)).model_dump()
+            write(self.home / "settings.json", saved)
         return saved
 
     def _create(self) -> dict:

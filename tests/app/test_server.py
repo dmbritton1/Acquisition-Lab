@@ -3,6 +3,7 @@ import base64
 import json
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -30,7 +31,7 @@ def full_settings():
 @pytest.fixture
 def srv(tmp_path, monkeypatch):
     """A running server on a temp home with the fake claude: (base url, home)."""
-    monkeypatch.setattr(solver, "ENV_KEEP", solver.ENV_KEEP + ("FAKE_CLAUDE", "FAKE_ARGS", "FAKE_ANSWERS"))
+    monkeypatch.setattr(solver, "ENV_KEEP", solver.ENV_KEEP + ("FAKE_CLAUDE", "FAKE_ARGS", "FAKE_ANSWERS", "FAKE_SLEEP"))
     answers = tmp_path / "answers"
     answers.mkdir()
     (answers / "reader.txt").write_text('{"name": "Cedar Co", "industry": "tools", "numbers": {}, "worries": []}')
@@ -47,11 +48,14 @@ def srv(tmp_path, monkeypatch):
     server.server_close()
 
 
-def call(base, path, body=None, raw=None):
-    """(status, parsed JSON or raw bytes, content type). A body (or raw bytes) makes it a POST."""
+def call(base, path, body=None, raw=None, headers=None):
+    """(status, parsed JSON or raw bytes, content type). A body (or raw bytes) makes it a POST, sent as JSON like the
+    page does."""
     data = raw if raw is not None else (None if body is None else json.dumps(body).encode())
+    head = {"Content-Type": "application/json"} | (headers or {})
     try:
-        r = urllib.request.urlopen(urllib.request.Request(base + path, data=data, method="GET" if data is None else "POST"))
+        r = urllib.request.urlopen(urllib.request.Request(base + path, data=data, headers=head,
+                                                          method="GET" if data is None else "POST"))
     except urllib.error.HTTPError as e:
         r = e
     ctype, out = r.headers.get("Content-Type", ""), r.read()
@@ -108,6 +112,8 @@ def test_a_bad_price_or_unknown_deal_is_a_clear_error(srv):
     assert call(base, "/api/nothing")[0] == 404
     bad = {"name": "A", "price": 5, "teaser": {"filename": "t.exe", "base64": b64("x")},
            "cim": {"filename": "c.md", "base64": b64("x" * 40)}}
+    assert call(base, "/api/deals", bad)[0] == 400
+    bad["teaser"] = {"filename": ".pdf", "base64": b64("x")}  # an extension with no name before it
     assert call(base, "/api/deals", bad)[0] == 400
     bad["teaser"] = {"filename": "t.md", "base64": "!!!"}
     assert call(base, "/api/deals", bad)[0] == 400
@@ -206,3 +212,42 @@ def test_a_failed_claude_call_says_try_again(srv, monkeypatch):
     monkeypatch.setenv("FAKE_CLAUDE", "limit")
     status, body, _ = call(base, "/api/deals/cedar/run/read", {})
     assert status == 502 and body["error"].startswith("failed, try again")
+
+
+def test_another_web_page_cannot_use_the_api(srv):
+    base, home = srv
+    new_deal(base)
+    status, body, _ = call(base, "/api/deals", headers={"Host": "evil.example:80"})
+    assert status == 403 and "error" in body
+    assert call(base, "/api/deals", headers={"Host": "127.0.0.1:1"})[0] == 403  # right name, wrong port
+    assert call(base, "/api/deals", headers={"Host": base.replace("127.0.0.1", "localhost")[7:]})[0] == 200
+    before = (home / "deals" / "cedar" / "numbers.json").exists()
+    # a cross-origin page can send text/plain without a preflight: refused, and nothing ran
+    for ctype in ("text/plain", "application/x-www-form-urlencoded", "text/plain;application/json"):
+        status, body, _ = call(base, "/api/deals/cedar/run/read", raw=b"{}", headers={"Content-Type": ctype})
+        assert status == 415 and "error" in body, ctype
+    assert call(base, "/api/settings", raw=b"{}", headers={"Content-Type": "application/json; charset=utf-8"})[0] == 200
+    assert (home / "deals" / "cedar" / "numbers.json").exists() == before
+
+
+def test_a_second_write_to_a_busy_deal_is_refused(srv, monkeypatch):
+    base, home = srv
+    new_deal(base)
+    new_deal(base, name="Birch")
+    monkeypatch.setenv("FAKE_CLAUDE", "sleep")
+    monkeypatch.setenv("FAKE_SLEEP", "3")
+    first = {}
+    t = threading.Thread(target=lambda: first.update(r=call(base, "/api/deals/cedar/run/read", {})))
+    t.start()
+    for _ in range(100):  # the fake writes its args file as soon as it starts
+        if (home.parent / "args.json").exists():
+            break
+        time.sleep(0.1)
+    for path in ("/run/read", "/numbers", "/board"):
+        status, body, _ = call(base, "/api/deals/cedar" + path, {})
+        assert status == 409 and "try again" in body["error"], path
+    assert call(base, "/api/deals/cedar")[0] == 200  # reading is never blocked
+    assert call(base, "/api/deals/birch/numbers", {"tax_rate": 0.2})[0] == 200  # another deal is free
+    t.join()
+    assert first["r"][0] == 200
+    assert call(base, "/api/deals/cedar/numbers", {"tax_rate": 0.2})[0] == 200  # released when the run ends
