@@ -166,6 +166,15 @@ def test_the_board_recalculates_from_overrides(srv):
     assert call(base, "/api/deals/cedar/board", [1])[0] == 400
 
 
+def test_an_opus_size_below_the_usual_range_is_reported_as_the_floor(srv):
+    base, home = srv
+    deal = board_setup(base, home)
+    write(deal / "worries.json", {"worries": {"debt_like": {"chance": 0.6, "low": 0, "high": 1, "reason": "r"}}, "cost": 0})
+    body = call(base, "/api/deals/cedar/board", {"overrides": {}})[1]
+    assert body["sizes"]["debt_like"] == {"size": pytest.approx(0.2 * 230), "floored": True}
+    assert body["worries"]["debt_like"]["high"] == 1  # Opus's own size is still there to show beside it
+
+
 def test_the_board_needs_complete_numbers_and_settings(srv):
     base, home = srv
     deal = board_setup(base, home)

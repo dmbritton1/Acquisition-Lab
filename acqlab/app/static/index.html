@@ -717,16 +717,10 @@ function drawFork() {
 // ---------- worry rows ----------
 function base(t) { return S.detail.worries?.worries?.[t] || {not_priced: "not priced yet: run Price, or set it yourself"}; }
 function priced(w) { return w && !("not_priced" in w) && ok(w.chance) && ok(w.high); }
+function sized(t) { return S.result?.sizes?.[t]; }  // the size the engine prices: Opus's, floored at the usual range
 function effective(t) {
-  const o = S.overrides[t], b = base(t);
-  return o ? {chance: o.chance, high: o.high} : priced(b) ? {chance: b.chance, high: b.high} : {chance: 0, high: 0};
-}
-function typical(t) {
-  // ponytail: a copy of agents.knowledge.typical_high, only to size the slider of a worry nobody priced yet
-  const rev = value("revenue_ltm"), price = S.detail.deal.price;
-  const x = {addback: Math.min(value("claimed_addbacks"), 0.25 * value("adj_ebitda")), debt_like: 0.2 * price,
-    concentration: 0.25 * rev, nwc: 0.2 * value("nwc_pct") * rev, capex: 0.03 * rev}[t];
-  return ok(x) && x > 0 ? x : 0.1 * price;
+  const o = S.overrides[t], b = base(t), z = sized(t);
+  return o ? {chance: o.chance, high: o.high} : priced(b) ? {chance: b.chance, high: ok(z?.size) ? z.size : b.high} : {chance: 0, high: 0};
 }
 function flipOf(t) {
   // flip_amount holds the other worries at zero and searches up to twice the range: it moves with the numbers and
@@ -740,8 +734,8 @@ function growMax(t, idle) {
   const r = S.rows[t], e = effective(t);
   if (!(idle && document.activeElement === r.chance)) r.chance.value = Math.round(e.chance * 100);
   if (idle && document.activeElement === r.size) return;
-  const b = base(t), f = flipOf(t);
-  const m = Math.max(S.sizeMax[t] || 0, 2 * e.high, 2 * (f || 0), priced(b) ? 2 * b.high : 2 * typical(t)) || 2 * typical(t);
+  const f = flipOf(t);
+  const m = Math.max(S.sizeMax[t] || 0, 2 * e.high, 2 * (f || 0), 2 * (sized(t)?.size || 0)) || 0.2 * S.detail.deal.price;
   S.sizeMax[t] = m;
   r.size.max = m; r.size.step = "any"; r.size.value = e.high;
   r.sizeEnd.textContent = money(m);
@@ -761,7 +755,7 @@ function buildWorries() {
     r.size = h("input", {type: "range", min: 0, "aria-label": LABEL[t] + ": size if real"});
     r.chanceOut = h("output", {class: "out"}); r.sizeOut = h("output", {class: "out"});
     r.flip = h("i", {class: "flip", hidden: true}); r.c2 = h("i", {class: "m2", hidden: true}); r.s2 = h("i", {class: "m2", hidden: true});
-    r.flipText = h("div", {class: "s fliptext"}); r.sizeEnd = h("span", {});
+    r.flipText = h("div", {class: "s fliptext"}); r.floorText = h("div", {class: "s"}); r.sizeEnd = h("span", {});
     r.chance.oninput = () => moved(t, "chance");
     r.size.oninput = () => moved(t, "size");
     r.size.onchange = () => growMax(t);
@@ -776,7 +770,7 @@ function buildWorries() {
         h("div", {}, h("div", {class: "ctl-head"}, h("span", {}, "Chance it's real"), r.chanceOut),
           h("div", {class: "track"}, r.chance, r.c2), h("div", {class: "ends"}, h("span", {}, "0%"), h("span", {}, "100%"))),
         h("div", {}, h("div", {class: "ctl-head"}, h("span", {}, "Size if real"), r.sizeOut),
-          h("div", {class: "track"}, r.size, r.flip, r.s2), h("div", {class: "ends"}, h("span", {}, "$0.0M"), r.sizeEnd), r.flipText))));
+          h("div", {class: "track"}, r.size, r.flip, r.s2), h("div", {class: "ends"}, h("span", {}, "$0.0M"), r.sizeEnd), r.floorText, r.flipText))));
     S.rows[t] = r;
     growMax(t); syncRow(t);
   }
@@ -799,6 +793,8 @@ function syncRow(t) {
   r.reason.textContent = why || "";
   r.chanceOut.textContent = pct(e.chance); setFill(r.chance);
   r.sizeOut.textContent = "up to " + money(e.high); setFill(r.size);
+  const floored = !mine && priced(b) && sized(t)?.floored;
+  r.floorText.textContent = floored ? `Opus said up to ${money(b.high)}; priced at the usual range, up to ${money(e.high)} (a starting guess).` : "";
   const max = Number(r.size.max), f = flipOf(t);
   place(r.flip, f, max);
   r.flipText.className = "s fliptext";

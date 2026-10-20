@@ -82,7 +82,8 @@ def apply(worries: dict, overrides: dict[str, dict]) -> tuple[dict, set[str]]:
 
 
 def compute(face: Face, worries: dict, yours: set[str]) -> dict:
-    """The board at these worries: the call, walk-away spread, flip sizes, pairs and the ask ranking."""
+    """The board at these worries: the call, walk-away spread, flip sizes, pairs, the ask ranking, and each worry's
+    priced size (an Opus size below the usual range is priced at it: "floored")."""
     rec = BoardRecord(face, worries, yours)
     values, w = rec.worlds()
     price = face.deal.asking_price
@@ -96,4 +97,6 @@ def compute(face: Face, worries: dict, yours: set[str]) -> dict:
             "pairs": [list(p) for p in rec.flagged_pairs()],
             "ask": [{"type": t, "value": float(v), "docs": [DOC_NAMES[k] for k in DILIGENCE_MAP[t]]}
                     for t, v in sorted(score.items(), key=lambda kv: -kv[1])],
+            "sizes": {t: {"size": rec.size_limit(t), "floored": e.proposed and rec.size_limit(t) > e.high}
+                      for t, e in rec.entries.items()},
             "price": float(price)}

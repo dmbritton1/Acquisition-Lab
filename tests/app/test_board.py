@@ -46,6 +46,26 @@ def test_an_opus_size_keeps_the_typical_floor():
     assert BoardRecord(f, {"debt_like": worry(0.5, 0, floor / 10)}, set()).issue("debt_like").hi == pytest.approx(floor)
 
 
+def test_compute_reports_the_floored_size_it_prices():
+    floor = typical_high("debt_like", f.teaser)
+    w = {"debt_like": worry(0.5, 0, floor / 10), "capex": worry(0.5, 0, 1e3)}
+    sizes = compute(f, w, set())["sizes"]
+    assert sizes["debt_like"] == {"size": pytest.approx(floor), "floored": True}
+    assert sizes["capex"] == {"size": 1e3, "floored": False}
+    assert compute(f, w, {"debt_like"})["sizes"]["debt_like"] == {"size": pytest.approx(floor / 10), "floored": False}
+
+
+def test_moving_only_the_chance_at_the_reported_size_never_flips_the_call():
+    # the reviewer's case: Opus's $3M debt_like is priced at the usual $42.8M; touching the chance by one point must
+    # keep that size, not drop to $3M (which flipped NO-GO to GO)
+    h = face(NUMBERS, SETTINGS, 214.0, "Acme", "Services")
+    w = {"debt_like": worry(0.6, 0, 3.0)}
+    before = compute(h, w, set())
+    size = before["sizes"]["debt_like"]["size"]
+    after = compute(h, *apply(w, {"debt_like": {"chance": 0.61, "high": size}}))
+    assert before["go"] is False and after["go"] is False and after["clears"] == pytest.approx(before["clears"], abs=0.02)
+
+
 def test_flip_sizes_are_reported_or_none():
     out = compute(g, {"debt_like": worry(0.5, 0, big), "capex": worry(0.1, 0, 0.01)}, {"capex"})
     assert out["flips"]["debt_like"] > 0 and out["flips"]["capex"] is None
