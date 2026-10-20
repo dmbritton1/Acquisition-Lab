@@ -33,8 +33,11 @@ A new session (possibly on the user's other Claude account) continues from this 
   call, flip sizes, pairs and an ask-the-seller list with live drags. The spec awaits the user's review; next is the
   implementation plan (superpowers:writing-plans). The spec and this note were committed on branch
   `claude/plan-7-demo-slides-b03003` (worktree `pensive-jang-8b3fd7`), one commit ahead of the plan-4b branch.
-- **The analyst board is built** (plan `docs/superpowers/plans/2026-10-19-analyst-board.md`, all 7 tasks, 629 tests
-  pass; a whole-branch review is still to do). To try it for free: make a sample deal from a generated room into a
+- **The analyst board is built** (plan `docs/superpowers/plans/2026-10-19-analyst-board.md`, all 7 tasks, 659 tests
+  pass). The final whole-branch review ran and its fixes landed: the board shows (and keeps on a drag) the floored
+  size the engine prices for an Opus worry, money numbers in $000s or $bn stay blank ("units look off"), the
+  documents go to `claude -p` on stdin (unverified against the real CLI until paid check 1), the estimate prices the
+  prompt as cache writes, and odd typed numbers or PDFs give a plain error instead of a 500. To try it for free: make a sample deal from a generated room into a
   scratch folder outside the repo, `.venv/bin/python scripts/board_sample.py --room <data>/deals/dev-000/room --home
   <scratch>`, then `.venv/bin/python -m acqlab.app --home <scratch>`. Careful: the board's step buttons (read, price,
   second look) call real Claude and cost money. **Paid check 1 is built but not run and needs the user's OK** (about
