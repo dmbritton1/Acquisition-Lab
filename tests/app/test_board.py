@@ -1,3 +1,4 @@
+import json
 import time
 
 import pytest
@@ -61,14 +62,47 @@ def test_the_worry_that_matters_most_tops_the_ask_list():
 
 
 def test_the_histogram_covers_every_world():
-    assert sum(compute(f, worries, set())["hist"]["counts"]) == N_WORLDS
+    out = compute(f, worries, set())
+    assert sum(out["hist"]["counts"]) == N_WORLDS
+    json.dumps(out)
 
 
 def test_a_recalculation_takes_under_a_second():
     t = time.perf_counter(); compute(f, all_five, set()); assert time.perf_counter() - t < 1.0
 
 
-def test_impossible_overrides_are_refused():
-    for bad in ({"chance": 1.5, "high": 1}, {"chance": 0.5, "high": -1}, {"chance": float("nan"), "high": 1}):
-        with pytest.raises(ValueError):
-            apply(worries, {"addback": bad})
+BAD_OVERRIDES = [{"chance": 1.5, "high": 1}, {"chance": 0.5, "high": -1}, {"chance": float("nan"), "high": 1},
+                 {"chance": "0.5", "high": 1}, {"chance": None, "high": 1}, {"chance": 0.5}, {"chance": True, "high": 1},
+                 {"chance": 0.5, "high": float("inf")}, 3, None]
+
+
+@pytest.mark.parametrize("bad", BAD_OVERRIDES)
+def test_impossible_overrides_are_refused(bad):
+    with pytest.raises(ValueError):
+        apply(worries, {"capex": bad})
+
+
+def test_an_unknown_worry_type_is_refused():
+    with pytest.raises(ValueError):
+        apply(worries, {"mystery": {"chance": 0.5, "high": 1}})
+
+
+@pytest.mark.parametrize("price", [0, -5, float("nan"), float("inf"), True, "230", None])
+def test_a_bad_price_is_refused(price):
+    with pytest.raises(ValueError):
+        face(NUMBERS, SETTINGS, price, "Acme", "Services")
+
+
+@pytest.mark.parametrize("bad", [None, "x", True, float("nan")])
+def test_a_missing_or_non_numeric_number_is_refused(bad):
+    with pytest.raises(ValueError, match="tax_rate"):
+        face(NUMBERS | {"tax_rate": bad}, SETTINGS, 230.0, "Acme", "Services")
+    with pytest.raises(ValueError, match="tax_rate"):
+        face({k: v for k, v in NUMBERS.items() if k != "tax_rate"}, SETTINGS, 230.0, "Acme", "Services")
+
+
+@pytest.mark.parametrize("bad", [{"mystery": worry(0.5, 0, 1)}, {"capex": 3}, {"capex": {"chance": "x", "low": 0, "high": 1}},
+                                 {"capex": {"chance": 0.5}}])
+def test_a_malformed_worry_is_refused(bad):
+    with pytest.raises(ValueError):
+        compute(f, bad, set())

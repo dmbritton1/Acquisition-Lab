@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 from acqlab.agents.knowledge import DILIGENCE_MAP
-from acqlab.agents.record import N_WORLDS, Face, Record
+from acqlab.agents.record import Face, Record
 from acqlab.engine import Company, Deal, Financing, Policy
 from acqlab.generator.sample import Teaser
 from acqlab.generator.traps import TRAPS
@@ -16,11 +16,25 @@ from acqlab.routers.routers import decide, score_regret
 DOC_NAMES = {"qoe": "Quality of earnings report", "audited": "Audited accounts and notes", "cim": "CIM",
              "legal": "Legal letter", "contract": "Customer contracts", "assets": "Fixed asset schedule"}
 BINS = 20
+NUMBER_FIELDS = ("revenue_ltm", "reported_ebitda", "claimed_addbacks", "adj_ebitda", "growth", "capex_pct", "nwc_pct",
+                 "da_pct", "tax_rate")
+
+
+def _ok(x) -> bool:
+    """A finite number (not a bool)."""
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
 def face(numbers: dict[str, float], settings: dict, price: float, name: str, industry: str) -> Face:
-    """The deal at face value from plain values (steps.values). Pydantic errors propagate as ValueError."""
+    """The deal at face value from plain values (steps.values). Raises ValueError for a bad price, a missing or
+    non-numeric field, or a bad setting."""
     n = numbers
+    if bad := [k for k in NUMBER_FIELDS if not _ok(n.get(k))]:
+        raise ValueError("missing or not a number: " + ", ".join(bad))
+    if not (_ok(price) and price > 0):
+        raise ValueError(f"the price must be a number above 0, not {price!r}")
+    if not isinstance(settings, dict) or not all(isinstance(settings.get(g), dict) for g in ("financing", "policy")):
+        raise ValueError("settings need financing and policy")
     teaser = Teaser(name=name, industry=industry, asking_price=price,
                     **{k: n[k] for k in ("revenue_ltm", "reported_ebitda", "claimed_addbacks", "adj_ebitda", "growth",
                                          "capex_pct", "nwc_pct")})
@@ -36,6 +50,10 @@ class BoardRecord(Record):
 
     def __init__(self, face: Face, worries: dict[str, dict], yours: set[str]):
         super().__init__(face)
+        for t, w in worries.items():
+            if t not in TRAPS or not isinstance(w, dict) or not ("not_priced" in w or all(_ok(w.get(k)) for k in
+                                                                                    ("chance", "low", "high"))):
+                raise ValueError(f"not a priced worry: {t}")
         self.yours = yours
         self.plan([{"type": t, "name": w.get("reason", ""), "chance": w["chance"], "low": w["low"],
                     "high": w["high"], "docs": []} for t, w in worries.items() if "not_priced" not in w])
@@ -55,8 +73,8 @@ def apply(worries: dict, overrides: dict[str, dict]) -> tuple[dict, set[str]]:
     an unknown type or a chance outside 0..1 or a size below 0."""
     out = dict(worries)
     for t, o in overrides.items():
-        chance, high = o["chance"], o["high"]
-        if t not in TRAPS or not (math.isfinite(chance) and math.isfinite(high) and 0 <= chance <= 1 and 0 <= high):
+        chance, high = (o.get("chance"), o.get("high")) if isinstance(o, dict) else (None, None)
+        if t not in TRAPS or not (_ok(chance) and _ok(high) and 0 <= chance <= 1 and 0 <= high):
             raise ValueError(f"impossible override for {t}: {o}")
         out[t] = {**out.get(t, {}), "chance": float(chance), "low": 0.0, "high": float(high)}
         out[t].pop("not_priced", None)
