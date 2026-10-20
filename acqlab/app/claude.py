@@ -1,5 +1,5 @@
 """One tool-less `claude -p` call that answers in JSON (the same sandbox as the solver: an empty folder, no tools, no
-settings, a scrubbed env)."""
+settings, a scrubbed env). The prompt goes on stdin: a long CIM would overflow argv, and argv shows in `ps`."""
 import json
 import subprocess
 import tempfile
@@ -11,11 +11,11 @@ from acqlab.llm import LLMUnavailable
 def ask(prompt: str, system: str, model: str, *, claude: str | None = None, timeout: float = TIMEOUT) -> tuple[dict, dict]:
     """The JSON object in Claude's answer (from its first { to its last }) and the CLI's result. Raises RunTimeout
     after `timeout` seconds, or LLMUnavailable on a failed run or an answer that is not JSON."""
-    cmd = [claude or claude_bin(), "-p", prompt, "--output-format", "json", "--model", model, "--tools", "",
+    cmd = [claude or claude_bin(), "-p", "--output-format", "json", "--model", model, "--tools", "",
            "--setting-sources", "", "--disable-slash-commands", "--system-prompt", system, "--no-session-persistence"]
     with tempfile.TemporaryDirectory() as tmp:
         try:
-            proc = subprocess.run(cmd, cwd=tmp, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            proc = subprocess.run(cmd, cwd=tmp, input=prompt, capture_output=True, text=True,
                                   timeout=timeout, env=child_env())
         except subprocess.TimeoutExpired as e:
             raise RunTimeout(f"claude -p timed out after {timeout:g}s") from e

@@ -126,7 +126,7 @@ def second_look(deal: Path, settings: dict, *, claude=None) -> dict:
 
 def estimate(deal: Path, step: str) -> float:
     """List-price dollars for a step ("read", "price" or "second"): the documents and prompt at 4 characters a token,
-    and an answer of 4,000 tokens."""
+    billed as cache writes (as `claude -p` bills a fresh prompt), and an answer of 4,000 tokens."""
     chars = len(documents(deal))
     runs = {"read": [(READER, HAIKU)], "price": [(PRICER, OPUS)], "second": [(READER, OPUS), (PRICER, OPUS)]}[step]
-    return sum(list_price([m], {"input_tokens": (chars + len(s)) / 4, "output_tokens": OUT_TOKENS}) for s, m in runs)
+    return sum(list_price([m], {"cache_creation_input_tokens": (chars + len(s)) / 4, "output_tokens": OUT_TOKENS}) for s, m in runs)

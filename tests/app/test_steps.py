@@ -10,7 +10,7 @@ from acqlab.app import steps
 from acqlab.app.steps import Incomplete
 from acqlab.app.claude import ask
 from acqlab.app.ingest import ingest
-from acqlab.app.prompts import HAIKU, READER
+from acqlab.app.prompts import HAIKU, READER, documents
 from acqlab.app.store import load, write
 from acqlab.app.verify import FIELDS
 from acqlab.llm import LLMUnavailable
@@ -64,6 +64,16 @@ def test_ask_runs_claude_without_tools_in_an_empty_folder_and_extracts_the_json(
     argv = got["argv"]
     assert answer == {"a": 1} and cli["is_error"] is False and got["files"] == []
     assert argv[argv.index("--tools") + 1] == "" and argv[argv.index("--model") + 1] == HAIKU
+
+
+def test_the_documents_go_on_stdin_never_in_argv(setup):
+    deal, fake, answers, args = setup
+    (answers / "reader.txt").write_text('{"numbers": {}}')
+    steps.read(deal, claude=fake)
+    got = json.loads(args.read_text())
+    assert "top customer left in March" in got["stdin"] and "Revenue of $162.8M" in got["stdin"]
+    assert not any("top customer" in a or "162.8" in a for a in got["argv"])
+    assert got["argv"][got["argv"].index("-p") + 1] == "--output-format"
 
 
 def test_ask_without_json_fails_with_claude_s_text(setup):
@@ -160,6 +170,8 @@ def test_the_estimate_prices_opus_above_haiku_and_the_second_look_highest(setup)
     deal = setup[0]
     r, p, s = (steps.estimate(deal, k) for k in ("read", "price", "second"))
     assert 0 < r < p < s
+    prompt = (len(documents(deal)) + len(READER)) / 4  # billed as cache writes: $0.20 a million on Haiku, not $0.10
+    assert r == pytest.approx((prompt * 0.20 + steps.OUT_TOKENS * 0.50) / 1e6)
 
 
 def test_each_step_records_its_cost(setup):
