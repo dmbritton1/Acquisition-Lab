@@ -8,6 +8,8 @@ FIELDS = ("revenue_ltm", "reported_ebitda", "claimed_addbacks", "adj_ebitda", "g
           "da_pct", "tax_rate")
 RATES = ("growth", "capex_pct", "nwc_pct", "da_pct", "tax_rate")  # stored as fractions, quoted as percentages
 _NUM = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*(%?)")  # a number and whether a % sign follows it
+# a money quote in thousands or billions: the number in it is not $M, whatever the reader copied
+SCALE = re.compile(r"000s|\(\$?000\)|thousand|billion|\bbn\b|\d\s*bn\b|\$k\b|\d[\d,]*(?:\.\d+)?k\b", re.I)
 OPS = {"sum": lambda a, b: a + b, "difference": lambda a, b: a - b, "product": lambda a, b: a * b,
        "divide": lambda a, b: a / b}
 
@@ -55,6 +57,8 @@ def check_number(field: str, answer: dict | None, texts) -> dict:
         return _blank("quote not found")
     inputs = inputs if isinstance(inputs, list) else []
     rate = field in RATES
+    if not rate and any(SCALE.search(q["text"]) for q in quotes):
+        return _blank("units look off", quotes)
     if calc == "none":
         if not all(has(value, q, rate) for q in quotes):
             return _blank("number not in quote")

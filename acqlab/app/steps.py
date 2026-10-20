@@ -14,6 +14,8 @@ from acqlab.engine import Financing, Policy
 from acqlab.generator.traps import TRAPS
 
 OUT_TOKENS = 4000  # the estimate's guess at an answer's length
+# price / value bounds outside which a money number is taken for a units slip ($000s or $bn read as $M)
+PLAUSIBLE = {"revenue_ltm": (1 / 50, 1 / 0.05), "reported_ebitda": (1, 100), "adj_ebitda": (1, 100)}
 
 
 class Incomplete(Exception):
@@ -39,6 +41,11 @@ def read(deal: Path, *, model: str = HAIKU, claude=None, out: str = "numbers.jso
     given = answer.get("numbers")
     given = given if isinstance(given, dict) else {}
     numbers = {f: check_number(f, given.get(f), t) for f in FIELDS}
+    price_ = load(deal / "deal.json")["price"]
+    for f, (lo, hi) in PLAUSIBLE.items():
+        v = numbers[f]["value"]
+        if v is not None and not (v > 0 and lo <= price_ / v <= hi):
+            numbers[f] = {**numbers[f], "value": None, "status": "blank", "why": "units look off"}
     saved = (load(deal / out, {}) or {}).get("numbers")
     numbers |= {f: s for f, s in (saved if isinstance(saved, dict) else {}).items()
                 if isinstance(s, dict) and s.get("status") == "you"}

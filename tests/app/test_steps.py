@@ -19,7 +19,8 @@ from tests.conftest import make_full
 FAKE = Path(__file__).parent / "fake_answer.py"
 
 TEASER = "Revenue of $162.8M LTM, growing 7.7% a year. Tax rate is 30% on profits."
-CIM = "The top customer left in March and was 12% of revenue. Adjusted EBITDA is $31.4M after add-backs."
+CIM = ("The top customer left in March and was 12% of revenue. Adjusted EBITDA is $31.4M after add-backs. "
+       "Net sales were 162,798 for the year. EBITDA came to 1.2 for the year.")
 
 
 def q(doc, text): return {"doc_id": doc, "text": text}
@@ -96,6 +97,17 @@ def test_read_fills_checked_numbers_and_keeps_what_the_analyst_set(setup):
     assert out["numbers"]["tax_rate"] == mine and set(out["numbers"]) == set(FIELDS)
     assert [(h["type"], len(h["quotes"]), h["dropped_quotes"]) for h in out["hints"]] == [("concentration", 1, 1)]
     assert out["name"] == "Cedar Harbor" and load(deal / "numbers.json") == out
+
+
+def test_read_blanks_money_numbers_whose_size_is_implausible_at_the_price(setup):
+    deal, fake, answers, args = setup  # the price is $230M: revenue 162,798 is $000s copied as $M, EBITDA 1.2 is $bn
+    (answers / "reader.txt").write_text(json.dumps({"numbers": {
+        "revenue_ltm": {"value": 162798, "quotes": [q("cim", "Net sales were 162,798 for the year")]},
+        "reported_ebitda": {"value": 1.2, "quotes": [q("cim", "EBITDA came to 1.2 for the year")]},
+        "adj_ebitda": {"value": 31.4, "quotes": [q("cim", "Adjusted EBITDA is $31.4M after add-backs")]}}}))
+    n = steps.read(deal, claude=fake)["numbers"]
+    assert [(n[f]["value"], n[f]["why"]) for f in ("revenue_ltm", "reported_ebitda")] == [(None, "units look off")] * 2
+    assert (n["adj_ebitda"]["status"], n["adj_ebitda"]["value"]) == ("quoted", 31.4)  # a normal $M number fills
 
 
 def test_price_refuses_while_a_number_or_setting_is_blank(setup):

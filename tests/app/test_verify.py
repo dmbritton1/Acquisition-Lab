@@ -4,7 +4,8 @@ import pytest
 from acqlab.app.verify import check_number, check_quotes
 
 TEXTS = {"cim": "[page 1]\nLTM revenue of $162.8M grew 7.7% a year. Capex was $7.8M last year.\n"
-                "Revenue last year: $162,798 thousand.",
+                "Revenue last year: $162,798 thousand.\nIncome statement ($000s): revenue 162,798\n"
+                "Group revenue reached $1.2bn last year. Other income was $0 last year.",
          "teaser": "[page 1]\nRevenue: $160.0M (LTM)"}
 
 
@@ -51,6 +52,28 @@ def test_a_short_quote_proves_nothing():
 def test_numbers_in_thousands_stay_blank_rather_than_wrong():
     r = check_number("revenue_ltm", ans(162.8, [q("cim", "Revenue last year: $162,798 thousand")]), TEXTS)
     assert r["status"] == "blank"
+
+
+@pytest.mark.parametrize("value, text", [(162798, "Income statement ($000s): revenue 162,798"),
+                                         (1.2, "Group revenue reached $1.2bn last year")])
+def test_a_money_number_quoted_in_thousands_or_billions_is_blank(value, text):
+    r = check_number("revenue_ltm", ans(value, [q("cim", text)]), TEXTS)
+    assert (r["value"], r["why"]) == (None, "units look off") and r["quotes"] == [q("cim", text)]
+
+
+CAPEX, REV = q("cim", "Capex was $7.8M last year"), q("cim", "LTM revenue of $162.8M")
+
+
+@pytest.mark.parametrize("value, quotes, inputs, why", [
+    (0.5, [CAPEX, REV], [7.8, 162.8], "calculation doesn't check"),  # wrong arithmetic
+    (1.0, [CAPEX, q("cim", "Other income was $0 last year")], [7.8, 0], "calculation doesn't check"),  # divide by zero
+    (7.8 / 162.8, [CAPEX, REV], [7.8], "calculation doesn't check"),  # one input for two quotes
+    (7.8 / 162.8, [CAPEX, REV], [7.8, 162.8, 1.0], "calculation doesn't check"),  # three inputs
+    (9.9 / 162.8, [CAPEX, REV], [9.9, 162.8], "number not in quote"),  # an input not in its quote
+])
+def test_a_calculation_that_fails_is_blank_with_its_reason(value, quotes, inputs, why):
+    r = check_number("capex_pct", ans(value, quotes, calc="divide", inputs=inputs), TEXTS)
+    assert (r["status"], r["value"], r["why"]) == ("blank", None, why)
 
 
 def test_documents_that_disagree_leave_it_blank_with_both_quotes():
