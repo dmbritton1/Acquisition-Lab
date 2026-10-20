@@ -4,7 +4,6 @@ from datetime import datetime
 from pathlib import Path
 
 from pypdf import PdfReader
-from pypdf.errors import PyPdfError
 
 from acqlab.app.store import load, new_deal, write
 
@@ -21,8 +20,8 @@ def pages(path: Path) -> list[str]:
     if path.suffix.lower() == ".pdf":
         try:
             return [p.extract_text() or "" for p in PdfReader(path).pages]
-        except PyPdfError as e:  # corrupt, truncated or password-protected
-            raise Unreadable(f"{path.name} is not a readable PDF (corrupt or password-protected)") from e
+        except Exception as e:  # corrupt, truncated, password-protected, or odd enough to trip pypdf (KeyError, ...)
+            raise Unreadable(f"{path.name} is not a readable PDF (corrupt, password-protected or unusual)") from e
     return [path.read_text()]
 
 

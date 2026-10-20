@@ -64,6 +64,18 @@ def test_a_corrupt_pdf_is_unreadable_not_a_raw_pypdf_error(tmp_path):
         ingest(tmp_path / "home", "X", 1.0, {"teaser": t, "cim": bad})
 
 
+@pytest.mark.parametrize("error", [KeyError("/Font"), TypeError("odd"), RecursionError()])
+def test_any_failure_inside_pypdf_is_unreadable(tmp_path, monkeypatch, error):
+    import pypdf
+
+    def boom(self, *a, **k):
+        raise error
+    monkeypatch.setattr(pypdf.PageObject, "extract_text", boom)
+    c = write_pdf(tmp_path / "cim.pdf", ["CIM page one, long enough to read"])
+    with pytest.raises(Unreadable, match="cim.pdf is not a readable PDF"):
+        pages(c)
+
+
 def test_a_cim_with_no_pages_is_unreadable(tmp_path):
     empty = write_pdf(tmp_path / "cim.pdf", [])
     t = tmp_path / "t.md"; t.write_text("teaser")
