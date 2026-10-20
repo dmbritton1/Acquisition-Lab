@@ -33,7 +33,11 @@ A new session (possibly on the user's other Claude account) continues from this 
   call, flip sizes, pairs and an ask-the-seller list with live drags. The spec awaits the user's review; next is the
   implementation plan (superpowers:writing-plans). The spec and this note were committed on branch
   `claude/plan-7-demo-slides-b03003` (worktree `pensive-jang-8b3fd7`), one commit ahead of the plan-4b branch.
-- **Next:** the analyst board's plan, then stage 2 of the hidden-upside track.
+- **Building the analyst board** (plan `docs/superpowers/plans/2026-10-19-analyst-board.md`, subagent-driven,
+  user's choice): Task 1 is done (`50ad437`, 533 tests). The run was paused by the user before Task 2. Resume from the
+  ledger `.superpowers/sdd/2026-10-19-analyst-board/progress.md` (git-ignored, in worktree `pensive-jang-8b3fd7`); it
+  holds the pre-flight rulings that Task 2 must carry.
+- **Next:** finish the analyst board, then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
   2026-09-26 (at `4896dbb`): its worktree `plan-4b-calibration-round-1-5f0549` was detached by something else, so
