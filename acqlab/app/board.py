@@ -13,8 +13,9 @@ from acqlab.generator.traps import TRAPS
 from acqlab.routers.beliefs import Issue
 from acqlab.routers.routers import decide, score_regret
 
-DOC_NAMES = {"qoe": "Quality of earnings report", "audited": "Audited accounts and notes", "cim": "CIM",
-             "legal": "Legal letter", "contract": "Customer contracts", "assets": "Fixed asset schedule"}
+# the documents that settle a worry; the CIM never does (it is the seller's own, and the analyst already has it)
+DOC_NAMES = {"qoe": "Quality of earnings report", "audited": "Audited accounts and notes", "legal": "Legal letter",
+             "contract": "Customer contracts", "assets": "Fixed asset schedule"}
 BINS = 20
 NUMBER_FIELDS = ("revenue_ltm", "reported_ebitda", "claimed_addbacks", "adj_ebitda", "growth", "capex_pct", "nwc_pct",
                  "da_pct", "tax_rate")
@@ -100,7 +101,7 @@ def compute(face: Face, worries: dict, yours: set[str]) -> dict:
             "clears": float((w > price).mean()), "hist": {"edges": edges.tolist(), "counts": counts.tolist()},
             "flips": {t: rec.flip_amount(t) for t, e in rec.entries.items() if e.proposed},
             "pairs": [list(p) for p in rec.flagged_pairs()],
-            "ask": [{"type": t, "value": float(v), "docs": [DOC_NAMES[k] for k in DILIGENCE_MAP[t]]}
+            "ask": [{"type": t, "value": float(v), "docs": [DOC_NAMES[k] for k in DILIGENCE_MAP[t] if k in DOC_NAMES]}
                     for t, v in sorted(score.items(), key=lambda kv: -kv[1])],
             "sizes": {t: {"size": rec.size_limit(t), "floored": e.proposed and rec.size_limit(t) > e.high}
                       for t, e in rec.entries.items()},

@@ -81,6 +81,11 @@ def test_the_worry_that_matters_most_tops_the_ask_list():
     assert out["ask"][0]["type"] == "debt_like" and out["ask"][0]["docs"][0] == "Audited accounts and notes"
 
 
+def test_the_ask_list_never_names_the_cim():
+    out = compute(g, all_five, set())
+    assert len(out["ask"]) == 5 and all(a["docs"] and "CIM" not in a["docs"] for a in out["ask"])
+
+
 def test_the_histogram_covers_every_world():
     out = compute(f, worries, set())
     assert sum(out["hist"]["counts"]) == N_WORLDS
