@@ -654,6 +654,11 @@ function drawResult(r) {
     });
     $("#fill").replaceChildren(h("b", {}, "Fill in the red fields first. "), "The board needs: " + names.join(", ") + ".");
     S.result = null; clearBoard();
+    if (/(^|[\s:,])(financing|policy)\./.test(r.data.error)) {
+      $("#settingsBox").open = true;
+      // only when the analyst isn't typing somewhere else
+      if (!document.activeElement?.matches("input, select, textarea")) $("#settingsForm .missing input")?.focus();
+    }
     return;
   }
   if (!r.ok) {  // never leave an old call showing over numbers it wasn't computed from
@@ -676,7 +681,8 @@ function clearBoard() {
 function drawCall() {
   const r = S.result, v = $("#verdict");
   v.className = "verdict " + (r.go ? "go" : "nogo");
-  v.replaceChildren(r.go ? "GO" : "NO-GO", h("small", {}, "at " + money(r.price)));
+  v.replaceChildren(r.go ? "GO" : "NO-GO", h("small", {}, "at " + money(r.price) +
+    (S.detail.worries ? "" : " \u00b7 at face value \u2014 nothing priced yet")));
   $("#walk").textContent = money(r.walk_away);
   $("#range").textContent = `p10\u2013p90: ${money(r.p10)} \u2013 ${money(r.p90)}`;
   $("#clears").textContent = pct(r.clears);
@@ -824,10 +830,15 @@ function drawPairs() {
     h("p", {class: "empty-line"}, "No two worries flip the call together at the top of their ranges when neither does alone."));
   if (p.length) $("#pairs").append(h("p", {class: "s", style: "margin:8px 0 0"}, "Each pair flips the call together at the top of their ranges, though neither does alone."));
 }
-function askLines() { return S.result.ask.map(a => `${LABEL[a.type]} \u2014 ${money(a.value)} \u2014 ${a.docs.join(", ")}`); }
+const NO_ASK = "No single answer would change the call at this price.";
+const askMoot = a => a.length && a.every(x => x.value < 0.05);  // every row would print $0.0M
+function askLines() {
+  const a = S.result.ask;
+  return askMoot(a) ? [NO_ASK] : a.map(x => `${LABEL[x.type]} \u2014 ${money(x.value)} \u2014 ${x.docs.join(", ")}`);
+}
 function drawAsk() {
   const a = S.result.ask;
-  $("#ask").replaceChildren(...(a.length ? a.map(x => h("li", {}, h("span", {}, LABEL[x.type]), h("span", {class: "val"}, money(x.value)),
+  $("#ask").replaceChildren(...(askMoot(a) ? [h("p", {class: "empty-line"}, NO_ASK)] : a.length ? a.map(x => h("li", {}, h("span", {}, LABEL[x.type]), h("span", {class: "val"}, money(x.value)),
     h("span", {class: "docs"}, x.docs.join("  \u00b7  ")))) : [h("p", {class: "empty-line"}, "Nothing open to ask about: no worry has a chance above zero.")]));
   $("#copyAsk").disabled = !a.length;
 }
