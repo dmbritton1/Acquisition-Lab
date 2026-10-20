@@ -1,4 +1,6 @@
 """The quote check: a number is filled in only when a real quote backs it."""
+import pytest
+
 from acqlab.app.verify import check_number, check_quotes
 
 TEXTS = {"cim": "[page 1]\nLTM revenue of $162.8M grew 7.7% a year. Capex was $7.8M last year.\n"
@@ -65,3 +67,35 @@ def test_worry_quotes_from_unknown_documents_are_dropped_and_counted():
 def test_a_rate_must_match_its_percentage():
     r = check_number("growth", ans(0.03, [q("cim", "grew 7.7% a year")]), TEXTS)
     assert r["status"] == "blank" and r["why"] == "number not in quote"
+
+
+def test_a_rate_does_not_match_a_dollar_amount():
+    assert check_number("capex_pct", ans(0.078, [q("cim", "Capex was $7.8M last year")]), TEXTS)["status"] == "blank"
+
+
+def test_an_amount_does_not_match_a_percentage():
+    assert check_number("revenue_ltm", ans(7.7, [q("cim", "grew 7.7% a year")]), TEXTS)["status"] == "blank"
+
+
+GOOD = q("cim", "LTM revenue of $162.8M grew")
+BASE = ans(162.8, [GOOD])
+TWO = {"quotes": [GOOD, GOOD], "calc": "divide"}
+OVERRIDES = [
+    {"inputs": None}, {"inputs": 5}, {"other_values": 5}, {"other_values": ["x", None, {"value": "y", "quote": 3}]},
+    {"value": "162.8"}, {"value": True}, {"quotes": GOOD}, {"quotes": ["LTM revenue of $162.8M grew"]},
+    {"quotes": [None]}, {"quotes": [{"doc_id": "cim", "text": 5}]}, {"quotes": [{"doc_id": ["cim"], "text": "x" * 20}]},
+    {"quotes": [{"doc_id": "cim"}]}, {"calc": ["divide"]}, {"calc": "nope"}, {"calc": None},
+    {**TWO, "inputs": ["7.8", 162.8]}, {**TWO, "inputs": [1, 0]}, {**TWO, "inputs": None},
+]
+
+
+@pytest.mark.parametrize("over", OVERRIDES)
+def test_malformed_model_output_never_raises(over):
+    r = check_number("revenue_ltm", {**BASE, **over}, TEXTS)
+    assert r["status"] in ("blank", "quoted", "calculated")
+    check_quotes(over.get("quotes") if isinstance(over.get("quotes"), list) else [None, "s"], TEXTS)
+
+
+@pytest.mark.parametrize("answer", [None, "not a dict", [], 5])
+def test_a_non_dict_answer_is_blank(answer):
+    assert check_number("revenue_ltm", answer, TEXTS)["status"] == "blank"
