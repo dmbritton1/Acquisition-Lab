@@ -33,10 +33,16 @@ A new session (possibly on the user's other Claude account) continues from this 
   call, flip sizes, pairs and an ask-the-seller list with live drags. The spec awaits the user's review; next is the
   implementation plan (superpowers:writing-plans). The spec and this note were committed on branch
   `claude/plan-7-demo-slides-b03003` (worktree `pensive-jang-8b3fd7`), one commit ahead of the plan-4b branch.
-- **Building the analyst board** (plan `docs/superpowers/plans/2026-10-19-analyst-board.md`, subagent-driven,
-  user's choice): Task 1 is done (`50ad437`, 533 tests). The run was paused by the user before Task 2. Resume from the
-  ledger `.superpowers/sdd/2026-10-19-analyst-board/progress.md` (git-ignored, in worktree `pensive-jang-8b3fd7`); it
-  holds the pre-flight rulings that Task 2 must carry.
+- **The analyst board is built** (plan `docs/superpowers/plans/2026-10-19-analyst-board.md`, all 7 tasks, 629 tests
+  pass; a whole-branch review is still to do). To try it for free: make a sample deal from a generated room into a
+  scratch folder outside the repo, `.venv/bin/python scripts/board_sample.py --room <data>/deals/dev-000/room --home
+  <scratch>`, then `.venv/bin/python -m acqlab.app --home <scratch>`. Careful: the board's step buttons (read, price,
+  second look) call real Claude and cost money. **Paid check 1 is built but not run and needs the user's OK** (about
+  $2): how often Haiku fills each number right, wrong or blank on 10 generated deals, and how often the call matches
+  the truth. Run it from this worktree against the plan-4b worktree's data: `.venv/bin/python
+  scripts/board_reading_check.py --data /Users/dwightbritton/Developer/acquisition-lab/.claude/worktrees/plan-4b-freeze-preregistration-0908fa/data/cal-r2
+  --n 10 --out docs/results/board-reading-check.json --yes` (without `--yes` it only prints the estimate). Paid check 2
+  (one real CIM) waits for a CIM from the user.
 - **Next:** finish the analyst board, then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
