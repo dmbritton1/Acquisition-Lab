@@ -5,7 +5,6 @@ the home has none), and the five worries sit at their starting guesses. Prints t
   .venv/bin/python scripts/board_sample.py --room <generated deals/dev-000/room> --home <folder outside the repo>"""
 import argparse
 import json
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -13,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from acqlab.agents.knowledge import typical_high
 from acqlab.app.ingest import ingest
-from acqlab.app.store import load, write
+from acqlab.app.store import checkouts, load, write
 from acqlab.generator.sample import Teaser
 from acqlab.generator.traps import TRAPS
 
@@ -21,18 +20,6 @@ REPO = Path(__file__).resolve().parents[1]
 RATES = json.loads((REPO / "acqlab" / "bench" / "base_rates.json").read_text())["rates"]
 TEASER_FIELDS = ("revenue_ltm", "reported_ebitda", "claimed_addbacks", "adj_ebitda", "growth", "capex_pct", "nwc_pct")
 COMPANY_FIELDS = ("da_pct", "tax_rate")
-
-
-def checkouts() -> list[Path]:
-    """The repository's main checkout and every worktree of it (each holds a data/ folder); this checkout alone if
-    git can't tell."""
-    git = lambda *a: subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True, check=True).stdout
-    try:
-        main = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir").strip()).parent
-        trees = [Path(line[9:]) for line in git("worktree", "list", "--porcelain").splitlines() if line.startswith("worktree ")]
-    except (OSError, subprocess.CalledProcessError):
-        return [REPO]
-    return [p.resolve() for p in [REPO, main, *trees]]
 
 
 def main(argv=None) -> str:

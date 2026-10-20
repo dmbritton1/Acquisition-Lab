@@ -11,12 +11,12 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from board_sample import COMPANY_FIELDS, TEASER_FIELDS, checkouts  # the same checkout rule and field lists
+from board_sample import COMPANY_FIELDS, TEASER_FIELDS  # the same field lists
 
 from acqlab.app import steps
 from acqlab.app.board import compute, face
 from acqlab.app.ingest import ingest
-from acqlab.app.store import load, write
+from acqlab.app.store import checkouts, load, write
 from acqlab.app.verify import FIELDS
 
 REFUSED = ("test-r2", "pilot-r2u")  # held-out sets, and mix-test-*

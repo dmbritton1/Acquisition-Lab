@@ -76,6 +76,17 @@ def test_it_listens_on_the_laptop_only(srv, tmp_path):
         server.server_close()
 
 
+def test_the_app_refuses_a_home_inside_a_checkout(monkeypatch):
+    import runpy
+    from acqlab.app.store import checkouts
+    for repo in {Path(__file__).parents[2], *checkouts()}:  # this checkout, the main one and every worktree
+        refused = repo / "data" / "board-home-refused"
+        monkeypatch.setattr(sys, "argv", ["acqlab.app", "--home", str(refused), "--port", "0"])
+        with pytest.raises(SystemExit):
+            runpy.run_module("acqlab.app", run_name="__main__")
+        assert not refused.exists()
+
+
 def test_the_page_is_served(srv):
     status, body, ctype = call(srv[0], "/")
     assert status == 200 and ctype.startswith("text/html") and b"<title>" in body
