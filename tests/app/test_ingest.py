@@ -39,3 +39,34 @@ def test_write_is_atomic_and_load_falls_back_to_the_default(tmp_path):
     write(tmp_path / "x.json", {"a": 1})
     assert load(tmp_path / "x.json") == {"a": 1} and load(tmp_path / "y.json", {}) == {}
     assert [p.name for p in tmp_path.iterdir()] == ["x.json"]
+
+
+def test_a_failed_write_leaves_no_listed_or_half_written_deal(tmp_path, monkeypatch):
+    from acqlab.app import ingest as mod
+    from acqlab.app.store import deals, write as real_write
+    t = tmp_path / "t.md"; t.write_text("teaser text that is long enough")
+    c = tmp_path / "c.md"; c.write_text("cim text that is long enough to read")
+
+    def flaky(path, obj):
+        if path.name == "cim.json":
+            raise OSError("disk full")
+        real_write(path, obj)
+    monkeypatch.setattr(mod, "write", flaky)
+    with pytest.raises(OSError):
+        ingest(tmp_path / "home", "X", 1.0, {"teaser": t, "cim": c})
+    assert deals(tmp_path / "home") == [] and list((tmp_path / "home" / "deals").iterdir()) == []
+
+
+def test_a_corrupt_pdf_is_unreadable_not_a_raw_pypdf_error(tmp_path):
+    bad = tmp_path / "cim.pdf"; bad.write_bytes(b"not a pdf")
+    t = tmp_path / "t.md"; t.write_text("teaser")
+    with pytest.raises(Unreadable):
+        ingest(tmp_path / "home", "X", 1.0, {"teaser": t, "cim": bad})
+
+
+def test_a_cim_with_no_pages_is_unreadable(tmp_path):
+    empty = write_pdf(tmp_path / "cim.pdf", [])
+    t = tmp_path / "t.md"; t.write_text("teaser")
+    with pytest.raises(Unreadable):
+        ingest(tmp_path / "home", "X", 1.0, {"teaser": t, "cim": empty})
+    assert not (tmp_path / "home" / "deals").exists()
