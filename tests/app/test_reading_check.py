@@ -35,13 +35,16 @@ def fake(tmp_path, monkeypatch):
 
 def run(data, tmp_path, claude, *extra):
     return SCRIPT["main"](["--data", str(data), "--n", "1", "--out", str(tmp_path / "out.json"),
-                           "--home", str(tmp_path / "home"), "--claude", claude, *extra])
+                           "--home", str(tmp_path / "home"), "--claude", claude, *extra])  # a later --out wins
 
 
 def test_the_check_refuses_held_out_sets_an_existing_out_and_a_home_in_a_checkout(data, tmp_path, fake):
-    for name in ("test-r2", "pilot-r2u", "mix-test-3"):
+    for name in ("test-r2", "pilot-r2u", "mix-test-3", "test-r2/inner"):
         with pytest.raises(SystemExit):
             SCRIPT["main"](["--data", str(tmp_path / name), "--out", str(tmp_path / "o.json"), "--yes"])
+    for repo in (Path(__file__).parents[2],):  # an out file under a checkout's data/ folder
+        with pytest.raises(SystemExit):
+            run(data, tmp_path, fake[0], "--yes", "--out", str(repo / "data" / "o.json"))
     (tmp_path / "out.json").write_text("{}")
     with pytest.raises(SystemExit):
         run(data, tmp_path, fake[0], "--yes")
@@ -64,3 +67,23 @@ def test_without_yes_it_prints_the_estimate_and_calls_nothing(data, tmp_path, fa
     assert "$" in capsys.readouterr().out and not (tmp_path / "out.json").exists()
     (fake[1] / "reader.txt").unlink()  # a call would now crash the fake
     run(data, tmp_path, fake[0])
+
+
+def test_a_failure_on_the_second_deal_keeps_the_first_result_and_the_spend(data, tmp_path, fake, capsys):
+    count = tmp_path / "count"
+    flaky = tmp_path / "flaky"  # the fake, except that from its third call on it reports a usage limit
+    flaky.write_text(f"#!{sys.executable}\nimport os, runpy\nfrom pathlib import Path\n"
+                     f"c = Path({str(count)!r})\nn = int(c.read_text() if c.exists() else 0) + 1\nc.write_text(str(n))\n"
+                     f"if n >= 3: os.environ['FAKE_CLAUDE'] = 'limit'\n"
+                     f"runpy.run_path({str(FAKE)!r}, run_name='__main__')\n")
+    flaky.chmod(0o755)
+    (data / "deals" / ".DS_Store").write_text("")  # not a deal
+    try:
+        with pytest.raises(SystemExit) as e:
+            run(data, tmp_path, str(flaky), "--yes", "--n", "2")
+    finally:
+        (data / "deals" / ".DS_Store").unlink()
+    assert e.value.code == 1 and "scratch home" in capsys.readouterr().out
+    out = load(tmp_path / "out.json")
+    assert len(out["deals"]) == 1 and "usage limit" in out["stopped"] and out["cost"] >= out["deals"][0]["cost"] > 0
+    assert out["calls"]["right"] + out["calls"]["wrong"] == 1

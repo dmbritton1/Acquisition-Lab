@@ -39,9 +39,10 @@ A new session (possibly on the user's other Claude account) continues from this 
   <scratch>`, then `.venv/bin/python -m acqlab.app --home <scratch>`. Careful: the board's step buttons (read, price,
   second look) call real Claude and cost money. **Paid check 1 is built but not run and needs the user's OK** (about
   $2): how often Haiku fills each number right, wrong or blank on 10 generated deals, and how often the call matches
-  the truth. Run it from this worktree against the plan-4b worktree's data: `.venv/bin/python
-  scripts/board_reading_check.py --data /Users/dwightbritton/Developer/acquisition-lab/.claude/worktrees/plan-4b-freeze-preregistration-0908fa/data/cal-r2
-  --n 10 --out docs/results/board-reading-check.json --yes` (without `--yes` it only prints the estimate). Paid check 2
+  the truth. Run it from this worktree against the plan-4b worktree's data, first without `--yes` (it only prints the estimate
+  and the scratch home): `.venv/bin/python scripts/board_reading_check.py --data /Users/dwightbritton/Developer/acquisition-lab/.claude/worktrees/plan-4b-freeze-preregistration-0908fa/data/cal-r2
+  --n 10 --out docs/results/board-reading-check.json`. Add `--yes` only after the user approves that printed
+  estimate. A failed run still saves the deals done and the money spent in the `--out` file (with a `stopped` note). Paid check 2
   (one real CIM) waits for a CIM from the user.
 - **Next:** finish the analyst board, then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
