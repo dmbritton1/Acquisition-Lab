@@ -395,7 +395,9 @@ async function loadDeals(want) {
   if (!r.ok) return showError(r.data.error);
   const sel = $("#dealSelect");
   sel.replaceChildren(...r.data.map(d => h("option", {value: d.id}, d.name + "  \u00b7  " + money(d.price))));
-  const id = [want, decodeURIComponent(location.hash.slice(1))].find(x => x && r.data.some(d => d.id === x)) || r.data[0]?.id;
+  let hash = "";
+  try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) { /* a malformed hash: ignore it */ }
+  const id = [want, hash].find(x => x && r.data.some(d => d.id === x)) || r.data[0]?.id;
   $("#empty").hidden = !!id;
   $("#grid").hidden = !id;
   if (!id) {
@@ -647,7 +649,8 @@ function drawResult(r) {
   if (fill) {
     const names = r.data.error.replace(/^fill in first:\s*/, "").split(/,\s*/).map(n => {
       const [g, k] = n.split(".");
-      return FIELD_LABEL[n] || (SETTINGS[g]?.find(s => s[0] === k)?.[1] + " (settings)") || n;
+      const setting = SETTINGS[g]?.find(s => s[0] === k)?.[1];
+      return FIELD_LABEL[n] || (setting ? setting + " (settings)" : n);
     });
     $("#fill").replaceChildren(h("b", {}, "Fill in the red fields first. "), "The board needs: " + names.join(", ") + ".");
     S.result = null; clearBoard();
@@ -733,9 +736,11 @@ function flipOf(t) {
   return ok(f) ? f : S.lastFlip[t] ?? null;
 }
 function growMax(t, idle) {
-  const r = S.rows[t];
-  if (idle && document.activeElement === r.size) return;  // never move the range under a thumb being dragged
-  const b = base(t), e = effective(t), f = flipOf(t);
+  // sets both sliders from the state (after a reset, a reload or a result), but never moves a thumb being dragged
+  const r = S.rows[t], e = effective(t);
+  if (!(idle && document.activeElement === r.chance)) r.chance.value = Math.round(e.chance * 100);
+  if (idle && document.activeElement === r.size) return;
+  const b = base(t), f = flipOf(t);
   const m = Math.max(S.sizeMax[t] || 0, 2 * e.high, 2 * (f || 0), priced(b) ? 2 * b.high : 2 * typical(t)) || 2 * typical(t);
   S.sizeMax[t] = m;
   r.size.max = m; r.size.step = "any"; r.size.value = e.high;
@@ -773,7 +778,6 @@ function buildWorries() {
         h("div", {}, h("div", {class: "ctl-head"}, h("span", {}, "Size if real"), r.sizeOut),
           h("div", {class: "track"}, r.size, r.flip, r.s2), h("div", {class: "ends"}, h("span", {}, "$0.0M"), r.sizeEnd), r.flipText))));
     S.rows[t] = r;
-    r.chance.value = Math.round(effective(t).chance * 100);
     growMax(t); syncRow(t);
   }
 }

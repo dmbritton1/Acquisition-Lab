@@ -5,6 +5,7 @@ the home has none), and the five worries sit at their starting guesses. Prints t
   .venv/bin/python scripts/board_sample.py --room <generated deals/dev-000/room> --home <folder outside the repo>"""
 import argparse
 import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -22,14 +23,26 @@ TEASER_FIELDS = ("revenue_ltm", "reported_ebitda", "claimed_addbacks", "adj_ebit
 COMPANY_FIELDS = ("da_pct", "tax_rate")
 
 
+def checkouts() -> list[Path]:
+    """The repository's main checkout and every worktree of it (each holds a data/ folder); this checkout alone if
+    git can't tell."""
+    git = lambda *a: subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True, check=True).stdout
+    try:
+        main = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir").strip()).parent
+        trees = [Path(line[9:]) for line in git("worktree", "list", "--porcelain").splitlines() if line.startswith("worktree ")]
+    except (OSError, subprocess.CalledProcessError):
+        return [REPO]
+    return [p.resolve() for p in [REPO, main, *trees]]
+
+
 def main(argv=None) -> str:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--room", type=Path, required=True)
     p.add_argument("--home", type=Path, required=True)
     args = p.parse_args(argv)
     home = args.home.expanduser().resolve()
-    if home.is_relative_to(REPO):  # covers the repo's data/ folder: deal folders stay outside the repo
-        p.error(f"--home must be outside the repository ({REPO}), not {home}")
+    if inside := [c for c in checkouts() if home.is_relative_to(c)]:  # covers every data/ folder: deals stay outside
+        p.error(f"--home must be outside the repository ({inside[0]}), not {home}")
     engine = load(args.room / "engine.json")
     teaser, company = engine["teaser"], engine["deal"]["company"]
     with tempfile.TemporaryDirectory() as tmp:

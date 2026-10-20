@@ -1,5 +1,6 @@
 """The free sample deal: a benchmark room on the board with no Claude call."""
 import runpy
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,10 @@ def test_the_sample_deal_prices_on_the_board(data, tmp_path, capsys):
     face = board.face(steps.values(nums), settings, d["price"], d["name"], "")
     out = board.compute(face, worries, set())
     assert isinstance(out["go"], bool) and len(out["flips"]) == 5
-    with pytest.raises(SystemExit):  # never into the repo's data folder
-        SCRIPT["main"](["--room", str(data / "deals" / "dev-000" / "room"),
-                        "--home", str(Path(__file__).parents[2] / "data" / "x")])
+    main = Path(subprocess.run(["git", "-C", str(Path(__file__).parent), "rev-parse", "--path-format=absolute",
+                                "--git-common-dir"], capture_output=True, text=True, check=True).stdout.strip()).parent
+    for repo in (Path(__file__).parents[2], main):  # this checkout, and the main one even from a worktree
+        refused = repo / "data" / "board-sample-refused"
+        with pytest.raises(SystemExit):
+            SCRIPT["main"](["--room", str(data / "deals" / "dev-000" / "room"), "--home", str(refused)])
+        assert not refused.exists()
