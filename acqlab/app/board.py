@@ -26,11 +26,16 @@ def _ok(x) -> bool:
 
 
 def face(numbers: dict[str, float], settings: dict, price: float, name: str, industry: str) -> Face:
-    """The deal at face value from plain values (steps.values). Raises ValueError for a bad price, a missing or
-    non-numeric field, or a bad setting."""
+    """The deal at face value from plain values (steps.values). Raises ValueError for a bad price, a missing,
+    non-numeric or impossible field, or a bad setting."""
     n = numbers
     if bad := [k for k in NUMBER_FIELDS if not _ok(n.get(k))]:
         raise ValueError("missing or not a number: " + ", ".join(bad))
+    bad = [f"{k} must be above 0" for k in ("revenue_ltm", "adj_ebitda") if n[k] <= 0]
+    bad += ["growth must be between -100% and 100%"] if not -1 <= n["growth"] <= 1 else []
+    bad += [f"{k} must be between 0% and 100%" for k in ("tax_rate", "capex_pct", "nwc_pct", "da_pct") if not 0 <= n[k] <= 1]
+    if bad:
+        raise ValueError("; ".join(bad))
     if not (_ok(price) and price > 0):
         raise ValueError(f"the price must be a number above 0, not {price!r}")
     if not isinstance(settings, dict) or not all(isinstance(settings.get(g), dict) for g in ("financing", "policy")):

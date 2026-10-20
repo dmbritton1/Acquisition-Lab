@@ -192,6 +192,17 @@ def test_the_board_needs_complete_numbers_and_settings(srv):
     assert status == 400 and "growth" in body["error"]
 
 
+def test_an_impossible_typed_number_is_a_400_naming_it(srv):
+    base, home = srv
+    board_setup(base, home)
+    for field, v in (("revenue_ltm", 0), ("adj_ebitda", -3), ("tax_rate", 1.5)):
+        call(base, "/api/deals/cedar/numbers", {field: v})
+        status, body, _ = call(base, "/api/deals/cedar/board", {"overrides": {}})
+        assert status == 400 and field in body["error"], field
+        call(base, "/api/deals/cedar/numbers", {field: VALUES[field]})
+    assert call(base, "/api/deals/cedar/board", {"overrides": {}})[0] == 200
+
+
 def test_the_second_look_shows_only_as_a_fresh_pair(srv):
     base, home = srv
     deal = board_setup(base, home)

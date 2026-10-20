@@ -656,7 +656,12 @@ function drawResult(r) {
     S.result = null; clearBoard();
     return;
   }
-  if (!r.ok) return showError(r.data.error);
+  if (!r.ok) {  // never leave an old call showing over numbers it wasn't computed from
+    $("#grid").classList.add("greyed"); $("#fill").hidden = false;
+    $("#fill").replaceChildren(h("b", {}, "The board can't be computed. "), r.data.error);
+    S.result = null; clearBoard(); for (const t of TRAPS) syncRow(t);
+    return;
+  }
   S.result = r.data;
   drawCall(); drawFork(); for (const t of TRAPS) { growMax(t, true); syncRow(t); } drawPairs(); drawAsk(); drawSecond();
 }

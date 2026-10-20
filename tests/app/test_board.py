@@ -121,6 +121,18 @@ def test_a_missing_or_non_numeric_number_is_refused(bad):
         face({k: v for k, v in NUMBERS.items() if k != "tax_rate"}, SETTINGS, 230.0, "Acme", "Services")
 
 
+@pytest.mark.parametrize("field, bad", [("revenue_ltm", 0), ("revenue_ltm", -1), ("adj_ebitda", 0), ("growth", -1.5),
+                                        ("growth", 2), ("tax_rate", 1.5), ("tax_rate", -0.1), ("capex_pct", 3),
+                                        ("nwc_pct", -0.2), ("da_pct", 1.01)])
+def test_an_impossible_number_is_refused_by_name(field, bad):
+    with pytest.raises(ValueError, match=field):
+        face(NUMBERS | {field: bad}, SETTINGS, 230.0, "Acme", "Services")
+
+
+def test_a_falling_revenue_is_allowed():
+    assert face(NUMBERS | {"growth": -0.2}, SETTINGS, 230.0, "Acme", "Services").deal.company.growth == -0.2
+
+
 @pytest.mark.parametrize("bad", [{"mystery": worry(0.5, 0, 1)}, {"capex": 3}, {"capex": {"chance": "x", "low": 0, "high": 1}},
                                  {"capex": {"chance": 0.5}}])
 def test_a_malformed_worry_is_refused(bad):
