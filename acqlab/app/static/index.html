@@ -5,257 +5,337 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Acquisition Lab</title>
 <style>
+/* terminal: black screen, amber labels, white figures, blue fields for what the analyst types, red and green for
+   every signal (green is good for the deal, red is bad). Barlow is bundled (fonts/, SIL Open Font License): the
+   page loads nothing from outside. Labels and text in Barlow Semi Condensed, figures in Barlow. */
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url(fonts/barlow-400.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url(fonts/barlow-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 700; font-display: swap; src: url(fonts/barlow-700.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 400; font-display: swap; src: url(fonts/barlow-semi-condensed-400.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 500; font-display: swap; src: url(fonts/barlow-semi-condensed-500.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-display: swap; src: url(fonts/barlow-semi-condensed-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-display: swap; src: url(fonts/barlow-semi-condensed-700.woff2) format("woff2"); }
 :root {
-  color-scheme: light dark;
-  --bg: #f4f5f7; --panel: #ffffff; --sunk: #f8f9fb; --ink: #1a1e24; --muted: #59626e; --faint: #8b939d;
-  --line: #e1e4e9; --track: #d9dde3; --accent: #2b5b88; --accent-soft: #e7eef6;
-  --go: #1d7348; --go-soft: #e2f1e8; --bad: #b2372f; --bad-soft: #f9e6e4; --warn: #8f5b00; --warn-soft: #fbf0d9;
-  --mark: #ffe48a; --bar-ok: #6f9fc9; --bar-bad: #c9a29d; --band: rgba(43, 91, 136, .07);
-  --shadow: 0 1px 2px rgba(16, 24, 40, .05);
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #101317; --panel: #171b20; --sunk: #13171b; --ink: #e5e8ec; --muted: #a0a8b2; --faint: #6f7782;
-    --line: #2a3038; --track: #343b44; --accent: #82b2df; --accent-soft: #1b2835;
-    --go: #55c08b; --go-soft: #142a1f; --bad: #ee7d73; --bad-soft: #33191a; --warn: #e2aa4c; --warn-soft: #2f2511;
-    --mark: #6f5a12; --bar-ok: #4d7aa3; --bar-bad: #8a5f5a; --band: rgba(130, 178, 223, .08);
-    --shadow: none;
-  }
+  color-scheme: dark;
+  --bg: #050505; --panel: #050505; --sunk: #101010; --ink: #ececec; --muted: #a3a3a3; --faint: #6e6e6e;
+  --line: #2b2416; --track: #262626; --amber: #f5a524; --accent: #4fc3f7; --accent-soft: #0b2a3b;
+  --field: #0a1f4d; --field-line: #1d3d80;
+  --go: #33d36b; --go-soft: #0c3d1d; --bad: #ff4b40; --bad-soft: #4d0f0b; --warn: #ffd400; --warn-soft: #3d3000;
+  --mark: #6b4a00; --bar-ok: #33d36b; --bar-bad: #ff4b40; --band: rgba(245, 165, 36, .09);
+  --label: "Barlow Semi Condensed", "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --sans: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;  /* only for raw document text and shell commands */
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { background: var(--bg); }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI",
-  Roboto, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; }
-h2 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
-  margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--label); font-variant-numeric: tabular-nums; }
+h2 { font-size: 14.5px; font-weight: 600; color: var(--amber); margin: -14px -16px 12px; padding: 6px 16px 4px;
+  border-bottom: 1px solid var(--amber); display: flex; align-items: center; gap: 8px; }
 h2 .grow { flex: 1; }
+h2 .key { color: var(--faint); font-weight: 400; }
 button, input, select { font: inherit; color: inherit; }
-button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 5px 11px; }
-button:hover:not(:disabled) { border-color: var(--faint); }
-button:disabled { opacity: .5; cursor: default; }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+button { cursor: pointer; border: 1px solid #3a3a3a; background: #141414; border-radius: 0; padding: 3px 10px; }
+button:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--amber); border-color: var(--amber); color: #000; font-weight: 600; }
+button.primary:hover:not(:disabled) { color: #000; background: #ffb84d; }
 button.link { border: 0; background: none; padding: 0 2px; color: var(--accent); font-size: 12px; }
-button.link:hover { text-decoration: underline; }
-input[type=text], input[type=number], select { border: 1px solid var(--line); background: var(--panel); border-radius: 6px;
-  padding: 5px 8px; min-width: 0; }
+button.link:hover:not(:disabled) { text-decoration: underline; color: var(--accent); }
+input[type=text], input[type=number], select { border: 1px solid var(--field-line); background: var(--field); color: #fff;
+  border-radius: 0; padding: 4px 8px; min-width: 0; }
+input[type=file] { color: var(--muted); }
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 1px; }
+  outline: 2px solid var(--amber); outline-offset: 1px; }
 .s { font-size: 12px; color: var(--muted); }
 .warn { color: var(--warn); }
 .bad { color: var(--bad); }
 
-/* header */
-.bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px; padding: 10px 24px;
-  background: var(--panel); border-bottom: 1px solid var(--line); }
-.brand { font-weight: 650; white-space: nowrap; }
-.brand .sub { font-weight: 400; color: var(--muted); margin-left: 6px; }
-.picker { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-.picker select { min-width: 220px; color: var(--ink); }
-.meta { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.spacer { flex: 1; }
-.busy { font-size: 12px; color: var(--muted); white-space: nowrap; }
-.busy::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;
-  background: var(--accent); animation: pulse 1s ease-in-out infinite; vertical-align: 1px; }
-@keyframes pulse { 50% { opacity: .25; } }
+/* header: a command line, then the hotkey menu */
+.bar { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+.cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 9px 16px; background: #161616; border-bottom: 1px solid var(--line); }
+.brand { font-size: 26px; font-weight: 700; letter-spacing: .01em; color: var(--amber); white-space: nowrap; margin-right: 6px; }
+.brand::before { content: "> "; color: var(--faint); }
+/* the deal picker, with the open deal's details on a line under it */
+.deal { display: grid; gap: 4px; align-items: center; color: var(--amber); min-width: 0; }
+/* the deal dropdown: an amber chevron on the blue field everywhere; where the browser allows a styled list
+   (appearance: base-select, Chrome and Edge), the open list is a terminal panel too. Elsewhere the list stays the
+   system one. */
+.deal select { --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23f5a524' stroke-width='2'/%3E%3C/svg%3E");
+  width: auto; max-width: min(420px, 40vw); font-size: 15px; font-weight: 600; padding: 6px 32px 6px 12px; text-overflow: ellipsis;
+  white-space: nowrap; appearance: none; cursor: pointer; background: var(--field) no-repeat right 10px center / 12px 8px var(--chevron); }
+.deal select:hover { border-color: var(--amber); }
+@supports (appearance: base-select) {
+  .deal select, .deal select::picker(select) { appearance: base-select; }
+  /* the chevron is pinned to the right edge, so a long name is clipped before it, never pushes it out */
+  .deal select { position: relative; display: block; overflow: hidden; background-image: none; }
+  .deal select::picker-icon { content: ""; position: absolute; right: 10px; top: calc(50% - 4px); width: 12px; height: 8px;
+    background: no-repeat center / contain var(--chevron); transition: rotate .15s; }
+  .deal select:open::picker-icon { rotate: 180deg; }
+  .deal select::picker(select) { margin-top: 4px; padding: 4px 0; background: #0c0c0c; border: 1px solid var(--amber);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .7); }
+  .deal select option { padding: 8px 14px; gap: 10px; color: var(--ink); font-size: 14.5px; font-weight: 500;
+    border-left: 3px solid transparent; }
+  .deal select option:hover, .deal select option:focus-visible { background: #1a1406; color: var(--amber); outline: none; }
+  .deal select option:checked { border-left-color: var(--amber); color: var(--amber); font-weight: 600; }
+  .deal select option::checkmark { display: none; }
+  @media (prefers-reduced-motion: reduce) { .deal select::picker-icon { transition: none; } }
+}
+.cmd button { white-space: nowrap; flex-shrink: 0; padding: 8px 18px; font-size: 16px; font-weight: 600; }
+.cmd .right { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.deal .meta { font-size: 12px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; min-height: 1em; width: 0; min-width: 100%; }  /* as wide as the picker, never wider */
+.busy { font-size: 12px; color: var(--amber); white-space: nowrap; }
+.busy::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px;
+  background: var(--amber); animation: pulse 1s steps(2) infinite; vertical-align: 0; }
+@keyframes pulse { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .busy::before { animation: none; } }
+.menu { display: flex; gap: 16px; white-space: nowrap; overflow-x: auto; scrollbar-width: none; padding: 3px 16px; background: #0d2a6b; color: #fff; }
+.menu a { color: inherit; text-decoration: none; }
+.menu a:hover { color: var(--amber); }
+.menu a b { color: var(--amber); font-weight: 500; }
 
-main { max-width: 1440px; margin: 0 auto; padding: 16px 24px 48px; }
-.msg { position: sticky; top: 49px; z-index: 4; display: flex; gap: 12px; align-items: flex-start; max-width: 1392px;
-  margin: 12px auto 0; padding: 10px 14px; border-radius: 8px; background: var(--bad-soft); color: var(--bad);
-  border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent); }
+main { max-width: 1440px; margin: 0 auto; padding: 12px 16px 48px; }
+.msg { position: sticky; top: 100px; z-index: 4; display: flex; gap: 12px; align-items: flex-start; max-width: 1408px;
+  margin: 10px auto 0; padding: 8px 14px; background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad); }
 .msg span { flex: 1; white-space: pre-wrap; }
-.msg button { background: transparent; border-color: currentColor; color: inherit; padding: 2px 10px; }
+.msg button { background: transparent; border-color: currentColor; color: inherit; padding: 1px 10px; }
 
 /* setup drawers */
-.setup { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 16px; }
-details.drawer { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+.setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 12px; }
+details.drawer { background: var(--panel); border: 1px solid var(--line); }
 details.drawer[open] { flex-basis: 100%; }
-details.drawer > summary { cursor: pointer; padding: 8px 14px; font-weight: 600; list-style: none; display: flex; gap: 10px;
-  align-items: baseline; }
+details.drawer > summary { cursor: pointer; padding: 5px 12px; font-weight: 600; color: var(--amber); list-style: none;
+  display: flex; gap: 10px; align-items: baseline; }
 details.drawer > summary::-webkit-details-marker { display: none; }
 details.drawer > summary::before { content: "+"; color: var(--faint); width: 10px; }
 details.drawer[open] > summary::before { content: "\2212"; }
 details.drawer > summary .s { font-weight: 400; }
-.drawer form { padding: 4px 14px 14px; }
+.drawer form { padding: 4px 12px 12px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 16px; }
-.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
-.field input { font-size: 14px; color: var(--ink); }
+.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--amber); }
+.field input { font-size: 13px; }
 .field.missing { color: var(--bad); }
 .field.missing input, input.missing { border-color: var(--bad); background: var(--bad-soft); }
 fieldset { border: 0; padding: 0; margin: 0 0 12px; }
 legend { font-size: 12px; font-weight: 600; color: var(--ink); padding: 0; margin-bottom: 8px; }
 .form-foot { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
 
-/* layout */
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
-.col-main, .col-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* layout: panels on a black screen */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 8px; align-items: start; }
+.col-main, .col-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 @media (max-width: 1180px) { .grid { grid-template-columns: minmax(0, 1fr); } }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
-  box-shadow: var(--shadow); min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; min-width: 0; }
 .board-part { transition: opacity .15s; }
-.greyed .board-part { opacity: .38; pointer-events: none; user-select: none; filter: grayscale(.6); }
-.fill { margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; background: var(--bad-soft); color: var(--bad);
-  border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent); }
+.greyed .board-part { opacity: .35; pointer-events: none; user-select: none; filter: grayscale(.8); }
+.fill { margin-bottom: 12px; padding: 8px 14px; background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad); }
 .fill b { font-weight: 650; }
 .empty { padding: 40px; text-align: center; color: var(--muted); }
-.empty code { font-family: var(--mono); font-size: 12px; background: var(--sunk); padding: 2px 6px; border-radius: 4px; }
+.empty code { font-family: var(--mono); font-size: 12px; background: var(--sunk); padding: 2px 6px; color: var(--amber); }
 
 /* the call */
 .call { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 24px; align-items: center; }
-.verdict { min-width: 128px; text-align: center; padding: 14px 18px; border-radius: 8px; font-size: 28px; font-weight: 750;
-  letter-spacing: .02em; background: var(--sunk); color: var(--faint); border: 1px solid var(--line); }
-.verdict.go { background: var(--go-soft); color: var(--go); border-color: color-mix(in srgb, var(--go) 35%, transparent); }
-.verdict.nogo { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
-.verdict small { display: block; font-size: 11px; font-weight: 500; letter-spacing: .04em; margin-top: 2px; }
-.kv .k { font-size: 12px; color: var(--muted); }
-.kv .v { font-size: 22px; font-weight: 650; }
-.meter { height: 4px; border-radius: 2px; background: var(--track); margin-top: 6px; overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--accent); }
-.note { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+.verdict { min-width: 128px; text-align: center; padding: 10px 16px; font-size: 26px; font-weight: 700;
+  background: var(--sunk); color: var(--faint); border: 1px solid var(--line); }
+.verdict.go { background: var(--go); color: #000; border-color: var(--go); }
+.verdict.nogo { background: var(--bad); color: #000; border-color: var(--bad); }
+.verdict small { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; }
+.kv .k { font-size: 12px; color: var(--amber); }
+.kv .v { font: 600 22px/1.3 var(--sans); }
+#price { color: var(--accent); }
+.kv .s { font-family: var(--sans); }
+.lo { color: var(--bad); }
+.hi { color: var(--go); }
+.meter { height: 6px; background: var(--track); margin-top: 6px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--go); }
+.meter.on { background: var(--bad); }  /* red for the share that falls short, only once there is a result */
+.note { margin: 14px 0 0; font: 12px/1.5 var(--sans); color: var(--muted); }
 
 /* fork chart */
 #fork { width: 100%; height: auto; display: block; }
-#fork text { fill: var(--muted); font-size: 11px; }
+#fork text { fill: var(--muted); font: 12px var(--label); }
 #fork .lbl { fill: var(--ink); font-weight: 600; }
 #fork .bar-ok { fill: var(--bar-ok); }
 #fork .bar-bad { fill: var(--bar-bad); }
 #fork .band { fill: var(--band); }
 #fork .axis { stroke: var(--line); }
 #fork .price { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
-#fork .walk { stroke: var(--accent); stroke-width: 2; }
+#fork .walk { stroke: var(--amber); stroke-width: 2; }
 .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--muted); }
-.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
 
 /* worries */
-.worry { padding: 14px 0; border-top: 1px solid var(--line); }
+.worry { padding: 12px 0; border-top: 1px solid var(--line); }
 .worry:first-child { border-top: 0; padding-top: 2px; }
 .w-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
-.w-title { font-weight: 650; font-size: 15px; }
-.tag { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: var(--sunk); color: var(--muted);
-  border: 1px solid var(--line); white-space: nowrap; }
-.tag.you { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
-.tag.opus { background: var(--go-soft); color: var(--go); border-color: transparent; }
-.tag.none { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.w-title { font-weight: 600; font-size: 14px; color: var(--ink); }
+.tag { font-size: 11px; padding: 0 7px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.tag.you { background: var(--accent-soft); color: var(--accent); }
+.tag.opus { background: #1a1a1a; color: var(--ink); }
+.tag.none { background: var(--warn-soft); color: var(--warn); }
+.state { font-size: 11px; font-weight: 600; padding: 0 7px; white-space: nowrap; }
+.state.flips { background: var(--bad-soft); color: var(--bad); }
+.state.near { background: var(--warn-soft); color: var(--warn); }
+.state.clear { background: var(--go-soft); color: var(--go); }
 .w-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(150px, .7fr) minmax(220px, 1.2fr); gap: 20px; }
 @media (max-width: 1000px) { .w-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .w-text { grid-column: 1 / -1; } }
-.reason { margin: 0; color: var(--ink); }
+.reason { margin: 0; color: var(--ink); font: 13px/1.5 var(--sans); }
 .reason.dim { color: var(--muted); font-style: italic; }
 .notes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
 .notes .hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
-.ctl-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
-.out { font-weight: 650; color: var(--ink); font-size: 13px; }
+.ctl-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--amber); }
+.out { font: 600 13px var(--sans); color: var(--accent); }
 .track { position: relative; height: 22px; margin-top: 2px; }
 .ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: -2px; }
 .fliptext { margin-top: 4px; }
 .fliptext.hit { color: var(--bad); font-weight: 600; }
-.flip { position: absolute; top: 2px; width: 2px; height: 18px; margin-left: -1px; background: var(--bad); border-radius: 1px;
+.flip { position: absolute; top: 2px; width: 2px; height: 18px; margin-left: -1px; background: var(--bad);
   left: calc(7px + (100% - 14px) * var(--at)); pointer-events: none; }
 .m2 { position: absolute; top: 6px; width: 10px; height: 10px; margin-left: -5px; border: 2px solid var(--warn);
-  transform: rotate(45deg); background: var(--panel); left: calc(7px + (100% - 14px) * var(--at)); pointer-events: none; }
+  transform: rotate(45deg); background: var(--bg); left: calc(7px + (100% - 14px) * var(--at)); pointer-events: none; }
 input[type=range] { -webkit-appearance: none; appearance: none; position: relative; width: 100%; height: 22px;
   margin: 0; background: transparent; cursor: pointer; --fill: 0%; }
-input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px;
+input[type=range]::-webkit-slider-runnable-track { height: 4px;
   background: linear-gradient(to right, var(--accent) var(--fill), var(--track) var(--fill)); }
-input[type=range]::-moz-range-track { height: 4px; border-radius: 2px;
+input[type=range]::-moz-range-track { height: 4px;
   background: linear-gradient(to right, var(--accent) var(--fill), var(--track) var(--fill)); }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px;
-  border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
-input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: var(--panel);
-  border: 2px solid var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 14px; margin-top: -5px;
+  background: var(--ink); border: 0; }
+input[type=range]::-moz-range-thumb { width: 12px; height: 14px; border-radius: 0; background: var(--ink); border: 0; }
 input[type=range]:focus-visible { outline: none; }
-input[type=range]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--accent); outline-offset: 2px; }
-.chip { font-size: 12px; max-width: 100%; padding: 2px 9px; border-radius: 12px; background: var(--sunk);
-  border: 1px solid var(--line); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+input[type=range]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--amber); outline-offset: 2px; }
+.chip { font: 12px var(--sans); max-width: 100%; padding: 1px 8px; background: var(--sunk); border: 1px solid #2a2a2a;
+  color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chip::before { content: "\201C"; color: var(--faint); }
 .chip::after { content: "\201D"; color: var(--faint); }
-.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
 
 /* pairs, ask */
 .pairs { display: flex; flex-wrap: wrap; gap: 8px; }
-.pair { padding: 6px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-weight: 600; font-size: 13px; }
-.empty-line { color: var(--muted); font-size: 13px; margin: 0; }
+.pair { padding: 3px 10px; background: var(--bad-soft); color: var(--bad); font-weight: 600; font-size: 12px; }
+.empty-line { color: var(--muted); font-size: 12px; margin: 0; }
 ol.ask { list-style: none; margin: 0; padding: 0; counter-reset: ask; }
-ol.ask li { counter-increment: ask; display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 8px; padding: 9px 0;
-  border-top: 1px solid var(--line); }
+ol.ask li { counter-increment: ask; display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; padding: 7px 0;
+  border-top: 1px solid #1a1a1a; }
 ol.ask li:first-child { border-top: 0; padding-top: 0; }
-ol.ask li::before { content: counter(ask); color: var(--faint); font-weight: 600; }
-ol.ask .val { font-weight: 650; text-align: right; }
+ol.ask li::before { content: counter(ask) ")"; color: var(--amber); }
+ol.ask .val { font: 600 13px var(--sans); color: var(--go); text-align: right; }
+ol.ask .val.zero { color: var(--faint); }
 ol.ask .docs { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
 
 /* numbers */
 .co { font-weight: 600; margin-bottom: 10px; }
 .co .s { font-weight: 400; display: block; }
 .num { display: grid; grid-template-columns: minmax(0, 1fr) 112px 104px; gap: 4px 10px; align-items: center;
-  padding: 6px 0; border-top: 1px solid var(--line); }
+  padding: 5px 0; border-top: 1px solid #1a1a1a; }
 .num:first-of-type { border-top: 0; }
-.num label { font-size: 13px; }
+.num label { font-size: 12px; }
 .num.blank label { color: var(--bad); font-weight: 600; }
 .unit { position: relative; }
-.unit input { width: 100%; text-align: right; padding-right: 30px; }
-.unit span { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--faint);
+.unit input { width: 100%; text-align: right; padding-right: 30px; font-family: var(--sans); }
+.unit span { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #8fa6d6;
   pointer-events: none; }
-.status { font-size: 11px; text-align: center; padding: 2px 6px; border-radius: 10px; background: var(--sunk); color: var(--muted);
-  border: 1px solid var(--line); white-space: nowrap; }
-.status.quoted, .status.calculated { background: var(--go-soft); color: var(--go); border-color: transparent; }
-.status.blank { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
-.status.conflict { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
-.status.you { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.status { font-size: 11px; text-align: center; padding: 1px 6px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.status.quoted, .status.calculated { background: var(--go-soft); color: var(--go); }
+.status.blank { background: var(--bad-soft); color: var(--bad); }
+.status.conflict { background: var(--warn-soft); color: var(--warn); }
+.status.you { background: var(--accent-soft); color: var(--accent); }
 .num .more { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
 /* steps, docs, second */
-.step { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; padding: 10px 0;
-  border-top: 1px solid var(--line); }
+.step { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; padding: 8px 0;
+  border-top: 1px solid #1a1a1a; }
 .step:first-child { border-top: 0; padding-top: 0; }
-.step b { font-weight: 650; }
+.step b { font-weight: 600; color: var(--ink); }
 .step .act { display: flex; gap: 6px; align-items: center; flex-shrink: 0; white-space: nowrap; }
-.docs-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
-.docs-list button { display: block; text-align: left; width: 100%; border: 0; padding: 4px 0; background: none; }
-.docs-list button:hover { color: var(--accent); }
+/* run model: the panel that starts everything, so it carries the amber frame and a filled title bar */
+#stepCard { border: 1px solid var(--amber); box-shadow: 0 0 0 1px rgba(245, 165, 36, .25), 0 0 24px rgba(245, 165, 36, .08); }
+#stepCard h2 { background: var(--amber); color: #000; border-bottom: 0; }
+.step.all { flex-direction: column; align-items: stretch; gap: 10px; }
+.step.all .s { font-size: 12.5px; color: var(--ink); }
+.step.all .act > button.primary { flex: 1; padding: 9px 12px; font-size: 14px; }
+.step.all .act > .busy { font-size: 13px; padding: 8px 0; }
+.step .confirm { display: flex; gap: 6px; }
+/* run all: the cost on its own line, then Confirm and Cancel side by side at equal width */
+.step.all .act:has(.confirm) { flex-direction: column; align-items: stretch; gap: 8px; }
+.step.all .est { text-align: center; font-size: 14px; color: var(--ink); }
+.step.all .confirm { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.step.all .confirm button { padding: 9px 12px; font-size: 14px; font-weight: 600; }
+details.sub { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+details.sub > summary { cursor: pointer; list-style: none; font-size: 12px; color: var(--amber); }
+details.sub > summary::-webkit-details-marker { display: none; }
+details.sub > summary::before { content: "+ "; color: var(--faint); }
+details.sub[open] > summary { margin-bottom: 8px; }
+details.sub[open] > summary::before { content: "\2212  "; }  /* the escape eats one space */
+.docs-list { margin: -3px 0; }
+.docs-list button { display: block; text-align: left; width: 100%; border: 0; padding: 3px 0; background: none; }
+.docs-list button:hover:not(:disabled) { color: var(--amber); }
 .mini { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
-.mini .verdict { min-width: 84px; font-size: 18px; padding: 8px 10px; }
+.mini .verdict { min-width: 84px; font-size: 16px; padding: 6px 10px; }
+.mini b { font-family: var(--sans); }
 table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; }
-table.cmp th, table.cmp td { padding: 5px 4px; border-top: 1px solid var(--line); text-align: right; }
+table.cmp th, table.cmp td { padding: 4px; border-top: 1px solid #1a1a1a; text-align: right; }
 table.cmp th:first-child, table.cmp td:first-child { text-align: left; }
-table.cmp thead th { color: var(--muted); font-weight: 600; border-top: 0; }
+table.cmp thead th { color: var(--amber); font-weight: 400; border-top: 0; border-bottom: 1px solid var(--line); }
 table.cmp td.diff { color: var(--warn); font-weight: 650; }
 
+/* new-deal pop-up */
+dialog { padding: 0; width: min(640px, calc(100vw - 32px)); background: var(--bg); color: var(--ink);
+  border: 1px solid var(--amber); }
+dialog::backdrop { background: rgba(0, 0, 0, .72); }
+dialog header { display: flex; align-items: center; padding: 6px 8px 6px 16px; background: #161616;
+  border-bottom: 1px solid var(--amber); }
+dialog header b { flex: 1; color: var(--amber); }
+dialog header button { border: 0; background: none; font-size: 18px; line-height: 1; padding: 2px 8px; }
+.dlg-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.dlg-body > .s, .dlg-body > .fill { margin: 0; }
+.drops { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .drops { grid-template-columns: 1fr; } }
+.drop { position: relative; display: flex; flex-direction: column; gap: 4px; justify-content: center; min-height: 120px;
+  padding: 14px; border: 1px dashed #4a4a4a; background: var(--sunk); text-align: center; cursor: pointer; }
+.drop b { color: var(--amber); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop:hover, .drop.over { border-color: var(--amber); background: #1a1406; }
+.drop:focus-within { outline: 2px solid var(--amber); outline-offset: 1px; }
+.drop.has { border-style: solid; border-color: var(--go); }
+.drop .picked { color: var(--go); font-weight: 600; word-break: break-all; }
+.dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); }
+
 /* document panel */
-.panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); z-index: 10; background: var(--panel);
-  border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.12); display: flex; flex-direction: column; }
-.panel header { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.panel header b { flex: 1; }
+.panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); z-index: 10; background: var(--bg);
+  border-left: 1px solid var(--amber); box-shadow: -8px 0 24px rgba(0,0,0,.6); display: flex; flex-direction: column; }
+.panel header { display: flex; gap: 10px; align-items: center; padding: 6px 16px; background: #161616;
+  border-bottom: 1px solid var(--amber); }
+.panel header b { flex: 1; color: var(--amber); }
 .panel .page { flex: 1; overflow: auto; margin: 0; padding: 16px 18px; font: 12.5px/1.6 var(--mono); white-space: pre-wrap;
-  word-break: break-word; background: var(--sunk); }
-.panel mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 1px 0; }
+  word-break: break-word; background: var(--sunk); color: #d8d8d8; }
+.panel mark { background: var(--mark); color: #fff; padding: 1px 0; }
 .panel .pnote { padding: 6px 16px; font-size: 12px; }
 </style>
 </head>
 <body>
 <header class="bar">
-  <div class="brand">Acquisition Lab<span class="sub">Analyst board</span></div>
-  <label class="picker">Deal <select id="dealSelect" aria-label="Deal"></select></label>
-  <div id="dealMeta" class="meta"></div>
-  <div class="spacer"></div>
-  <span id="busy" class="busy" hidden></span>
+  <div class="cmd">
+    <div class="brand">Acquisition Lab</div>
+    <div class="deal">
+      <select id="dealSelect" aria-label="Deal"></select>
+      <div id="dealMeta" class="meta"></div>
+    </div>
+    <div class="right">
+      <span id="busy" class="busy" hidden></span>
+      <button type="button" id="newDealBtn">+ New deal</button>
+    </div>
+  </div>
+  <nav class="menu" aria-label="Sections (keys 1 to 8)">
+    <a href="#callCard"><b>1)</b> Call</a><a href="#forkCard"><b>2)</b> Outcomes</a><a href="#worryCard"><b>3)</b> Worries</a>
+    <a href="#pairCard"><b>4)</b> Pairs</a><a href="#stepCard"><b>5)</b> Pricing model</a><a href="#askCard"><b>6)</b> Ask seller</a>
+    <a href="#numCard"><b>7)</b> Numbers</a><a href="#docCard"><b>8)</b> Documents</a>
+  </nav>
 </header>
 <div id="msg" class="msg" role="alert" hidden><span id="msgText"></span><button type="button" id="msgClose">Dismiss</button></div>
 <main>
   <section class="setup">
-    <details class="drawer" id="newDeal">
-      <summary>New deal</summary>
-      <form id="newDealForm">
-        <div class="form-grid">
-          <label class="field">Company name <input type="text" name="name" required></label>
-          <label class="field">Asking price ($M) <input type="number" name="price" step="any" min="0" required></label>
-          <label class="field">Teaser (.pdf, .md, .txt) <input type="file" name="teaser" accept=".pdf,.md,.txt" required></label>
-          <label class="field">CIM (.pdf, .md, .txt) <input type="file" name="cim" accept=".pdf,.md,.txt" required></label>
-        </div>
-        <div class="form-foot"><button class="primary" type="submit">Add deal</button>
-          <span class="s">The files are copied into the deal folder on this laptop. Nothing is sent anywhere until you run a step.</span></div>
-      </form>
-    </details>
     <details class="drawer" id="settingsBox">
       <summary>Firm settings <span class="s" id="settingsSummary"></span></summary>
       <form id="settingsForm"></form>
@@ -277,37 +357,41 @@ table.cmp td.diff { color: var(--warn); font-weight: 650; }
         <p class="note">GO when buying at the price carries no more expected regret than passing. The walk-away is the
           highest price that still meets the firm's hurdle in an outcome; outcomes are simulated over the worries below.</p>
       </section>
-      <section class="card board-part">
+      <section class="card board-part" id="forkCard">
         <h2>Walk-away price across outcomes</h2>
         <svg id="fork" viewBox="0 0 640 210" role="img" aria-label="Histogram of walk-away prices"></svg>
         <div class="legend"><span><i style="background:var(--bar-ok)"></i>clears the price</span>
           <span><i style="background:var(--bar-bad)"></i>falls short</span>
           <span><i style="background:var(--band);outline:1px solid var(--line)"></i>p10 to p90</span></div>
       </section>
-      <section class="card board-part">
-        <h2>Worries <span class="grow"></span><span class="s" style="text-transform:none;letter-spacing:0;font-weight:400">
+      <section class="card board-part" id="worryCard">
+        <h2>Worries <span class="grow"></span><span class="s" style="font-weight:400">
           <i class="flip-key" style="display:inline-block;width:2px;height:10px;background:var(--bad);vertical-align:-1px"></i>
           where it alone flips the face-value call</span></h2>
         <div id="worries"></div>
       </section>
-      <section class="card board-part">
+      <section class="card board-part" id="pairCard">
         <h2>Together they flip it</h2>
         <div id="pairs"></div>
       </section>
     </div>
     <div class="col-side">
-      <section class="card board-part">
+      <section class="card" id="stepCard">
+        <h2>Pricing model</h2>
+        <div id="runAll"></div>
+        <details class="sub"><summary>Run one step at a time</summary><div id="steps"></div></details>
+      </section>
+      <section class="card board-part" id="askCard">
         <h2>Ask the seller first <span class="grow"></span><button type="button" id="copyAsk">Copy as text</button></h2>
-        <p class="s" style="margin:-6px 0 10px">Ranked by how much knowing the size would cut expected loss.</p>
+        <p class="s" style="margin:0 0 10px">Ranked by how much knowing the size would cut expected loss.</p>
         <ol class="ask" id="ask"></ol>
       </section>
-      <section class="card">
+      <section class="card" id="numCard">
         <h2>Company numbers</h2>
         <div id="numbers"></div>
       </section>
-      <section class="card">
-        <h2>Steps</h2>
-        <div id="steps"></div>
+      <section class="card" id="docCard">
+        <h2>Documents</h2>
         <div id="docs" class="docs-list"></div>
       </section>
       <section class="card board-part">
@@ -317,6 +401,24 @@ table.cmp td.diff { color: var(--warn); font-weight: 650; }
     </div>
   </div>
 </main>
+<dialog id="newDeal" aria-labelledby="newDealTitle">
+  <form id="newDealForm">
+    <header><b id="newDealTitle">New deal</b><button type="button" id="newDealClose" aria-label="Close">&times;</button></header>
+    <div class="dlg-body">
+      <label class="field">Company name <input type="text" name="name" required></label>
+      <label class="field">Asking price ($M) <input type="number" name="price" step="any" min="0" required></label>
+      <div class="drops">
+        <label class="drop"><input type="file" name="teaser" accept=".pdf,.md,.txt" required>
+          <b>Teaser</b><span class="s">Drop the file here, or click to choose. PDF, Markdown or text.</span><span class="picked"></span></label>
+        <label class="drop"><input type="file" name="cim" accept=".pdf,.md,.txt" required>
+          <b>CIM</b><span class="s">Drop the file here, or click to choose. PDF, Markdown or text.</span><span class="picked"></span></label>
+      </div>
+      <p class="fill" id="newDealErr" role="alert" hidden></p>
+      <p class="s">The files are copied into the deal folder on this laptop. Nothing is sent anywhere until you run a step.</p>
+    </div>
+    <div class="dlg-foot"><button type="button" id="newDealCancel">Cancel</button><button class="primary" type="submit">Add deal</button></div>
+  </form>
+</dialog>
 <aside id="panel" class="panel" hidden aria-label="Document">
   <header><b id="pTitle"></b>
     <button type="button" id="pPrev" aria-label="Previous page">&lsaquo;</button><span class="s" id="pPage"></span>
@@ -350,7 +452,7 @@ const STEPS = [["read", "Read", "Haiku reads the teaser and CIM and quotes each 
 
 // state: the open deal, its overrides (the page's copy of board.json), the last board result
 const S = {id: null, detail: null, settings: {}, overrides: {}, result: null, rows: {}, sizeMax: {}, lastFlip: {},
-  step: null, stepDeal: null, boardBusy: false, boardWanted: false, boardTimer: null};
+  step: null, stepDeal: null, chain: null, boardBusy: false, boardWanted: false, boardTimer: null};
 const $ = s => document.querySelector(s);
 
 function h(tag, props, ...kids) {
@@ -403,7 +505,7 @@ async function loadDeals(want) {
   if (!id) {
     $("#fill").hidden = true;
     $("#dealMeta").textContent = "";
-    $("#empty").replaceChildren(h("p", {}, "No deals yet. Add one with New deal above, or make the free sample deal:"),
+    $("#empty").replaceChildren(h("p", {}, "No deals yet. Add one with + New deal at the top, or make the free sample deal:"),
       h("p", {}, h("code", {}, ".venv/bin/python scripts/board_sample.py --room <a generated deals/dev-000/room> --home <this folder>")));
     return;
   }
@@ -420,12 +522,33 @@ async function loadDeal(id, keep) {
   if (fresh) { S.overrides = r.data.board?.overrides || {}; S.sizeMax = {}; S.result = null; }
   S.lastFlip = {};
   const d = r.data.deal, n = r.data.numbers;
-  $("#dealMeta").textContent = [d.name, n?.industry, "added " + new Date(d.created).toLocaleDateString()].filter(Boolean).join("  \u00b7  ");
+  $("#dealMeta").textContent = [n?.industry, "added " + new Date(d.created).toLocaleDateString(undefined,
+    {month: "short", day: "numeric", year: "numeric"})].filter(Boolean).join("  \u00b7  ");
   $("#price").textContent = money(d.price);
   renderNumbers(); renderSteps(); renderDocs(); buildWorries();
   if (fresh) clearBoard();
   scheduleBoard(0);
 }
+
+// ---------- the new-deal pop-up: two drop zones; each is a file input stretched over its box, so a click picks a
+// file and a drop lands on the input natively ----------
+$("#newDealBtn").onclick = () => $("#newDeal").showModal();
+$("#newDealClose").onclick = $("#newDealCancel").onclick = () => $("#newDeal").close();
+function showPicked() {
+  for (const zone of document.querySelectorAll(".drop")) {
+    const f = zone.querySelector("input").files[0];
+    zone.classList.toggle("has", !!f);
+    zone.querySelector(".picked").textContent = f ? `${f.name}  (${Math.max(1, Math.round(f.size / 1024))} KB)` : "";
+  }
+}
+for (const zone of document.querySelectorAll(".drop")) {
+  zone.querySelector("input").onchange = showPicked;
+  zone.ondragenter = zone.ondragover = () => zone.classList.add("over");
+  zone.ondragleave = zone.ondrop = () => zone.classList.remove("over");
+}
+// a file dropped anywhere but a drop zone must not make the browser open it in place of the board
+for (const type of ["dragover", "drop"])
+  addEventListener(type, e => { if (!e.target.matches?.("input[type=file]")) e.preventDefault(); });
 
 $("#newDealForm").onsubmit = async e => {
   e.preventDefault();
@@ -436,17 +559,20 @@ $("#newDealForm").onsubmit = async e => {
     fr.onerror = () => rej(fr.error);
     fr.readAsDataURL(file);
   });
+  // errors show inside the pop-up: the page's banner sits behind it
+  const fail = text => { $("#newDealErr").textContent = text; $("#newDealErr").hidden = false; };
+  $("#newDealErr").hidden = true;
   btn.disabled = true; setBusy("Reading the files\u2026");
   try {
     const [t, c] = [f.teaser.files[0], f.cim.files[0]];
     const r = await api("/api/deals", {name: f.name.value, price: parseFloat(f.price.value),
       teaser: {filename: t.name, base64: await read(t)}, cim: {filename: c.name, base64: await read(c)}});
-    if (!r.ok) return showError(r.data.error);
-    f.reset(); $("#newDeal").open = false;
+    if (!r.ok) return fail(r.data.error);
+    f.reset(); showPicked(); $("#newDeal").close();
     location.hash = r.data.id;
     await loadDeals(r.data.id);
   } catch (err) {
-    showError("couldn't read the file: " + err);
+    fail("couldn't read the file: " + err);
   } finally { btn.disabled = false; setBusy(""); }
 };
 
@@ -543,30 +669,46 @@ async function saveNumber(f, input) {
 // ---------- steps and documents ----------
 function renderSteps() {
   const cost = {read: S.detail.numbers?.cost, price: S.detail.worries?.cost, second: S.detail.second_worries?.cost};
-  $("#steps").replaceChildren(...STEPS.map(([step, name, desc]) => {
+  const busy = !!S.step || !!S.chain, here = S.stepDeal === S.id;
+  const row = (name, desc, last, running, steps, all) => {  // all: the run-everything row, a big button and no heading
     const act = h("div", {class: "act"});
-    const idle = () => act.replaceChildren(h("button", {type: "button", disabled: !!S.step, onclick: () => ask(step, act, idle)}, name + "\u2026"));
-    if (S.step === step && S.stepDeal === S.id) act.replaceChildren(h("span", {class: "busy", id: "stepClock"}, "Running"));
+    const idle = () => act.replaceChildren(h("button", {type: "button", class: all ? "primary" : null, disabled: busy,
+      onclick: () => ask(steps, act, idle)}, name + "\u2026"));
+    if (running && here) act.replaceChildren(h("span", {class: "busy stepClock"}, "Running"));
     else idle();
-    return h("div", {class: "step"}, h("div", {}, h("b", {}, name), h("div", {class: "s"}, desc),
-      ok(cost[step]) && cost[step] > 0 ? h("div", {class: "s"}, "Last run cost " + dollars(cost[step])) : null), act);
-  }));
+    return h("div", {class: "step" + (all ? " all" : "")}, h("div", {}, all ? null : h("b", {}, name), h("div", {class: "s"}, desc),
+      ok(last) && last > 0 ? h("div", {class: "s"}, "Last run cost " + dollars(last)) : null), act);
+  };
+  $("#runAll").replaceChildren(row("Run all", "Runs Read, then Price, then Second look, one after another. Stops at the first step that fails.",
+    null, !!S.chain, STEPS.map(s => s[0]), true));
+  $("#steps").replaceChildren(...STEPS.map(([step, name, desc]) => row(name, desc, cost[step], S.step === step && !S.chain, [step])));
 }
-async function ask(step, act, idle) {
+async function ask(steps, act, idle) {
+  // one estimate for the whole run: the steps' list prices added up
   act.replaceChildren(h("span", {class: "s"}, "Estimating\u2026"));
-  const r = await api(`/api/deals/${S.id}/estimate/${step}`);
-  if (!r.ok) { showError(r.data.error); idle(); return; }
-  act.replaceChildren(h("span", {class: "s"}, "About " + dollars(r.data.dollars) + " "),
-    h("button", {type: "button", class: "primary", onclick: () => run(step)}, "Run"),
-    h("button", {type: "button", onclick: idle}, "Cancel"));
+  const rs = await Promise.all(steps.map(step => api(`/api/deals/${S.id}/estimate/${step}`)));
+  const bad = rs.find(r => !r.ok);
+  if (bad) { showError(bad.data.error); idle(); return; }
+  const id = S.id;
+  act.replaceChildren(h("span", {class: "s est"}, "Estimated cost: about " + dollars(rs.reduce((a, r) => a + r.data.dollars, 0))),
+    h("div", {class: "confirm"}, h("button", {type: "button", class: "primary", onclick: () => runAll(steps, id)}, "Confirm"),
+      h("button", {type: "button", onclick: idle}, "Cancel")));
 }
-async function run(step) {
-  const id = S.id, started = Date.now();
+async function runAll(steps, id) {
+  // the chain stays on the deal it started on, even if the analyst opens another meanwhile
+  S.chain = steps.length > 1 ? id : null;
+  for (const [i, step] of steps.entries())
+    if (!await run(step, id, S.chain ? `Step ${i + 1} of ${steps.length}: ` : "")) break;
+  S.chain = null;
+  if (S.id === id) renderSteps();
+}
+async function run(step, id, label) {
+  const started = Date.now();
   S.step = step; S.stepDeal = id; renderSteps();
   const name = STEPS.find(s => s[0] === step)[1];
-  const tick = () => { const s = Math.round((Date.now() - started) / 1000), el = $("#stepClock");
-    const t = `${name} running \u00b7 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} \u00b7 can take a few minutes`;
-    setBusy(t); if (el) el.textContent = "Running " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+  const tick = () => { const s = Math.round((Date.now() - started) / 1000), clock = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    setBusy(`${label}${name} running \u00b7 ${clock} \u00b7 can take a few minutes`);
+    for (const el of document.querySelectorAll(".stepClock")) el.textContent = `${label}${name} ${clock}`; };
   tick();
   const clock = setInterval(tick, 1000);
   const r = await api(`/api/deals/${id}/run/${step}`, {});
@@ -574,10 +716,10 @@ async function run(step) {
   S.step = null;
   if (!r.ok) showError(name + ": " + r.data.error);
   if (S.id === id) await loadDeal(id, true); else renderSteps();
+  return r.ok;
 }
 function renderDocs() {
-  $("#docs").replaceChildren(h("div", {class: "s", style: "margin-bottom:4px"}, "Documents"),
-    ...S.detail.docs.map(d => h("button", {type: "button", onclick: () => openDoc(d, 0)}, d.title,
+  $("#docs").replaceChildren(...S.detail.docs.map(d => h("button", {type: "button", onclick: () => openDoc(d, 0)}, d.title,
       h("span", {class: "s"}, `  \u00b7  ${d.pages.length} page${d.pages.length === 1 ? "" : "s"}`),
       d.unreadable?.length ? h("span", {class: "s warn"}, `  \u00b7  no text on page ${d.unreadable.join(", ")}`) : null)));
 }
@@ -620,6 +762,20 @@ $("#pPrev").onclick = () => { P.page--; drawPage(); };
 $("#pNext").onclick = () => { P.page++; drawPage(); };
 $("#pClose").onclick = () => { $("#panel").hidden = true; };
 document.addEventListener("keydown", e => { if (e.key === "Escape") $("#panel").hidden = true; });
+
+// ---------- the section menu: click or press 1 to 7 (the URL hash stays the deal id) ----------
+const MENU = [...document.querySelectorAll(".menu a")];
+const jump = a => {  // lands the section just under the sticky header
+  const el = document.querySelector(a.getAttribute("href"));
+  if (el) scrollTo({top: el.getBoundingClientRect().top + scrollY - $(".bar").offsetHeight - 8});
+};
+for (const a of MENU) a.onclick = e => { e.preventDefault(); jump(a); };
+document.addEventListener("keydown", e => {
+  const i = Number(e.key) - 1;
+  if (e.ctrlKey || e.metaKey || e.altKey || !MENU[i] || $("#newDeal").open ||
+      document.activeElement?.matches("input, select, textarea")) return;
+  jump(MENU[i]);
+});
 
 // ---------- the board request: one in flight, only the latest pending ----------
 function scheduleBoard(delay) {
@@ -673,7 +829,7 @@ function drawResult(r) {
 function clearBoard() {
   $("#verdict").className = "verdict"; $("#verdict").textContent = "\u2014";
   for (const k of ["#walk", "#clears"]) $(k).textContent = "\u2014";
-  $("#range").textContent = ""; $("#clearsBar").style.width = "0";
+  $("#range").textContent = ""; $("#clearsBar").style.width = "0"; $("#clearsBar").parentElement.className = "meter";
   $("#fork").replaceChildren(); $("#pairs").replaceChildren(); $("#ask").replaceChildren(); $("#second").replaceChildren();
 }
 
@@ -684,9 +840,10 @@ function drawCall() {
   v.replaceChildren(r.go ? "GO" : "NO-GO", h("small", {}, "at " + money(r.price) +
     (S.detail.worries ? "" : " \u00b7 at face value \u2014 nothing priced yet")));
   $("#walk").textContent = money(r.walk_away);
-  $("#range").textContent = `p10\u2013p90: ${money(r.p10)} \u2013 ${money(r.p90)}`;
+  $("#range").replaceChildren("p10\u2013p90: ", h("span", {class: r.p10 < r.price ? "lo" : "hi"}, money(r.p10)), " \u2013 ",
+    h("span", {class: r.p90 < r.price ? "lo" : "hi"}, money(r.p90)));
   $("#clears").textContent = pct(r.clears);
-  $("#clearsBar").style.width = (r.clears * 100).toFixed(1) + "%";
+  $("#clearsBar").style.width = (r.clears * 100).toFixed(1) + "%"; $("#clearsBar").parentElement.className = "meter on";
   $("#clears").parentElement.title = `The deal clears the price in ${pct(r.clears)} of simulated outcomes`;
 }
 function niceTicks(a, b, n) {
@@ -759,7 +916,7 @@ function buildWorries() {
   box.replaceChildren(); S.rows = {};
   for (const t of TRAPS) {
     const b = base(t), r = {};
-    r.tag = h("span", {class: "tag"});
+    r.tag = h("span", {class: "tag"}); r.state = h("span", {class: "state", hidden: true});
     r.reset = h("button", {type: "button", class: "link", onclick: () => { delete S.overrides[t]; growMax(t); syncRow(t); scheduleBoard(0); }}, "reset");
     r.reason = h("p", {class: "reason"});
     r.chance = h("input", {type: "range", min: 0, max: 100, step: 1, "aria-label": LABEL[t] + ": chance it's real"});
@@ -775,7 +932,7 @@ function buildWorries() {
       hints.filter(x => x.type === t).map(x => [h("div", {class: "hint"}, "Read noted: " + x.note), chips(x.quotes),
         x.dropped_quotes > 0 ? h("span", {class: "s warn"}, "a quote didn't check out") : null]));
     box.append(h("div", {class: "worry"},
-      h("div", {class: "w-head"}, h("span", {class: "w-title"}, LABEL[t]), r.tag, r.reset),
+      h("div", {class: "w-head"}, h("span", {class: "w-title"}, LABEL[t]), r.state, r.tag, r.reset),
       h("div", {class: "w-body"},
         h("div", {class: "w-text"}, r.reason, notes),
         h("div", {}, h("div", {class: "ctl-head"}, h("span", {}, "Chance it's real"), r.chanceOut),
@@ -804,7 +961,7 @@ function syncRow(t) {
   r.reason.textContent = why || "";
   r.chanceOut.textContent = pct(e.chance); setFill(r.chance);
   r.sizeOut.textContent = "up to " + money(e.high); setFill(r.size);
-  const floored = !mine && priced(b) && sized(t)?.floored;
+  const floored = !mine && priced(b) && sized(t)?.floored && money(b.high) !== money(e.high);  // a lift too small to show isn't news
   r.floorText.textContent = floored ? `Opus said up to ${money(b.high)}; priced at the usual range, up to ${money(e.high)} (a starting guess).` : "";
   const max = Number(r.size.max), f = flipOf(t);
   place(r.flip, f, max);
@@ -818,6 +975,10 @@ function syncRow(t) {
     r.flipText.textContent = `At ${money(f)} it alone flips the face-value call` + (hit ? ": your range reaches it" : "");
   }
   r.flip.title = ok(f) ? "alone flips the face-value call at " + money(f) : "";
+  // red when its range reaches the flip, yellow within a quarter of it, green otherwise; hidden with no board
+  const [sc, st] = !S.result || e.chance <= 0 ? [] : ok(f) && e.high >= f ? ["flips", "Flips it"] :
+    ok(f) && e.high >= 0.75 * f ? ["near", "Near flip"] : ["clear", "Clear"];
+  r.state.hidden = !sc; r.state.className = "state " + (sc || ""); r.state.textContent = st || "";
   const w2 = S.result?.second && S.detail.second_worries?.worries?.[t];
   place(r.c2, priced(w2) ? w2.chance : null, 1); place(r.s2, priced(w2) ? w2.high : null, max);
   if (priced(w2)) { r.c2.title = "second look: " + pct(w2.chance); r.s2.title = "second look: up to " + money(w2.high); }
@@ -838,7 +999,7 @@ function askLines() {
 }
 function drawAsk() {
   const a = S.result.ask;
-  $("#ask").replaceChildren(...(askMoot(a) ? [h("p", {class: "empty-line"}, NO_ASK)] : a.length ? a.map(x => h("li", {}, h("span", {}, LABEL[x.type]), h("span", {class: "val"}, money(x.value)),
+  $("#ask").replaceChildren(...(askMoot(a) ? [h("p", {class: "empty-line"}, NO_ASK)] : a.length ? a.map(x => h("li", {}, h("span", {}, LABEL[x.type]), h("span", {class: "val" + (x.value < 0.05 ? " zero" : "")}, money(x.value)),
     h("span", {class: "docs"}, x.docs.join("  \u00b7  ")))) : [h("p", {class: "empty-line"}, "Nothing open to ask about: no worry has a chance above zero.")]));
   $("#copyAsk").disabled = !a.length;
 }

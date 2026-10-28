@@ -18,11 +18,13 @@ from acqlab.app import board, steps
 from acqlab.app.ingest import Unreadable, ingest
 from acqlab.app.steps import Incomplete
 from acqlab.app.store import deals, load, write
-from acqlab.app.verify import FIELDS
+from acqlab.app.verify import FIELDS, RATES
 from acqlab.engine import Financing, Policy
 from acqlab.llm import LLMUnavailable
 
 PAGE = Path(__file__).parent / "static" / "index.html"
+FONTS = Path(__file__).parent / "static" / "fonts"  # the page's typefaces, bundled so it loads nothing from outside
+FONT = re.compile(r"[a-z0-9-]+\.woff2")
 ID = re.compile(r"[a-z0-9-]+")
 EXTENSIONS = (".pdf", ".md", ".txt")
 STEPS = ("read", "price", "second")
@@ -83,6 +85,13 @@ def _num(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
+def _same(field: str, a, b) -> bool:
+    """Equal as the board shows them: within half the last digit ($0.1M, or 0.1% for a rate). Two blanks match."""
+    if a is None or b is None:
+        return a is b
+    return abs(a - b) < (0.0005 if field in RATES else 0.05)
+
+
 def _upload(tmp: Path, key: str, f) -> Path:
     """Save one {"filename", "base64"} upload into tmp and return its path."""
     f = _obj(f, key)
@@ -136,6 +145,10 @@ class Handler(BaseHTTPRequestHandler):
             parts = [unquote(p) for p in urlsplit(self.path).path.strip("/").split("/")]
             if method == "GET" and parts == [""]:
                 status, out, ctype = 200, PAGE.read_bytes(), "text/html; charset=utf-8"
+            elif method == "GET" and len(parts) == 2 and parts[0] == "fonts" and FONT.fullmatch(parts[1]):
+                if not (FONTS / parts[1]).is_file():
+                    raise NotFound
+                status, out, ctype = 200, (FONTS / parts[1]).read_bytes(), "font/woff2"
             else:
                 status, out = 200, self._route(method, parts)
         except Refused as e:
@@ -266,7 +279,8 @@ class Handler(BaseHTTPRequestHandler):
         if n2.exists() and w2.exists() and w2.stat().st_mtime_ns >= n2.stat().st_mtime_ns:
             theirs = steps.values(load(n2).get("numbers", {}))
             out["second"] = board.compute(face, (load(w2) or {}).get("worries", {}), set()) | {
-                "differences": {f: {"board": mine[f], "second": theirs.get(f)} for f in FIELDS if theirs.get(f) != mine[f]}}
+                "differences": {f: {"board": mine[f], "second": theirs.get(f)} for f in FIELDS
+                                if not _same(f, theirs.get(f), mine[f])}}
         return out
 
 

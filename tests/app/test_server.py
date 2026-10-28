@@ -92,6 +92,14 @@ def test_the_page_is_served(srv):
     assert status == 200 and ctype.startswith("text/html") and b"<title>" in body
 
 
+def test_the_page_fonts_are_served_and_nothing_else_is(srv):
+    base = srv[0]
+    status, body, ctype = call(base, "/fonts/barlow-400.woff2")
+    assert status == 200 and ctype == "font/woff2" and body[:4] == b"wOF2"
+    for path in ("/fonts/OFL.txt", "/fonts/missing.woff2", "/fonts/..%2Fserver.py", "/fonts/..%2F..%2Fserver.py", "/fonts"):
+        assert call(base, path)[0] == 404, path
+
+
 def test_settings_round_trip_and_bad_settings_are_refused(srv):
     base, _ = srv
     assert call(base, "/api/settings", full_settings())[0] == 200
@@ -226,6 +234,22 @@ def test_the_second_look_shows_only_as_a_fresh_pair(srv):
     assert "go" in body["second"] and body["second"]["differences"] == {"growth": {"board": 0.05, "second": 0.01}}
     write(deal / "second_numbers.json", second)  # a newer read than the worries: stale pair
     assert "second" not in call(base, "/api/deals/cedar/board", {"overrides": {}})[1]
+
+
+def test_the_second_look_ignores_differences_the_board_rounds_away(srv):
+    base, home = srv
+    deal = board_setup(base, home)
+    mine = {f: e["value"] for f, e in load(deal / "numbers.json")["numbers"].items()}
+    second = {**load(deal / "numbers.json")}
+    second["numbers"] = {**second["numbers"],
+                         "revenue_ltm": {"value": mine["revenue_ltm"] + 0.04, "status": "quoted"},  # shows the same $M
+                         "growth": {"value": mine["growth"] + 0.0004, "status": "quoted"},  # shows the same %
+                         "reported_ebitda": {"value": mine["reported_ebitda"] + 0.06, "status": "quoted"},
+                         "tax_rate": {"value": None, "status": "blank"}}
+    write(deal / "second_numbers.json", second)
+    write(deal / "second_worries.json", {"worries": {}, "cost": 0})
+    body = call(base, "/api/deals/cedar/board", {"overrides": {}})[1]
+    assert set(body["second"]["differences"]) == {"reported_ebitda", "tax_rate"}
 
 
 def test_a_step_runs_through_claude(srv):
