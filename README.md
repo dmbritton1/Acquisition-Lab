@@ -6,6 +6,12 @@ the go/no-go call.**
 Acquisition Lab generates synthetic private-equity deals whose data rooms hide real problems. It gives AI systems a
 fixed reading budget and scores each go/no-go call against the hidden truth.
 
+The **analyst board** puts the same engine in front of an analyst. Drop in a teaser and CIM, and it shows the call at
+the asking price, which worries could flip it, and what to ask the seller first. Drag any chance or size to see the
+call change live.
+
+![The analyst board](docs/images/analyst-board.png)
+
 ## The problem
 
 A teaser shows revenue, adjusted EBITDA, an asking price and a lender term sheet. The data room behind it may hide a
@@ -120,6 +126,20 @@ uv run python -m acqlab.bench.pilot --data data/demo --n 5 --systems s1b,s4 --co
 uv run python -m acqlab.bench.pilot --data data/demo --n 5 --systems s1b,s4 --report
 ```
 
+### Run the analyst board
+
+Make a sample deal from one of the generated rooms, then start the board. Its data folder must sit outside the
+repository:
+
+```bash
+uv run python scripts/board_sample.py --room data/demo/deals/dev-000/room --home ~/AcqLab
+uv run python -m acqlab.app --home ~/AcqLab
+```
+
+Open http://127.0.0.1:8765. The board, the sample deal and the live drags are free. The **Read**, **Price** and
+**Second look** steps call Claude through the [Claude Code](https://claude.com/claude-code) CLI and use your own
+Claude usage. Deals are saved only on your machine.
+
 ## Repository map
 
 | Path | Contents |
@@ -127,6 +147,7 @@ uv run python -m acqlab.bench.pilot --data data/demo --n 5 --systems s1b,s4 --re
 | `acqlab/engine/` | LBO model, debt sizing, walk-away price |
 | `acqlab/generator/` | Deal sampler, hidden-fact library, document rendering and checks |
 | `acqlab/dataroom/` | The budgeted tools every system shares |
+| `acqlab/app/` | The analyst board: local server and web page |
 | `acqlab/agents/` | The Team, the single agent, the Committer |
 | `acqlab/routers/` | Code routers that price the next read |
 | `acqlab/bench/` | Runners, campaign, analysis |
