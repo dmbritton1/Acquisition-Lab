@@ -45,7 +45,7 @@ Listing the data room is free; every search and document read costs budget.
 Blue is AI, green is code.
 
 ```mermaid
-flowchart TD
+flowchart LR
     L["Deal Lead · AI<br/>Proposes issues"] <--> B["Shared deal record<br/>Beliefs + accepted evidence"]
     B --> R["Router · code<br/>Chooses the next document"]
     R --> I["Investigator · AI<br/>Reads and reports findings"]
