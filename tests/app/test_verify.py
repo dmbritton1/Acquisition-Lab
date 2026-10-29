@@ -1,0 +1,124 @@
+"""The quote check: a number is filled in only when a real quote backs it."""
+import pytest
+
+from acqlab.app.verify import check_number, check_quotes
+
+TEXTS = {"cim": "[page 1]\nLTM revenue of $162.8M grew 7.7% a year. Capex was $7.8M last year.\n"
+                "Revenue last year: $162,798 thousand.\nIncome statement ($000s): revenue 162,798\n"
+                "Group revenue reached $1.2bn last year. Other income was $0 last year.",
+         "teaser": "[page 1]\nRevenue: $160.0M (LTM)"}
+
+
+def q(doc, text): return {"doc_id": doc, "text": text}
+def ans(value, quotes, calc="none", inputs=(), other=()):
+    return {"value": value, "quotes": list(quotes), "calc": calc, "inputs": list(inputs), "other_values": list(other)}
+
+
+def test_a_quoted_number_is_filled_in():
+    r = check_number("revenue_ltm", ans(162.8, [q("cim", "LTM revenue of $162.8M grew")]), TEXTS)
+    assert (r["status"], r["value"]) == ("quoted", 162.8)
+
+
+def test_a_percentage_is_checked_as_its_fraction():
+    assert check_number("growth", ans(0.077, [q("cim", "grew 7.7% a year")]), TEXTS)["status"] == "quoted"
+
+
+def test_a_calculated_number_shows_its_inputs():
+    r = check_number("capex_pct", ans(7.8 / 162.8, [q("cim", "Capex was $7.8M last year"),
+                                                    q("cim", "LTM revenue of $162.8M")],
+                                      calc="divide", inputs=[7.8, 162.8]), TEXTS)
+    assert r["status"] == "calculated" and r["inputs"] == [7.8, 162.8]
+
+
+def test_no_quote_or_null_value_is_blank():
+    assert check_number("revenue_ltm", ans(None, []), TEXTS)["why"] == "not stated"
+    assert check_number("revenue_ltm", None, TEXTS)["status"] == "blank"
+
+
+def test_a_quote_not_in_the_text_is_blank():
+    r = check_number("revenue_ltm", ans(162.8, [q("cim", "LTM revenue of $162.8 million")]), TEXTS)
+    assert r["why"] == "quote not found"
+
+
+def test_a_quote_without_the_number_is_blank():
+    r = check_number("revenue_ltm", ans(150.0, [q("cim", "LTM revenue of $162.8M grew")]), TEXTS)
+    assert r["why"] == "number not in quote"
+
+
+def test_a_short_quote_proves_nothing():
+    assert check_number("capex_pct", ans(7.8, [q("cim", "$7.8M")]), TEXTS)["status"] == "blank"
+
+
+def test_numbers_in_thousands_stay_blank_rather_than_wrong():
+    r = check_number("revenue_ltm", ans(162.8, [q("cim", "Revenue last year: $162,798 thousand")]), TEXTS)
+    assert r["status"] == "blank"
+
+
+@pytest.mark.parametrize("value, text", [(162798, "Income statement ($000s): revenue 162,798"),
+                                         (1.2, "Group revenue reached $1.2bn last year")])
+def test_a_money_number_quoted_in_thousands_or_billions_is_blank(value, text):
+    r = check_number("revenue_ltm", ans(value, [q("cim", text)]), TEXTS)
+    assert (r["value"], r["why"]) == (None, "units look off") and r["quotes"] == [q("cim", text)]
+
+
+CAPEX, REV = q("cim", "Capex was $7.8M last year"), q("cim", "LTM revenue of $162.8M")
+
+
+@pytest.mark.parametrize("value, quotes, inputs, why", [
+    (0.5, [CAPEX, REV], [7.8, 162.8], "calculation doesn't check"),  # wrong arithmetic
+    (1.0, [CAPEX, q("cim", "Other income was $0 last year")], [7.8, 0], "calculation doesn't check"),  # divide by zero
+    (7.8 / 162.8, [CAPEX, REV], [7.8], "calculation doesn't check"),  # one input for two quotes
+    (7.8 / 162.8, [CAPEX, REV], [7.8, 162.8, 1.0], "calculation doesn't check"),  # three inputs
+    (9.9 / 162.8, [CAPEX, REV], [9.9, 162.8], "number not in quote"),  # an input not in its quote
+])
+def test_a_calculation_that_fails_is_blank_with_its_reason(value, quotes, inputs, why):
+    r = check_number("capex_pct", ans(value, quotes, calc="divide", inputs=inputs), TEXTS)
+    assert (r["status"], r["value"], r["why"]) == ("blank", None, why)
+
+
+def test_documents_that_disagree_leave_it_blank_with_both_quotes():
+    r = check_number("revenue_ltm", ans(162.8, [q("cim", "LTM revenue of $162.8M grew")],
+                     other=[{"value": 160.0, "quote": q("teaser", "Revenue: $160.0M (LTM)")}]), TEXTS)
+    assert r["status"] == "conflict" and r["value"] is None and len(r["quotes"]) == 2
+
+
+def test_worry_quotes_from_unknown_documents_are_dropped_and_counted():
+    kept, dropped = check_quotes([q("cim", "Capex was $7.8M last year"), q("qoe", "anything at all here ok")], TEXTS)
+    assert len(kept) == 1 and dropped == 1
+
+
+def test_a_rate_must_match_its_percentage():
+    r = check_number("growth", ans(0.03, [q("cim", "grew 7.7% a year")]), TEXTS)
+    assert r["status"] == "blank" and r["why"] == "number not in quote"
+
+
+def test_a_rate_does_not_match_a_dollar_amount():
+    assert check_number("capex_pct", ans(0.078, [q("cim", "Capex was $7.8M last year")]), TEXTS)["status"] == "blank"
+
+
+def test_an_amount_does_not_match_a_percentage():
+    assert check_number("revenue_ltm", ans(7.7, [q("cim", "grew 7.7% a year")]), TEXTS)["status"] == "blank"
+
+
+GOOD = q("cim", "LTM revenue of $162.8M grew")
+BASE = ans(162.8, [GOOD])
+TWO = {"quotes": [GOOD, GOOD], "calc": "divide"}
+OVERRIDES = [
+    {"inputs": None}, {"inputs": 5}, {"other_values": 5}, {"other_values": ["x", None, {"value": "y", "quote": 3}]},
+    {"value": "162.8"}, {"value": True}, {"quotes": GOOD}, {"quotes": ["LTM revenue of $162.8M grew"]},
+    {"quotes": [None]}, {"quotes": [{"doc_id": "cim", "text": 5}]}, {"quotes": [{"doc_id": ["cim"], "text": "x" * 20}]},
+    {"quotes": [{"doc_id": "cim"}]}, {"calc": ["divide"]}, {"calc": "nope"}, {"calc": None},
+    {**TWO, "inputs": ["7.8", 162.8]}, {**TWO, "inputs": [1, 0]}, {**TWO, "inputs": None},
+]
+
+
+@pytest.mark.parametrize("over", OVERRIDES)
+def test_malformed_model_output_never_raises(over):
+    r = check_number("revenue_ltm", {**BASE, **over}, TEXTS)
+    assert r["status"] in ("blank", "quoted", "calculated")
+    check_quotes(over.get("quotes") if isinstance(over.get("quotes"), list) else [None, "s"], TEXTS)
+
+
+@pytest.mark.parametrize("answer", [None, "not a dict", [], 5])
+def test_a_non_dict_answer_is_blank(answer):
+    assert check_number("revenue_ltm", answer, TEXTS)["status"] == "blank"

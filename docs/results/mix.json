@@ -1,0 +1,2066 @@
+{
+  "frozen": [
+    "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+    "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+    "mix_haiku_solo",
+    "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+  ],
+  "systems": [
+    "s1b",
+    "s4",
+    "mix_haiku_solo",
+    "mix_h_haiku3",
+    "mix_h_opus1",
+    "mix_opus_low",
+    "mix_sonnet_solo",
+    "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+    "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+    "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+  ],
+  "sets": {
+    "mix-test-r2": {
+      "n": 80,
+      "systems": {
+        "s1b": {
+          "n": 80,
+          "regret": 0.01757962433575904,
+          "correct": 0.7625,
+          "false_go": 14,
+          "false_nogo": 5,
+          "cost": 0.1350009375,
+          "escalated": 0.0
+        },
+        "s4": {
+          "n": 80,
+          "regret": 0.008349663691780135,
+          "correct": 0.8625,
+          "false_go": 4,
+          "false_nogo": 7,
+          "cost": 0.5426411474999999,
+          "escalated": 0.0
+        },
+        "mix_haiku_solo": {
+          "n": 80,
+          "regret": 0.02346273952806847,
+          "correct": 0.7125,
+          "false_go": 2,
+          "false_nogo": 21,
+          "cost": 0.007580506249999999,
+          "escalated": 0.0
+        },
+        "mix_h_haiku3": {
+          "n": 80,
+          "regret": 0.012975496319632402,
+          "correct": 0.775,
+          "false_go": 8,
+          "false_nogo": 10,
+          "cost": 0.023672761000000004,
+          "escalated": 0.0
+        },
+        "mix_h_opus1": {
+          "n": 80,
+          "regret": 0.009618340960915458,
+          "correct": 0.8375,
+          "false_go": 6,
+          "false_nogo": 7,
+          "cost": 0.128438643125,
+          "escalated": 0.0
+        },
+        "mix_opus_low": {
+          "n": 80,
+          "regret": 0.021027966857533387,
+          "correct": 0.75,
+          "false_go": 18,
+          "false_nogo": 2,
+          "cost": 0.0985102375,
+          "escalated": 0.0
+        },
+        "mix_sonnet_solo": {
+          "n": 80,
+          "regret": 0.01856697482822518,
+          "correct": 0.7875,
+          "false_go": 12,
+          "false_nogo": 5,
+          "cost": 0.05176557,
+          "escalated": 0.0
+        },
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05": {
+          "n": 80,
+          "regret": 0.014692914966832343,
+          "correct": 0.775,
+          "false_go": 11,
+          "false_nogo": 7,
+          "cost": 0.082669836,
+          "escalated": 0.4125
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02": {
+          "n": 80,
+          "regret": 0.013452104746538008,
+          "correct": 0.8375,
+          "false_go": 9,
+          "false_nogo": 4,
+          "cost": 0.142407663125,
+          "escalated": 0.1375
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": {
+          "n": 80,
+          "regret": 0.017319316450304212,
+          "correct": 0.7625,
+          "false_go": 2,
+          "false_nogo": 17,
+          "cost": 0.01694140625,
+          "escalated": 0.175
+        }
+      },
+      "versus": {
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s1b": {
+          "n": 80,
+          "diff": -0.0028867093689266994,
+          "ci95": [
+            -0.007614502404811018,
+            0.0012448010171016437
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.0024438367810846883,
+              "ci95": [
+                -0.010585566197811454,
+                0.01791707654106552
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.014686421261484495,
+              "ci95": [
+                -0.03833550785758366,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": -0.0013781542056856835,
+              "ci95": [
+                -0.0062565404789144624,
+                0.0016376908609871267
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 4,
+          "lost": 3,
+          "tied": 73
+        },
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s4": {
+          "n": 80,
+          "diff": 0.006343251275052209,
+          "ci95": [
+            -0.0020154258026617504,
+            0.014660687606150441
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.00020067505490536236,
+              "ci95": [
+                -0.02580847090471459,
+                0.02388049518029972
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": -0.006982129429841673,
+              "ci95": [
+                -0.020388493129369203,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.013936217184517102,
+              "ci95": [
+                0.0,
+                0.03384479321605604
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.0017208855803583659,
+              "ci95": [
+                -0.02722051059928859,
+                0.02052673356431434
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": 0.01542814593084768,
+              "ci95": [
+                0.0038545383352414026,
+                0.029123601665173516
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 5,
+          "lost": 12,
+          "tied": 63
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s1b": {
+          "n": 80,
+          "diff": -0.004127519589221033,
+          "ci95": [
+            -0.01364531622685061,
+            0.006001618165956419
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.0023293258342255993,
+              "ci95": [
+                0.0,
+                0.006987977502676798
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": 0.006424234269685858,
+              "ci95": [
+                0.0,
+                0.019272702809057574
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.005959306255721673,
+              "ci95": [
+                -0.022077946601243865,
+                0.036881820217481424
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.00017639971506487422,
+              "ci95": [
+                -0.031402107770236026,
+                0.03744321637046407
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": -0.017383102335424384,
+              "ci95": [
+                -0.030947929016689007,
+                -0.005588293537519805
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 13,
+          "lost": 7,
+          "tied": 60
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s4": {
+          "n": 80,
+          "diff": 0.0051024410547578745,
+          "ci95": [
+            -0.0026173154384433565,
+            0.013679833391184039
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.002530000889130963,
+              "ci95": [
+                -0.022736687545245025,
+                0.02483263765482625
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": -0.0005578951601558155,
+              "ci95": [
+                -0.0016736854804674463,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.017451686659154086,
+              "ci95": [
+                0.0,
+                0.04087573216533001
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": 0.012789135966061254,
+              "ci95": [
+                -0.019216623797841142,
+                0.049018095516088926
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": -0.0005768021988910213,
+              "ci95": [
+                -0.0016243241736992305,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 7,
+          "lost": 9,
+          "tied": 64
+        },
+        "mix_haiku_solo-s1b": {
+          "n": 80,
+          "diff": 0.005883115192309433,
+          "ci95": [
+            -0.007235070611303051,
+            0.020074426188400954
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.03525715542046821,
+              "ci95": [
+                0.0,
+                0.08169528209494929
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": 0.03624554956634156,
+              "ci95": [
+                0.015244324968929197,
+                0.05887403245541301
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.032278487993445966,
+              "ci95": [
+                -0.061240160269714794,
+                -0.0070570441318743024
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.023244556514785266,
+              "ci95": [
+                -0.04752066447623911,
+                -0.004452528326324755
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": 0.012021619282281652,
+              "ci95": [
+                -0.008925422048516148,
+                0.03640075280060745
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 12,
+          "lost": 16,
+          "tied": 52
+        },
+        "mix_haiku_solo-s4": {
+          "n": 80,
+          "diff": 0.015113075836288343,
+          "ci95": [
+            0.0020729818995296615,
+            0.029055433475003486
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.035457830475373577,
+              "ci95": [
+                -0.009421097970507641,
+                0.08540634881605413
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": 0.02926342013649989,
+              "ci95": [
+                0.009551466493819107,
+                0.05177678433658335
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.020786107590013553,
+              "ci95": [
+                -0.050657108388271234,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.01027902083365914,
+              "ci95": [
+                -0.030977895056350128,
+                0.003062240587798307
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": 0.02882791941881501,
+              "ci95": [
+                0.007846096327642773,
+                0.051471666509548285
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 5,
+          "lost": 17,
+          "tied": 58
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s1b": {
+          "n": 80,
+          "diff": -0.0002603078854548288,
+          "ci95": [
+            -0.011538410663251125,
+            0.011702026299988807
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.03292782958624261,
+              "ci95": [
+                0.0,
+                0.0793659562607237
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": 0.026584436989615073,
+              "ci95": [
+                0.009460662118305726,
+                0.04554053555612671
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.032278487993445966,
+              "ci95": [
+                -0.061240160269714794,
+                -0.0070570441318743024
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.023244556514785266,
+              "ci95": [
+                -0.04752066447623911,
+                -0.004452528326324755
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": 3.580599642938427e-05,
+              "ci95": [
+                -0.013707442748626715,
+                0.01747783453373126
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 12,
+          "lost": 12,
+          "tied": 56
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s4": {
+          "n": 80,
+          "diff": 0.00896965275852408,
+          "ci95": [
+            -0.002621323228581064,
+            0.021365979068738265
+          ],
+          "by_case": {
+            "clean": {
+              "n": 12,
+              "diff": 0.03312850464114798,
+              "ci95": [
+                -0.012942738180763596,
+                0.08370628659166618
+              ]
+            },
+            "decoy": {
+              "n": 12,
+              "diff": 0.0196023075597734,
+              "ci95": [
+                0.004657208266571551,
+                0.036496254086669865
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.020786107590013553,
+              "ci95": [
+                -0.050657108388271234,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 15,
+              "diff": -0.01027902083365914,
+              "ci95": [
+                -0.030977895056350128,
+                0.003062240587798307
+              ]
+            },
+            "unresolvable": {
+              "n": 29,
+              "diff": 0.016842106132962748,
+              "ci95": [
+                0.0014665848353940492,
+                0.035933569308730574
+              ]
+            },
+            "relief": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "confirmed": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            }
+          },
+          "won": 6,
+          "lost": 14,
+          "tied": 60
+        }
+      },
+      "verdicts": {
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s1b": "no clear difference: at most 0.0012 worse",
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s4": "no clear difference: at most 0.0147 worse",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s1b": "no clear difference: at most 0.0060 worse",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s4": "no clear difference: at most 0.0137 worse",
+        "mix_haiku_solo-s1b": "no clear difference: at most 0.0201 worse",
+        "mix_haiku_solo-s4": "worse",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s1b": "no clear difference: at most 0.0117 worse",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s4": "no clear difference: at most 0.0214 worse"
+      },
+      "cost_ratio": {
+        "s1b/cascade:mix_h_haiku3>s1b@flag|close:0.05": 1.633013249233977,
+        "s4/cascade:mix_h_haiku3>s1b@flag|close:0.05": 6.5639557758406575,
+        "s1b/cascade:mix_h_opus1>mix_opus_low@close:0.02": 0.9479892762617791,
+        "s4/cascade:mix_h_opus1>mix_opus_low@close:0.02": 3.81047715826704,
+        "s1b/mix_haiku_solo": 17.80896064824167,
+        "s4/mix_haiku_solo": 71.58376097902432,
+        "s1b/cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": 7.968697256167858,
+        "s4/cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": 32.03046662670048
+      }
+    },
+    "mix-test-r2u": {
+      "n": 20,
+      "systems": {
+        "s1b": {
+          "n": 20,
+          "regret": 0.0067032491216283425,
+          "correct": 0.65,
+          "false_go": 1,
+          "false_nogo": 6,
+          "cost": 0.12795779000000002,
+          "escalated": 0.0
+        },
+        "s4": {
+          "n": 20,
+          "regret": 0.012784317794262085,
+          "correct": 0.4,
+          "false_go": 1,
+          "false_nogo": 11,
+          "cost": 0.5155929200000001,
+          "escalated": 0.0
+        },
+        "mix_haiku_solo": {
+          "n": 20,
+          "regret": 0.017079367679289373,
+          "correct": 0.4,
+          "false_go": 0,
+          "false_nogo": 12,
+          "cost": 0.0073971985,
+          "escalated": 0.0
+        },
+        "mix_h_haiku3": {
+          "n": 20,
+          "regret": 0.01449897227089925,
+          "correct": 0.45,
+          "false_go": 0,
+          "false_nogo": 11,
+          "cost": 0.024067642999999996,
+          "escalated": 0.0
+        },
+        "mix_h_opus1": {
+          "n": 20,
+          "regret": 0.00966847324059883,
+          "correct": 0.5,
+          "false_go": 0,
+          "false_nogo": 10,
+          "cost": 0.127759395,
+          "escalated": 0.0
+        },
+        "mix_opus_low": {
+          "n": 20,
+          "regret": 0.007572235834727534,
+          "correct": 0.65,
+          "false_go": 2,
+          "false_nogo": 5,
+          "cost": 0.09588326999999999,
+          "escalated": 0.0
+        },
+        "mix_sonnet_solo": {
+          "n": 20,
+          "regret": 0.007421842340336675,
+          "correct": 0.6,
+          "false_go": 1,
+          "false_nogo": 7,
+          "cost": 0.05104755000000001,
+          "escalated": 0.0
+        },
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05": {
+          "n": 20,
+          "regret": 0.008842449221211513,
+          "correct": 0.55,
+          "false_go": 1,
+          "false_nogo": 8,
+          "cost": 0.136843903,
+          "escalated": 0.85
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02": {
+          "n": 20,
+          "regret": 0.004523997044167243,
+          "correct": 0.75,
+          "false_go": 0,
+          "false_nogo": 5,
+          "cost": 0.16988290499999997,
+          "escalated": 0.45
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": {
+          "n": 20,
+          "regret": 0.01206089649308706,
+          "correct": 0.45,
+          "false_go": 0,
+          "false_nogo": 11,
+          "cost": 0.0127660085,
+          "escalated": 0.1
+        }
+      },
+      "versus": {
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s1b": {
+          "n": 20,
+          "diff": 0.002139200099583171,
+          "ci95": [
+            0.0,
+            0.006003262162942916
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.02139200099583171,
+              "ci95": [
+                0.008286762716131945,
+                0.03449723927553147
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 0,
+          "lost": 2,
+          "tied": 18
+        },
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s4": {
+          "n": 20,
+          "diff": -0.003941868573050571,
+          "ci95": [
+            -0.009569693009952926,
+            0.0
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": -0.017373565483448098,
+              "ci95": [
+                -0.017373565483448098,
+                -0.017373565483448098
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": -0.007682975747195414,
+              "ci95": [
+                -0.019645092009636572,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 3,
+          "lost": 0,
+          "tied": 17
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s1b": {
+          "n": 20,
+          "diff": -0.0021792520774610987,
+          "ci95": [
+            -0.0058143349312082745,
+            0.0
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": -0.007234213011750227,
+              "ci95": [
+                -0.014468426023500455,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": -0.0036395769407151905,
+              "ci95": [
+                -0.010918730822145572,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 2,
+          "lost": 0,
+          "tied": 18
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s4": {
+          "n": 20,
+          "diff": -0.00826032075009484,
+          "ci95": [
+            -0.01497805267852864,
+            -0.0026985541730518217
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": -0.017373565483448098,
+              "ci95": [
+                -0.017373565483448098,
+                -0.017373565483448098
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": -0.007234213011750227,
+              "ci95": [
+                -0.014468426023500455,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": -0.02139200099583171,
+              "ci95": [
+                -0.03449723927553147,
+                -0.008286762716131945
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": -0.011322552687910605,
+              "ci95": [
+                -0.02328466895035176,
+                -0.0017019176159748352
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 7,
+          "lost": 0,
+          "tied": 13
+        },
+        "mix_haiku_solo-s1b": {
+          "n": 20,
+          "diff": 0.010376118557661029,
+          "ci95": [
+            0.0013449083107702755,
+            0.02240543006620463
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.03345647457468207,
+              "ci95": [
+                0.0,
+                0.10036942372404623
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": 0.017373565483448098,
+              "ci95": [
+                0.017373565483448098,
+                0.017373565483448098
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": -0.007234213011750227,
+              "ci95": [
+                -0.014468426023500455,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.02139200099583171,
+              "ci95": [
+                0.008286762716131945,
+                0.03449723927553147
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.007682975747195414,
+              "ci95": [
+                0.0,
+                0.019645092009636572
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 1,
+          "lost": 6,
+          "tied": 13
+        },
+        "mix_haiku_solo-s4": {
+          "n": 20,
+          "diff": 0.004295049885027288,
+          "ci95": [
+            -0.002170263903525068,
+            0.015055413558606933
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.03345647457468207,
+              "ci95": [
+                0.0,
+                0.10036942372404623
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": -0.007234213011750227,
+              "ci95": [
+                -0.014468426023500455,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 1,
+          "lost": 1,
+          "tied": 18
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s1b": {
+          "n": 20,
+          "diff": 0.005357647371458718,
+          "ci95": [
+            -4.2654254785088645e-05,
+            0.01214558416285913
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": 0.017373565483448098,
+              "ci95": [
+                0.017373565483448098,
+                0.017373565483448098
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": -0.007234213011750227,
+              "ci95": [
+                -0.014468426023500455,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.02139200099583171,
+              "ci95": [
+                0.008286762716131945,
+                0.03449723927553147
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.007682975747195414,
+              "ci95": [
+                0.0,
+                0.019645092009636572
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 1,
+          "lost": 5,
+          "tied": 14
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s4": {
+          "n": 20,
+          "diff": -0.0007234213011750228,
+          "ci95": [
+            -0.002170263903525068,
+            0.0
+          ],
+          "by_case": {
+            "clean": {
+              "n": 3,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 1,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 0,
+              "diff": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "interaction": {
+              "n": 2,
+              "diff": -0.007234213011750227,
+              "ci95": [
+                -0.014468426023500455,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 2,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 1,
+          "lost": 0,
+          "tied": 19
+        }
+      },
+      "verdicts": {
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s1b": "no clear difference: at most 0.0060 worse",
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s4": "no clear difference: at most 0.0000 worse",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s1b": "no clear difference: at most 0.0000 worse",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s4": "better",
+        "mix_haiku_solo-s1b": "worse",
+        "mix_haiku_solo-s4": "no clear difference: at most 0.0151 worse",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s1b": "no clear difference: at most 0.0121 worse",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s4": "no clear difference: at most 0.0000 worse"
+      },
+      "cost_ratio": {
+        "s1b/cascade:mix_h_haiku3>s1b@flag|close:0.05": 0.9350638734704901,
+        "s4/cascade:mix_h_haiku3>s1b@flag|close:0.05": 3.7677449173603312,
+        "s1b/cascade:mix_h_opus1>mix_opus_low@close:0.02": 0.753211690134449,
+        "s4/cascade:mix_h_opus1>mix_opus_low@close:0.02": 3.034990012679617,
+        "s1b/mix_haiku_solo": 17.298141992539474,
+        "s4/mix_haiku_solo": 69.70110643914721,
+        "s1b/cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": 10.023320131738908,
+        "s4/cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": 40.387950548521104
+      }
+    },
+    "all": {
+      "n": 100,
+      "systems": {
+        "s1b": {
+          "n": 100,
+          "regret": 0.015404349292932905,
+          "correct": 0.74,
+          "false_go": 15,
+          "false_nogo": 11,
+          "cost": 0.133592308,
+          "escalated": 0.0
+        },
+        "s4": {
+          "n": 100,
+          "regret": 0.009236594512276524,
+          "correct": 0.77,
+          "false_go": 5,
+          "false_nogo": 18,
+          "cost": 0.537231502,
+          "escalated": 0.0
+        },
+        "mix_haiku_solo": {
+          "n": 100,
+          "regret": 0.022186065158312656,
+          "correct": 0.65,
+          "false_go": 2,
+          "false_nogo": 33,
+          "cost": 0.007543844699999999,
+          "escalated": 0.0
+        },
+        "mix_h_haiku3": {
+          "n": 100,
+          "regret": 0.013280191509885768,
+          "correct": 0.71,
+          "false_go": 8,
+          "false_nogo": 21,
+          "cost": 0.023751737399999997,
+          "escalated": 0.0
+        },
+        "mix_h_opus1": {
+          "n": 100,
+          "regret": 0.009628367416852133,
+          "correct": 0.77,
+          "false_go": 6,
+          "false_nogo": 17,
+          "cost": 0.12830279349999998,
+          "escalated": 0.0
+        },
+        "mix_opus_low": {
+          "n": 100,
+          "regret": 0.018336820652972218,
+          "correct": 0.73,
+          "false_go": 20,
+          "false_nogo": 7,
+          "cost": 0.09798484400000002,
+          "escalated": 0.0
+        },
+        "mix_sonnet_solo": {
+          "n": 100,
+          "regret": 0.016337948330647476,
+          "correct": 0.75,
+          "false_go": 13,
+          "false_nogo": 12,
+          "cost": 0.051621966000000005,
+          "escalated": 0.0
+        },
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05": {
+          "n": 100,
+          "regret": 0.013522821817708175,
+          "correct": 0.73,
+          "false_go": 12,
+          "false_nogo": 15,
+          "cost": 0.09350464939999999,
+          "escalated": 0.5
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02": {
+          "n": 100,
+          "regret": 0.011666483206063859,
+          "correct": 0.82,
+          "false_go": 9,
+          "false_nogo": 9,
+          "cost": 0.1479027115,
+          "escalated": 0.2
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": {
+          "n": 100,
+          "regret": 0.01626763245886078,
+          "correct": 0.7,
+          "false_go": 2,
+          "false_nogo": 28,
+          "cost": 0.016106326699999996,
+          "escalated": 0.16
+        }
+      },
+      "versus": {
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s1b": {
+          "n": 100,
+          "diff": -0.0018815274752247255,
+          "ci95": [
+            -0.006006386845627984,
+            0.0015771059004626297
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.0024438367810846883,
+              "ci95": [
+                -0.010585566197811454,
+                0.01791707654106552
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.012958606995427495,
+              "ci95": [
+                -0.030419458958874324,
+                0.0
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": 9.088806537995457e-05,
+              "ci95": [
+                -0.005396016325855402,
+                0.004220297908889853
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 4,
+          "lost": 5,
+          "tied": 91
+        },
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s4": {
+          "n": 100,
+          "diff": 0.004286227305431652,
+          "ci95": [
+            -0.002469149005483348,
+            0.011022274013117185
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.00016054004392428988,
+              "ci95": [
+                -0.0200528107035765,
+                0.019866110123861
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": -0.0077814706647344745,
+              "ci95": [
+                -0.02046304343658362,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.013936217184517102,
+              "ci95": [
+                0.0,
+                0.03384479321605604
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.0015184284532573818,
+              "ci95": [
+                -0.02401809758760758,
+                0.016760835238601637
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": 0.014432781677244603,
+              "ci95": [
+                0.003682462976813518,
+                0.02768027112740767
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": -0.007682975747195414,
+              "ci95": [
+                -0.019645092009636572,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 8,
+          "lost": 12,
+          "tied": 80
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s1b": {
+          "n": 100,
+          "diff": -0.003737866086869046,
+          "ci95": [
+            -0.011318114022465242,
+            0.004492884383844381
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.0018634606673804794,
+              "ci95": [
+                0.0,
+                0.005590382002141439
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": 0.005930062402786946,
+              "ci95": [
+                0.0,
+                0.017790187208360838
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.005959306255721673,
+              "ci95": [
+                -0.022077946601243865,
+                0.036881820217481424
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.0010067306911455036,
+              "ci95": [
+                -0.029634840516415926,
+                0.03148387353544099
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": -0.016261611862171198,
+              "ci95": [
+                -0.029918558931192312,
+                -0.0052947823053282874
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": -0.0036395769407151905,
+              "ci95": [
+                -0.010918730822145572,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 15,
+          "lost": 7,
+          "tied": 78
+        },
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s4": {
+          "n": 100,
+          "diff": 0.0024298886937873325,
+          "ci95": [
+            -0.004237321727775861,
+            0.00970628518015322
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.0020240007113047705,
+              "ci95": [
+                -0.01744667890606533,
+                0.020640338422283713
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": -0.0018514082619475296,
+              "ci95": [
+                -0.0050392446380064515,
+                0.0
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": 0.017451686659154086,
+              "ci95": [
+                0.0,
+                0.04087573216533001
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": 0.01043344785102461,
+              "ci95": [
+                -0.0169128634619904,
+                0.04208894433495431
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": -0.0019197182503065495,
+              "ci95": [
+                -0.004650158952263009,
+                -8.271277357540827e-05
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": -0.011322552687910605,
+              "ci95": [
+                -0.02328466895035176,
+                -0.0017019176159748352
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 14,
+          "lost": 9,
+          "tied": 77
+        },
+        "mix_haiku_solo-s1b": {
+          "n": 100,
+          "diff": 0.006781715865379751,
+          "ci95": [
+            -0.0036804392270701467,
+            0.01835481830922169
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.03489701925131098,
+              "ci95": [
+                0.0037269213347609588,
+                0.0749098482513279
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": 0.03479385848304206,
+              "ci95": [
+                0.01624922227538936,
+                0.05616645736785606
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.032278487993445966,
+              "ci95": [
+                -0.061240160269714794,
+                -0.0070570441318743024
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.021360986690898788,
+              "ci95": [
+                -0.042474733232312774,
+                -0.003928701464404195
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": 0.01262616003799456,
+              "ci95": [
+                -0.0062638532889406524,
+                0.034710977173978
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.007682975747195414,
+              "ci95": [
+                0.0,
+                0.019645092009636572
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 13,
+          "lost": 22,
+          "tied": 65
+        },
+        "mix_haiku_solo-s4": {
+          "n": 100,
+          "diff": 0.01294947064603613,
+          "ci95": [
+            0.0028494699445373904,
+            0.024661163951964195
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.035057559295235276,
+              "ci95": [
+                -0.0003472406236397931,
+                0.07710130268564366
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": 0.02701238781830759,
+              "ci95": [
+                0.008816738301986869,
+                0.04966678368075591
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.020786107590013553,
+              "ci95": [
+                -0.050657108388271234,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.00992080814872868,
+              "ci95": [
+                -0.027946799052011778,
+                0.002088614751648603
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": 0.026968053649859203,
+              "ci95": [
+                0.008943760383975959,
+                0.0490044998524666
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 6,
+          "lost": 18,
+          "tied": 76
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s1b": {
+          "n": 100,
+          "diff": 0.0008632831659278814,
+          "ci95": [
+            -0.008080604764418318,
+            0.011021407644606653
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.02634226366899409,
+              "ci95": [
+                0.0,
+                0.06821855333639149
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": 0.025875908412217614,
+              "ci95": [
+                0.010659033177800047,
+                0.04344350575216246
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.032278487993445966,
+              "ci95": [
+                -0.061240160269714794,
+                -0.0070570441318743024
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.021360986690898788,
+              "ci95": [
+                -0.042474733232312774,
+                -0.003928701464404195
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": 0.0014136250286488892,
+              "ci95": [
+                -0.011868882239390139,
+                0.01786161255055772
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.007682975747195414,
+              "ci95": [
+                0.0,
+                0.019645092009636572
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 13,
+          "lost": 17,
+          "tied": 70
+        },
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s4": {
+          "n": 100,
+          "diff": 0.00703103794658426,
+          "ci95": [
+            -0.0019098728579022067,
+            0.01709081041050771
+          ],
+          "by_case": {
+            "clean": {
+              "n": 15,
+              "diff": 0.02650280371291838,
+              "ci95": [
+                -0.00924825015786597,
+                0.06981925717350411
+              ]
+            },
+            "decoy": {
+              "n": 13,
+              "diff": 0.01809443774748314,
+              "ci95": [
+                0.0042989614768352774,
+                0.03501664855789112
+              ]
+            },
+            "flip": {
+              "n": 12,
+              "diff": -0.020786107590013553,
+              "ci95": [
+                -0.050657108388271234,
+                0.0
+              ]
+            },
+            "interaction": {
+              "n": 17,
+              "diff": -0.00992080814872868,
+              "ci95": [
+                -0.027946799052011778,
+                0.002088614751648603
+              ]
+            },
+            "unresolvable": {
+              "n": 31,
+              "diff": 0.015755518640513538,
+              "ci95": [
+                0.002436662681820172,
+                0.03445508708986441
+              ]
+            },
+            "relief": {
+              "n": 8,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            },
+            "confirmed": {
+              "n": 4,
+              "diff": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "won": 7,
+          "lost": 14,
+          "tied": 79
+        }
+      },
+      "verdicts": {
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s1b": "no clear difference: at most 0.0016 worse",
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05-s4": "no clear difference: at most 0.0110 worse",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s1b": "no clear difference: at most 0.0045 worse",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02-s4": "no clear difference: at most 0.0097 worse",
+        "mix_haiku_solo-s1b": "no clear difference: at most 0.0184 worse",
+        "mix_haiku_solo-s4": "worse",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s1b": "no clear difference: at most 0.0110 worse",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02-s4": "no clear difference: at most 0.0171 worse"
+      },
+      "cost_ratio": {
+        "s1b/cascade:mix_h_haiku3>s1b@flag|close:0.05": 1.4287236929632294,
+        "s4/cascade:mix_h_haiku3>s1b@flag|close:0.05": 5.745505763053533,
+        "s1b/cascade:mix_h_opus1>mix_opus_low@close:0.02": 0.9032444817619181,
+        "s4/cascade:mix_h_opus1>mix_opus_low@close:0.02": 3.632330310590689,
+        "s1b/mix_haiku_solo": 17.70878289686955,
+        "s4/mix_haiku_solo": 71.2145495253899,
+        "s1b/cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": 8.294399492095241,
+        "s4/cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02": 33.3553088799571
+      }
+    }
+  },
+  "readings": {
+    "mix-test-r2": {
+      "cheaper_and_not_worse_than_s1b": [
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+        "mix_haiku_solo",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+      ],
+      "cheaper_and_not_worse_than_s4": [
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+      ]
+    },
+    "mix-test-r2u": {
+      "cheaper_and_not_worse_than_s1b": [
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+      ],
+      "cheaper_and_not_worse_than_s4": [
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+        "mix_haiku_solo",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+      ]
+    },
+    "all": {
+      "cheaper_and_not_worse_than_s1b": [
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+        "mix_haiku_solo",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+      ],
+      "cheaper_and_not_worse_than_s4": [
+        "cascade:mix_h_haiku3>s1b@flag|close:0.05",
+        "cascade:mix_h_opus1>mix_opus_low@close:0.02",
+        "cascade:mix_haiku_solo>mix_sonnet_solo@close:0.02"
+      ]
+    }
+  }
+}

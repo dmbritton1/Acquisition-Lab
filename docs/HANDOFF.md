@@ -3,9 +3,51 @@
 *Last updated 2026-09-27, after Plan 5's checks and the Plan 6 design. Read this first, then the reframe spec. The
 specs are the binding authority on design; this file is the source of truth for status and next steps.*
 
-## Resume here (2026-10-09, evening)
+## Resume here (2026-10-10)
 
 A new session (possibly on the user's other Claude account) continues from this point.
+
+- **Done: mixing Opus, Sonnet and Haiku** (spec `docs/superpowers/specs/2026-10-11-mixed-models-design.md`). Final
+  result in `docs/results/mix.md` (numbers in `mix.json`, run once 2026-10-14). On 100 fresh deals, the Haiku team
+  with single Opus on risky or close calls showed no clear difference from single Opus (at most 0.0016 worse) at 30%
+  less cost; a Haiku reader + Opus pricer with low-effort Opus on close calls showed no clear difference from the Opus
+  team (at most 0.0097 worse) at 28% of its cost. Spend: practice $56.70, final $98.00 (list prices).
+- **Done: the Haiku team** (spec `docs/superpowers/specs/2026-10-10-haiku-team-design.md`). Final result in
+  `docs/results/haiku-team.md` (numbers in `haiku-team.json`, run once 2026-10-12): the frozen winner
+  `haiku_lean_zero_w0` shows no clear difference from single Opus on 200 held-out deals (at most 0.0092 worse) at a
+  fifth of the cost, is worse on the 40 `r2u` deals alone, is worse than the Opus team, and adds nothing over single
+  Haiku (same regret, a third of the cost).
+- **Done: the mix test's two leads** (`docs/results/mix-confirm.md`, run once 2026-10-15, $25.53). The Haiku reader +
+  one Opus pricer alone passed the pre-registered rule against the Opus team on 200 held-out deals (at most 0.0091
+  worse, a quarter of the cost) but was worse on the 160 `r2` deals and no better than single Opus at the same cost;
+  the Haiku team alone shows no clear difference from single Opus on 300 deals (at most 0.0062 worse) at a fifth of
+  the cost. Both leads looked better on the 100 fresh deals than they are.
+- **Done: the full benchmark on 300 deals** (`docs/results/mix-benchmark.md`, run once 2026-10-15, $29.98): every
+  system and mix on the same 300 deals. The Opus team is the most accurate (0.0096); mix 1 matches single Opus most
+  tightly (at most 0.0021 worse) at 69% of its cost but is the slowest; single Opus is the fast choice; the Haiku
+  systems are the cheapest and lean NO-GO.
+- **Plan 7 changed (user, 2026-10-18): no competition demo or slides, and the headline no longer has to beat single
+  Opus.** The goal is a product for PE analysts. Spec: `docs/superpowers/specs/2026-10-19-analyst-board-design.md`, the
+  analyst board. It is a local app for the first screen of a deal: Haiku reads the teaser and CIM and quotes the
+  numbers, code checks each quote (anything unchecked stays blank), Opus prices the worries, and the board shows the
+  call, flip sizes, pairs and an ask-the-seller list with live drags. The spec awaits the user's review; next is the
+  implementation plan (superpowers:writing-plans). The spec and this note were committed on branch
+  `claude/plan-7-demo-slides-b03003` (worktree `pensive-jang-8b3fd7`), one commit ahead of the plan-4b branch.
+- **The analyst board is built** (plan `docs/superpowers/plans/2026-10-19-analyst-board.md`, all 7 tasks, 659 tests
+  pass). The final whole-branch review ran and its fixes landed: the board shows (and keeps on a drag) the floored
+  size the engine prices for an Opus worry, money numbers in $000s or $bn stay blank ("units look off"), the
+  documents go to `claude -p` on stdin (unverified against the real CLI until paid check 1), the estimate prices the
+  prompt as cache writes, and odd typed numbers or PDFs give a plain error instead of a 500. To try it for free: make a sample deal from a generated room into a
+  scratch folder outside the repo, `.venv/bin/python scripts/board_sample.py --room <data>/deals/dev-000/room --home
+  <scratch>`, then `.venv/bin/python -m acqlab.app --home <scratch>`. Careful: the board's step buttons (read, price,
+  second look) call real Claude and cost money. **Paid check 1 is built but not run and needs the user's OK** (about
+  $2): how often Haiku fills each number right, wrong or blank on 10 generated deals, and how often the call matches
+  the truth. Run it from this worktree against the plan-4b worktree's data, first without `--yes` (it only prints the estimate
+  and the scratch home): `.venv/bin/python scripts/board_reading_check.py --data /Users/dwightbritton/Developer/acquisition-lab/.claude/worktrees/plan-4b-freeze-preregistration-0908fa/data/cal-r2
+  --n 10 --out docs/results/board-reading-check.json`. Add `--yes` only after the user approves that printed
+  estimate. A failed run still saves the deals done and the money spent in the `--out` file (with a `stopped` note). Paid check 2
+  (one real CIM) waits for a CIM from the user.
+- **Next:** finish the analyst board, then stage 2 of the hidden-upside track.
 - **Where to work:** worktree `.claude/worktrees/plan-4b-freeze-preregistration-0908fa`, branch
   `claude/plan-4b-freeze-preregistration-0908fa`, which holds all of Plans 5 and 6. `plan-5` stopped following it on
   2026-09-26 (at `4896dbb`): its worktree `plan-4b-calibration-round-1-5f0549` was detached by something else, so

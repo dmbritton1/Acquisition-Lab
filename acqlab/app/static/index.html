@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acquisition Lab</title>
+<style>
+/* terminal: black screen, amber labels, white figures, blue fields for what the analyst types, red and green for
+   every signal (green is good for the deal, red is bad). Barlow is bundled (fonts/, SIL Open Font License): the
+   page loads nothing from outside. Labels and text in Barlow Semi Condensed, figures in Barlow. */
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url(fonts/barlow-400.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url(fonts/barlow-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 700; font-display: swap; src: url(fonts/barlow-700.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 400; font-display: swap; src: url(fonts/barlow-semi-condensed-400.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 500; font-display: swap; src: url(fonts/barlow-semi-condensed-500.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-display: swap; src: url(fonts/barlow-semi-condensed-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-display: swap; src: url(fonts/barlow-semi-condensed-700.woff2) format("woff2"); }
+:root {
+  color-scheme: dark;
+  --bg: #050505; --panel: #050505; --sunk: #101010; --ink: #ececec; --muted: #a3a3a3; --faint: #6e6e6e;
+  --line: #2b2416; --track: #262626; --amber: #f5a524; --accent: #4fc3f7; --accent-soft: #0b2a3b;
+  --field: #0a1f4d; --field-line: #1d3d80;
+  --go: #33d36b; --go-soft: #0c3d1d; --bad: #ff4b40; --bad-soft: #4d0f0b; --warn: #ffd400; --warn-soft: #3d3000;
+  --mark: #6b4a00; --bar-ok: #33d36b; --bar-bad: #ff4b40; --band: rgba(245, 165, 36, .09);
+  --label: "Barlow Semi Condensed", "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --sans: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;  /* only for raw document text and shell commands */
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--label); font-variant-numeric: tabular-nums; }
+h2 { font-size: 14.5px; font-weight: 600; color: var(--amber); margin: -14px -16px 12px; padding: 6px 16px 4px;
+  border-bottom: 1px solid var(--amber); display: flex; align-items: center; gap: 8px; }
+h2 .grow { flex: 1; }
+h2 .key { color: var(--faint); font-weight: 400; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid #3a3a3a; background: #141414; border-radius: 0; padding: 3px 10px; }
+button:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--amber); border-color: var(--amber); color: #000; font-weight: 600; }
+button.primary:hover:not(:disabled) { color: #000; background: #ffb84d; }
+button.link { border: 0; background: none; padding: 0 2px; color: var(--accent); font-size: 12px; }
+button.link:hover:not(:disabled) { text-decoration: underline; color: var(--accent); }
+input[type=text], input[type=number], select { border: 1px solid var(--field-line); background: var(--field); color: #fff;
+  border-radius: 0; padding: 4px 8px; min-width: 0; }
+input[type=file] { color: var(--muted); }
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--amber); outline-offset: 1px; }
+.s { font-size: 12px; color: var(--muted); }
+.warn { color: var(--warn); }
+.bad { color: var(--bad); }
+
+/* header: a command line, then the hotkey menu */
+.bar { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+.cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 9px 16px; background: #161616; border-bottom: 1px solid var(--line); }
+.brand { font-size: 26px; font-weight: 700; letter-spacing: .01em; color: var(--amber); white-space: nowrap; margin-right: 6px; }
+.brand::before { content: "> "; color: var(--faint); }
+/* the deal picker, with the open deal's details on a line under it */
+.deal { display: grid; gap: 4px; align-items: center; color: var(--amber); min-width: 0; }
+/* the deal dropdown: an amber chevron on the blue field everywhere; where the browser allows a styled list
+   (appearance: base-select, Chrome and Edge), the open list is a terminal panel too. Elsewhere the list stays the
+   system one. */
+.deal select { --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23f5a524' stroke-width='2'/%3E%3C/svg%3E");
+  width: auto; max-width: min(420px, 40vw); font-size: 15px; font-weight: 600; padding: 6px 32px 6px 12px; text-overflow: ellipsis;
+  white-space: nowrap; appearance: none; cursor: pointer; background: var(--field) no-repeat right 10px center / 12px 8px var(--chevron); }
+.deal select:hover { border-color: var(--amber); }
+@supports (appearance: base-select) {
+  .deal select, .deal select::picker(select) { appearance: base-select; }
+  /* the chevron is pinned to the right edge, so a long name is clipped before it, never pushes it out */
+  .deal select { position: relative; display: block; overflow: hidden; background-image: none; }
+  .deal select::picker-icon { content: ""; position: absolute; right: 10px; top: calc(50% - 4px); width: 12px; height: 8px;
+    background: no-repeat center / contain var(--chevron); transition: rotate .15s; }
+  .deal select:open::picker-icon { rotate: 180deg; }
+  .deal select::picker(select) { margin-top: 4px; padding: 4px 0; background: #0c0c0c; border: 1px solid var(--amber);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .7); }
+  .deal select option { padding: 8px 14px; gap: 10px; color: var(--ink); font-size: 14.5px; font-weight: 500;
+    border-left: 3px solid transparent; }
+  .deal select option:hover, .deal select option:focus-visible { background: #1a1406; color: var(--amber); outline: none; }
+  .deal select option:checked { border-left-color: var(--amber); color: var(--amber); font-weight: 600; }
+  .deal select option::checkmark { display: none; }
+  @media (prefers-reduced-motion: reduce) { .deal select::picker-icon { transition: none; } }
+}
+.cmd button { white-space: nowrap; flex-shrink: 0; padding: 8px 18px; font-size: 16px; font-weight: 600; }
+.cmd .right { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.deal .meta { font-size: 12px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; min-height: 1em; width: 0; min-width: 100%; }  /* as wide as the picker, never wider */
+.busy { font-size: 12px; color: var(--amber); white-space: nowrap; }
+.busy::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px;
+  background: var(--amber); animation: pulse 1s steps(2) infinite; vertical-align: 0; }
+@keyframes pulse { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .busy::before { animation: none; } }
+.menu { display: flex; gap: 16px; white-space: nowrap; overflow-x: auto; scrollbar-width: none; padding: 3px 16px; background: #0d2a6b; color: #fff; }
+.menu a { color: inherit; text-decoration: none; }
+.menu a:hover { color: var(--amber); }
+.menu a b { color: var(--amber); font-weight: 500; }
+
+main { max-width: 1440px; margin: 0 auto; padding: 12px 16px 48px; }
+.msg { position: sticky; top: 100px; z-index: 4; display: flex; gap: 12px; align-items: flex-start; max-width: 1408px;
+  margin: 10px auto 0; padding: 8px 14px; background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad); }
+.msg span { flex: 1; white-space: pre-wrap; }
+.msg button { background: transparent; border-color: currentColor; color: inherit; padding: 1px 10px; }
+
+/* setup drawers */
+.setup { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 12px; }
+details.drawer { background: var(--panel); border: 1px solid var(--line); }
+details.drawer[open] { flex-basis: 100%; }
+details.drawer > summary { cursor: pointer; padding: 5px 12px; font-weight: 600; color: var(--amber); list-style: none;
+  display: flex; gap: 10px; align-items: baseline; }
+details.drawer > summary::-webkit-details-marker { display: none; }
+details.drawer > summary::before { content: "+"; color: var(--faint); width: 10px; }
+details.drawer[open] > summary::before { content: "\2212"; }
+details.drawer > summary .s { font-weight: 400; }
+.drawer form { padding: 4px 12px 12px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 16px; }
+.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--amber); }
+.field input { font-size: 13px; }
+.field.missing { color: var(--bad); }
+.field.missing input, input.missing { border-color: var(--bad); background: var(--bad-soft); }
+fieldset { border: 0; padding: 0; margin: 0 0 12px; }
+legend { font-size: 12px; font-weight: 600; color: var(--ink); padding: 0; margin-bottom: 8px; }
+.form-foot { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+
+/* layout: panels on a black screen */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 8px; align-items: start; }
+.col-main, .col-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+@media (max-width: 1180px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; min-width: 0; }
+.board-part { transition: opacity .15s; }
+.greyed .board-part { opacity: .35; pointer-events: none; user-select: none; filter: grayscale(.8); }
+.fill { margin-bottom: 12px; padding: 8px 14px; background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad); }
+.fill b { font-weight: 650; }
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+.empty code { font-family: var(--mono); font-size: 12px; background: var(--sunk); padding: 2px 6px; color: var(--amber); }
+
+/* the call */
+.call { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 24px; align-items: center; }
+.verdict { min-width: 128px; text-align: center; padding: 10px 16px; font-size: 26px; font-weight: 700;
+  background: var(--sunk); color: var(--faint); border: 1px solid var(--line); }
+.verdict.go { background: var(--go); color: #000; border-color: var(--go); }
+.verdict.nogo { background: var(--bad); color: #000; border-color: var(--bad); }
+.verdict small { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; }
+.kv .k { font-size: 12px; color: var(--amber); }
+.kv .v { font: 600 22px/1.3 var(--sans); }
+#price { color: var(--accent); }
+.kv .s { font-family: var(--sans); }
+.lo { color: var(--bad); }
+.hi { color: var(--go); }
+.meter { height: 6px; background: var(--track); margin-top: 6px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--go); }
+.meter.on { background: var(--bad); }  /* red for the share that falls short, only once there is a result */
+.note { margin: 14px 0 0; font: 12px/1.5 var(--sans); color: var(--muted); }
+
+/* fork chart */
+#fork { width: 100%; height: auto; display: block; }
+#fork text { fill: var(--muted); font: 12px var(--label); }
+#fork .lbl { fill: var(--ink); font-weight: 600; }
+#fork .bar-ok { fill: var(--bar-ok); }
+#fork .bar-bad { fill: var(--bar-bad); }
+#fork .band { fill: var(--band); }
+#fork .axis { stroke: var(--line); }
+#fork .price { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+#fork .walk { stroke: var(--amber); stroke-width: 2; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
+
+/* worries */
+.worry { padding: 12px 0; border-top: 1px solid var(--line); }
+.worry:first-child { border-top: 0; padding-top: 2px; }
+.w-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.w-title { font-weight: 600; font-size: 14px; color: var(--ink); }
+.tag { font-size: 11px; padding: 0 7px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.tag.you { background: var(--accent-soft); color: var(--accent); }
+.tag.opus { background: #1a1a1a; color: var(--ink); }
+.tag.none { background: var(--warn-soft); color: var(--warn); }
+.state { font-size: 11px; font-weight: 600; padding: 0 7px; white-space: nowrap; }
+.state.flips { background: var(--bad-soft); color: var(--bad); }
+.state.near { background: var(--warn-soft); color: var(--warn); }
+.state.clear { background: var(--go-soft); color: var(--go); }
+.w-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(150px, .7fr) minmax(220px, 1.2fr); gap: 20px; }
+@media (max-width: 1000px) { .w-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .w-text { grid-column: 1 / -1; } }
+.reason { margin: 0; color: var(--ink); font: 13px/1.5 var(--sans); }
+.reason.dim { color: var(--muted); font-style: italic; }
+.notes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
+.notes .hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.ctl-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--amber); }
+.out { font: 600 13px var(--sans); color: var(--accent); }
+.track { position: relative; height: 22px; margin-top: 2px; }
+.ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: -2px; }
+.fliptext { margin-top: 4px; }
+.fliptext.hit { color: var(--bad); font-weight: 600; }
+.flip { position: absolute; top: 2px; width: 2px; height: 18px; margin-left: -1px; background: var(--bad);
+  left: calc(7px + (100% - 14px) * var(--at)); pointer-events: none; }
+.m2 { position: absolute; top: 6px; width: 10px; height: 10px; margin-left: -5px; border: 2px solid var(--warn);
+  transform: rotate(45deg); background: var(--bg); left: calc(7px + (100% - 14px) * var(--at)); pointer-events: none; }
+input[type=range] { -webkit-appearance: none; appearance: none; position: relative; width: 100%; height: 22px;
+  margin: 0; background: transparent; cursor: pointer; --fill: 0%; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px;
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--track) var(--fill)); }
+input[type=range]::-moz-range-track { height: 4px;
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--track) var(--fill)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 14px; margin-top: -5px;
+  background: var(--ink); border: 0; }
+input[type=range]::-moz-range-thumb { width: 12px; height: 14px; border-radius: 0; background: var(--ink); border: 0; }
+input[type=range]:focus-visible { outline: none; }
+input[type=range]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--amber); outline-offset: 2px; }
+.chip { font: 12px var(--sans); max-width: 100%; padding: 1px 8px; background: var(--sunk); border: 1px solid #2a2a2a;
+  color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip::before { content: "\201C"; color: var(--faint); }
+.chip::after { content: "\201D"; color: var(--faint); }
+.chip:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+
+/* pairs, ask */
+.pairs { display: flex; flex-wrap: wrap; gap: 8px; }
+.pair { padding: 3px 10px; background: var(--bad-soft); color: var(--bad); font-weight: 600; font-size: 12px; }
+.empty-line { color: var(--muted); font-size: 12px; margin: 0; }
+ol.ask { list-style: none; margin: 0; padding: 0; counter-reset: ask; }
+ol.ask li { counter-increment: ask; display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; padding: 7px 0;
+  border-top: 1px solid #1a1a1a; }
+ol.ask li:first-child { border-top: 0; padding-top: 0; }
+ol.ask li::before { content: counter(ask) ")"; color: var(--amber); }
+ol.ask .val { font: 600 13px var(--sans); color: var(--go); text-align: right; }
+ol.ask .val.zero { color: var(--faint); }
+ol.ask .docs { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
+
+/* numbers */
+.co { font-weight: 600; margin-bottom: 10px; }
+.co .s { font-weight: 400; display: block; }
+.num { display: grid; grid-template-columns: minmax(0, 1fr) 112px 104px; gap: 4px 10px; align-items: center;
+  padding: 5px 0; border-top: 1px solid #1a1a1a; }
+.num:first-of-type { border-top: 0; }
+.num label { font-size: 12px; }
+.num.blank label { color: var(--bad); font-weight: 600; }
+.unit { position: relative; }
+.unit input { width: 100%; text-align: right; padding-right: 30px; font-family: var(--sans); }
+.unit span { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #8fa6d6;
+  pointer-events: none; }
+.status { font-size: 11px; text-align: center; padding: 1px 6px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.status.quoted, .status.calculated { background: var(--go-soft); color: var(--go); }
+.status.blank { background: var(--bad-soft); color: var(--bad); }
+.status.conflict { background: var(--warn-soft); color: var(--warn); }
+.status.you { background: var(--accent-soft); color: var(--accent); }
+.num .more { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* steps, docs, second */
+.step { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; padding: 8px 0;
+  border-top: 1px solid #1a1a1a; }
+.step:first-child { border-top: 0; padding-top: 0; }
+.step b { font-weight: 600; color: var(--ink); }
+.step .act { display: flex; gap: 6px; align-items: center; flex-shrink: 0; white-space: nowrap; }
+/* run model: the panel that starts everything, so it carries the amber frame and a filled title bar */
+#stepCard { border: 1px solid var(--amber); box-shadow: 0 0 0 1px rgba(245, 165, 36, .25), 0 0 24px rgba(245, 165, 36, .08); }
+#stepCard h2 { background: var(--amber); color: #000; border-bottom: 0; }
+.step.all { flex-direction: column; align-items: stretch; gap: 10px; }
+.step.all .s { font-size: 12.5px; color: var(--ink); }
+.step.all .act > button.primary { flex: 1; padding: 9px 12px; font-size: 14px; }
+.step.all .act > .busy { font-size: 13px; padding: 8px 0; }
+.step .confirm { display: flex; gap: 6px; }
+/* run all: the cost on its own line, then Confirm and Cancel side by side at equal width */
+.step.all .act:has(.confirm) { flex-direction: column; align-items: stretch; gap: 8px; }
+.step.all .est { text-align: center; font-size: 14px; color: var(--ink); }
+.step.all .confirm { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.step.all .confirm button { padding: 9px 12px; font-size: 14px; font-weight: 600; }
+details.sub { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+details.sub > summary { cursor: pointer; list-style: none; font-size: 12px; color: var(--amber); }
+details.sub > summary::-webkit-details-marker { display: none; }
+details.sub > summary::before { content: "+ "; color: var(--faint); }
+details.sub[open] > summary { margin-bottom: 8px; }
+details.sub[open] > summary::before { content: "\2212  "; }  /* the escape eats one space */
+.docs-list { margin: -3px 0; }
+.docs-list button { display: block; text-align: left; width: 100%; border: 0; padding: 3px 0; background: none; }
+.docs-list button:hover:not(:disabled) { color: var(--amber); }
+.mini { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.mini .verdict { min-width: 84px; font-size: 16px; padding: 6px 10px; }
+.mini b { font-family: var(--sans); }
+table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.cmp th, table.cmp td { padding: 4px; border-top: 1px solid #1a1a1a; text-align: right; }
+table.cmp th:first-child, table.cmp td:first-child { text-align: left; }
+table.cmp thead th { color: var(--amber); font-weight: 400; border-top: 0; border-bottom: 1px solid var(--line); }
+table.cmp td.diff { color: var(--warn); font-weight: 650; }
+
+/* new-deal pop-up */
+dialog { padding: 0; width: min(640px, calc(100vw - 32px)); background: var(--bg); color: var(--ink);
+  border: 1px solid var(--amber); }
+dialog::backdrop { background: rgba(0, 0, 0, .72); }
+dialog header { display: flex; align-items: center; padding: 6px 8px 6px 16px; background: #161616;
+  border-bottom: 1px solid var(--amber); }
+dialog header b { flex: 1; color: var(--amber); }
+dialog header button { border: 0; background: none; font-size: 18px; line-height: 1; padding: 2px 8px; }
+.dlg-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.dlg-body > .s, .dlg-body > .fill { margin: 0; }
+.drops { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .drops { grid-template-columns: 1fr; } }
+.drop { position: relative; display: flex; flex-direction: column; gap: 4px; justify-content: center; min-height: 120px;
+  padding: 14px; border: 1px dashed #4a4a4a; background: var(--sunk); text-align: center; cursor: pointer; }
+.drop b { color: var(--amber); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop:hover, .drop.over { border-color: var(--amber); background: #1a1406; }
+.drop:focus-within { outline: 2px solid var(--amber); outline-offset: 1px; }
+.drop.has { border-style: solid; border-color: var(--go); }
+.drop .picked { color: var(--go); font-weight: 600; word-break: break-all; }
+.dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); }
+
+/* document panel */
+.panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); z-index: 10; background: var(--bg);
+  border-left: 1px solid var(--amber); box-shadow: -8px 0 24px rgba(0,0,0,.6); display: flex; flex-direction: column; }
+.panel header { display: flex; gap: 10px; align-items: center; padding: 6px 16px; background: #161616;
+  border-bottom: 1px solid var(--amber); }
+.panel header b { flex: 1; color: var(--amber); }
+.panel .page { flex: 1; overflow: auto; margin: 0; padding: 16px 18px; font: 12.5px/1.6 var(--mono); white-space: pre-wrap;
+  word-break: break-word; background: var(--sunk); color: #d8d8d8; }
+.panel mark { background: var(--mark); color: #fff; padding: 1px 0; }
+.panel .pnote { padding: 6px 16px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="cmd">
+    <div class="brand">Acquisition Lab</div>
+    <div class="deal">
+      <select id="dealSelect" aria-label="Deal"></select>
+      <div id="dealMeta" class="meta"></div>
+    </div>
+    <div class="right">
+      <span id="busy" class="busy" hidden></span>
+      <button type="button" id="newDealBtn">+ New deal</button>
+    </div>
+  </div>
+  <nav class="menu" aria-label="Sections (keys 1 to 8)">
+    <a href="#callCard"><b>1)</b> Call</a><a href="#forkCard"><b>2)</b> Outcomes</a><a href="#worryCard"><b>3)</b> Worries</a>
+    <a href="#pairCard"><b>4)</b> Pairs</a><a href="#stepCard"><b>5)</b> Pricing model</a><a href="#askCard"><b>6)</b> Ask seller</a>
+    <a href="#numCard"><b>7)</b> Numbers</a><a href="#docCard"><b>8)</b> Documents</a>
+  </nav>
+</header>
+<div id="msg" class="msg" role="alert" hidden><span id="msgText"></span><button type="button" id="msgClose">Dismiss</button></div>
+<main>
+  <section class="setup">
+    <details class="drawer" id="settingsBox">
+      <summary>Firm settings <span class="s" id="settingsSummary"></span></summary>
+      <form id="settingsForm"></form>
+    </details>
+  </section>
+  <div id="empty" class="empty" hidden></div>
+  <div id="fill" class="fill" hidden></div>
+  <div class="grid" id="grid" hidden>
+    <div class="col-main">
+      <section class="card board-part" id="callCard" aria-live="polite">
+        <div class="call">
+          <div class="verdict" id="verdict">&mdash;</div>
+          <div class="kv"><div class="k">Asking price</div><div class="v" id="price">&mdash;</div></div>
+          <div class="kv"><div class="k">Walk-away price (median)</div><div class="v" id="walk">&mdash;</div>
+            <div class="s" id="range"></div></div>
+          <div class="kv"><div class="k">Clears the price</div><div class="v" id="clears">&mdash;</div>
+            <div class="meter"><i id="clearsBar" style="width:0"></i></div></div>
+        </div>
+        <p class="note">GO when buying at the price carries no more expected regret than passing. The walk-away is the
+          highest price that still meets the firm's hurdle in an outcome; outcomes are simulated over the worries below.</p>
+      </section>
+      <section class="card board-part" id="forkCard">
+        <h2>Walk-away price across outcomes</h2>
+        <svg id="fork" viewBox="0 0 640 210" role="img" aria-label="Histogram of walk-away prices"></svg>
+        <div class="legend"><span><i style="background:var(--bar-ok)"></i>clears the price</span>
+          <span><i style="background:var(--bar-bad)"></i>falls short</span>
+          <span><i style="background:var(--band);outline:1px solid var(--line)"></i>p10 to p90</span></div>
+      </section>
+      <section class="card board-part" id="worryCard">
+        <h2>Worries <span class="grow"></span><span class="s" style="font-weight:400">
+          <i class="flip-key" style="display:inline-block;width:2px;height:10px;background:var(--bad);vertical-align:-1px"></i>
+          where it alone flips the face-value call</span></h2>
+        <div id="worries"></div>
+      </section>
+      <section class="card board-part" id="pairCard">
+        <h2>Together they flip it</h2>
+        <div id="pairs"></div>
+      </section>
+    </div>
+    <div class="col-side">
+      <section class="card" id="stepCard">
+        <h2>Pricing model</h2>
+        <div id="runAll"></div>
+        <details class="sub"><summary>Run one step at a time</summary><div id="steps"></div></details>
+      </section>
+      <section class="card board-part" id="askCard">
+        <h2>Ask the seller first <span class="grow"></span><button type="button" id="copyAsk">Copy as text</button></h2>
+        <p class="s" style="margin:0 0 10px">Ranked by how much knowing the size would cut expected loss.</p>
+        <ol class="ask" id="ask"></ol>
+      </section>
+      <section class="card" id="numCard">
+        <h2>Company numbers</h2>
+        <div id="numbers"></div>
+      </section>
+      <section class="card" id="docCard">
+        <h2>Documents</h2>
+        <div id="docs" class="docs-list"></div>
+      </section>
+      <section class="card board-part">
+        <h2>Second look</h2>
+        <div id="second"></div>
+      </section>
+    </div>
+  </div>
+</main>
+<dialog id="newDeal" aria-labelledby="newDealTitle">
+  <form id="newDealForm">
+    <header><b id="newDealTitle">New deal</b><button type="button" id="newDealClose" aria-label="Close">&times;</button></header>
+    <div class="dlg-body">
+      <label class="field">Company name <input type="text" name="name" required></label>
+      <label class="field">Asking price ($M) <input type="number" name="price" step="any" min="0" required></label>
+      <div class="drops">
+        <label class="drop"><input type="file" name="teaser" accept=".pdf,.md,.txt" required>
+          <b>Teaser</b><span class="s">Drop the file here, or click to choose. PDF, Markdown or text.</span><span class="picked"></span></label>
+        <label class="drop"><input type="file" name="cim" accept=".pdf,.md,.txt" required>
+          <b>CIM</b><span class="s">Drop the file here, or click to choose. PDF, Markdown or text.</span><span class="picked"></span></label>
+      </div>
+      <p class="fill" id="newDealErr" role="alert" hidden></p>
+      <p class="s">The files are copied into the deal folder on this laptop. Nothing is sent anywhere until you run a step.</p>
+    </div>
+    <div class="dlg-foot"><button type="button" id="newDealCancel">Cancel</button><button class="primary" type="submit">Add deal</button></div>
+  </form>
+</dialog>
+<aside id="panel" class="panel" hidden aria-label="Document">
+  <header><b id="pTitle"></b>
+    <button type="button" id="pPrev" aria-label="Previous page">&lsaquo;</button><span class="s" id="pPage"></span>
+    <button type="button" id="pNext" aria-label="Next page">&rsaquo;</button>
+    <button type="button" id="pClose">Close</button></header>
+  <div class="pnote s" id="pNote" hidden></div>
+  <pre class="page" id="pText"></pre>
+</aside>
+<script>
+"use strict";
+const TRAPS = ["addback", "debt_like", "concentration", "nwc", "capex"];
+const LABEL = {addback: "Add-backs that may not be one-time", debt_like: "Debt-like items at closing",
+  concentration: "Customer revenue at risk", nwc: "Working capital shortfall", capex: "Extra capex needed"};
+const FIELDS = [["revenue_ltm", "LTM revenue ($M)"], ["reported_ebitda", "Reported EBITDA ($M)"],
+  ["claimed_addbacks", "Claimed add-backs ($M)"], ["adj_ebitda", "Adjusted EBITDA ($M)"], ["growth", "Revenue growth"],
+  ["capex_pct", "Capex (% of revenue)"], ["nwc_pct", "Net working capital (% of revenue)"], ["da_pct", "D&A (% of revenue)"],
+  ["tax_rate", "Tax rate"]];
+const FIELD_LABEL = Object.fromEntries(FIELDS);
+const RATES = new Set(["growth", "capex_pct", "nwc_pct", "da_pct", "tax_rate"]);
+const STATUS = {quoted: "quoted", calculated: "calculated", blank: "blank", conflict: "documents disagree", you: "you set"};
+const SETTINGS = {
+  financing: [["max_leverage", "Max leverage (x EBITDA)", "x"], ["interest_rate", "Interest rate", "%"],
+    ["amortization_pct", "Amortization per year", "%"], ["cash_sweep", "Cash sweep", "%"],
+    ["covenant_max_leverage", "Covenant max leverage, by year (x)", "list"], ["fees_pct", "Fees (% of price)", "%"]],
+  policy: [["irr_hurdle", "IRR hurdle", "%"], ["hold_years", "Hold (years)", "int"], ["exit_multiple", "Exit multiple (x)", "x"],
+    ["min_equity_pct", "Minimum equity", "%"], ["downside_revenue_shock", "Downside revenue shock", "%"],
+    ["downside_margin_shock", "Downside margin shock", "%"]]};
+const STEPS = [["read", "Read", "Haiku reads the teaser and CIM and quotes each number."],
+  ["price", "Price", "Opus prices the five worries from the numbers and documents."],
+  ["second", "Second look", "Opus reads and prices again on its own, as a check on the board."]];
+
+// state: the open deal, its overrides (the page's copy of board.json), the last board result
+const S = {id: null, detail: null, settings: {}, overrides: {}, result: null, rows: {}, sizeMax: {}, lastFlip: {},
+  step: null, stepDeal: null, chain: null, boardBusy: false, boardWanted: false, boardTimer: null};
+const $ = s => document.querySelector(s);
+
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "style") el.style.cssText = v;
+    else if (k in el) el[k] = v;
+    else el.setAttribute(k, v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+const ok = x => typeof x === "number" && isFinite(x);
+const money = v => !ok(v) ? "\u2014" : (v < 0 ? "\u2212$" : "$") + Math.abs(v).toLocaleString("en-US",
+  {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "M";
+const pct = v => !ok(v) ? "\u2014" : (v * 100).toFixed(1) + "%";
+const mult = v => !ok(v) ? "\u2014" : v.toFixed(2) + "x";
+const field = (f, v) => RATES.has(f) ? pct(v) : money(v);
+const dollars = d => !ok(d) ? "\u2014" : d < 0.01 ? "under $0.01" : "$" + d.toFixed(2);
+const trim = n => String(Math.round(n * 1e4) / 1e4);
+
+// ---------- messages and the server ----------
+function showError(text) { $("#msgText").textContent = text; $("#msg").hidden = false; }
+$("#msgClose").onclick = () => { $("#msg").hidden = true; };
+function setBusy(text) { const b = $("#busy"); b.hidden = !text; b.textContent = text || ""; }
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)};
+  let r;
+  try { r = await fetch(path, opt); } catch (e) { return {ok: false, status: 0, data: {error: "the server isn't answering: is it still running?"}}; }
+  let data;
+  try { data = await r.json(); } catch (e) { data = {error: "unexpected answer from the server (HTTP " + r.status + ")"}; }
+  return {ok: r.ok, status: r.status, data};
+}
+
+// ---------- deals ----------
+async function loadDeals(want) {
+  const r = await api("/api/deals");
+  if (!r.ok) return showError(r.data.error);
+  const sel = $("#dealSelect");
+  sel.replaceChildren(...r.data.map(d => h("option", {value: d.id}, d.name + "  \u00b7  " + money(d.price))));
+  let hash = "";
+  try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) { /* a malformed hash: ignore it */ }
+  const id = [want, hash].find(x => x && r.data.some(d => d.id === x)) || r.data[0]?.id;
+  $("#empty").hidden = !!id;
+  $("#grid").hidden = !id;
+  if (!id) {
+    $("#fill").hidden = true;
+    $("#dealMeta").textContent = "";
+    $("#empty").replaceChildren(h("p", {}, "No deals yet. Add one with + New deal at the top, or make the free sample deal:"),
+      h("p", {}, h("code", {}, ".venv/bin/python scripts/board_sample.py --room <a generated deals/dev-000/room> --home <this folder>")));
+    return;
+  }
+  sel.value = id;
+  await loadDeal(id, false);
+}
+$("#dealSelect").onchange = e => { location.hash = e.target.value; loadDeal(e.target.value, false); };
+
+async function loadDeal(id, keep) {
+  const r = await api("/api/deals/" + encodeURIComponent(id));
+  if (!r.ok) return showError(r.data.error);
+  const fresh = S.id !== id || !keep;
+  S.id = id; S.detail = r.data;
+  if (fresh) { S.overrides = r.data.board?.overrides || {}; S.sizeMax = {}; S.result = null; }
+  S.lastFlip = {};
+  const d = r.data.deal, n = r.data.numbers;
+  $("#dealMeta").textContent = [n?.industry, "added " + new Date(d.created).toLocaleDateString(undefined,
+    {month: "short", day: "numeric", year: "numeric"})].filter(Boolean).join("  \u00b7  ");
+  $("#price").textContent = money(d.price);
+  renderNumbers(); renderSteps(); renderDocs(); buildWorries();
+  if (fresh) clearBoard();
+  scheduleBoard(0);
+}
+
+// ---------- the new-deal pop-up: two drop zones; each is a file input stretched over its box, so a click picks a
+// file and a drop lands on the input natively ----------
+$("#newDealBtn").onclick = () => $("#newDeal").showModal();
+$("#newDealClose").onclick = $("#newDealCancel").onclick = () => $("#newDeal").close();
+function showPicked() {
+  for (const zone of document.querySelectorAll(".drop")) {
+    const f = zone.querySelector("input").files[0];
+    zone.classList.toggle("has", !!f);
+    zone.querySelector(".picked").textContent = f ? `${f.name}  (${Math.max(1, Math.round(f.size / 1024))} KB)` : "";
+  }
+}
+for (const zone of document.querySelectorAll(".drop")) {
+  zone.querySelector("input").onchange = showPicked;
+  zone.ondragenter = zone.ondragover = () => zone.classList.add("over");
+  zone.ondragleave = zone.ondrop = () => zone.classList.remove("over");
+}
+// a file dropped anywhere but a drop zone must not make the browser open it in place of the board
+for (const type of ["dragover", "drop"])
+  addEventListener(type, e => { if (!e.target.matches?.("input[type=file]")) e.preventDefault(); });
+
+$("#newDealForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target, btn = f.querySelector("button[type=submit]");
+  const read = file => new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result).split(",")[1] || "");
+    fr.onerror = () => rej(fr.error);
+    fr.readAsDataURL(file);
+  });
+  // errors show inside the pop-up: the page's banner sits behind it
+  const fail = text => { $("#newDealErr").textContent = text; $("#newDealErr").hidden = false; };
+  $("#newDealErr").hidden = true;
+  btn.disabled = true; setBusy("Reading the files\u2026");
+  try {
+    const [t, c] = [f.teaser.files[0], f.cim.files[0]];
+    const r = await api("/api/deals", {name: f.name.value, price: parseFloat(f.price.value),
+      teaser: {filename: t.name, base64: await read(t)}, cim: {filename: c.name, base64: await read(c)}});
+    if (!r.ok) return fail(r.data.error);
+    f.reset(); showPicked(); $("#newDeal").close();
+    location.hash = r.data.id;
+    await loadDeals(r.data.id);
+  } catch (err) {
+    fail("couldn't read the file: " + err);
+  } finally { btn.disabled = false; setBusy(""); }
+};
+
+// ---------- settings ----------
+async function loadSettings() {
+  const r = await api("/api/settings");
+  if (!r.ok) return showError(r.data.error);
+  S.settings = r.data || {};
+  renderSettings();
+}
+function settingMissing(g, k) { const v = S.settings[g]?.[k]; return v == null; }
+function renderSettings() {
+  const form = $("#settingsForm");
+  const shown = (kind, v) => v == null ? "" : kind === "%" ? trim(v * 100) : kind === "list" ? v.map(x => x.toFixed(2)).join(", ") :
+    kind === "x" ? trim(v) : String(v);
+  form.replaceChildren(...Object.entries(SETTINGS).map(([g, list]) => h("fieldset", {},
+    h("legend", {}, g === "financing" ? "Financing" : "Investment policy"),
+    h("div", {class: "form-grid"}, list.map(([k, label, kind]) => {
+      const v = S.settings[g]?.[k];
+      const input = h("input", {type: "text", inputMode: "decimal", name: g + "." + k, value: shown(kind, v),
+        placeholder: kind === "list" ? "e.g. 6.0, 5.75, 5.5, 5.25, 5.0" : ""});
+      input.dataset.kind = kind; input.dataset.g = g; input.dataset.k = k;
+      input.oninput = () => { input.dataset.dirty = "1"; };
+      return h("label", {class: "field" + (v == null ? " missing" : "")}, label + (kind === "%" ? " (%)" : ""), input);
+    })))),
+    h("div", {class: "form-foot"}, h("button", {class: "primary", type: "submit"}, "Save settings"),
+      h("span", {class: "s"}, "The firm's financing terms and policy, used for every deal.")));
+  const missing = Object.entries(SETTINGS).flatMap(([g, l]) => l.filter(([k]) => settingMissing(g, k)));
+  const f = S.settings.financing, p = S.settings.policy;
+  $("#settingsSummary").className = missing.length ? "s bad" : "s";
+  $("#settingsSummary").textContent = missing.length ? missing.length + " to fill in" :
+    `${mult(f.max_leverage)} at ${pct(f.interest_rate)} \u00b7 hurdle ${pct(p.irr_hurdle)} \u00b7 ${p.hold_years}-year hold \u00b7 exit ${mult(p.exit_multiple)}`;
+}
+$("#settingsForm").onsubmit = async e => {
+  e.preventDefault();
+  const body = {};
+  for (const input of e.target.querySelectorAll("input")) {
+    const {g, k, kind} = input.dataset, raw = input.value.trim();
+    if (!raw) continue;
+    let v;
+    if (!input.dataset.dirty && S.settings[g]?.[k] != null) v = S.settings[g][k];  // untouched: keep the full precision
+    else if (kind === "list") v = raw.split(/[,\s]+/).filter(Boolean).map(Number);
+    else v = kind === "%" ? Number(raw) / 100 : Number(raw);
+    if ((Array.isArray(v) ? v : [v]).some(x => !ok(x))) return showError(`settings: "${raw}" is not a number`);
+    (body[g] ||= {})[k] = v;
+  }
+  if (!Object.keys(body).length) return;
+  const r = await api("/api/settings", body);
+  if (!r.ok) return showError("settings: " + r.data.error);
+  S.settings = r.data; renderSettings();
+  S.lastFlip = {}; scheduleBoard(0);
+};
+
+// ---------- company numbers ----------
+function numbersOf() { return S.detail?.numbers?.numbers || {}; }
+function value(f) { const v = numbersOf()[f]?.value; return ok(v) ? v : null; }
+function chips(quotes) {
+  return (quotes || []).filter(q => q && typeof q.text === "string").map(q =>
+    h("button", {type: "button", class: "chip", title: q.text, onclick: () => openQuote(q)}, q.text));
+}
+function renderNumbers() {
+  const n = S.detail.numbers, box = $("#numbers");
+  box.replaceChildren(h("div", {class: "co"}, n?.name || S.detail.deal.name,
+    h("span", {class: "s"}, n ? (n.industry || "industry not stated") : "Not read yet: run Read, or type the numbers in.")));
+  for (const [f, label] of FIELDS) {
+    const e = numbersOf()[f] || {status: "blank", why: ""}, v = value(f), rate = RATES.has(f);
+    const input = h("input", {type: "text", inputMode: "decimal", id: "n-" + f,
+      value: v == null ? "" : rate ? (v * 100).toFixed(1) : v.toFixed(1), class: v == null ? "missing" : ""});
+    input.onchange = () => saveNumber(f, input);
+    const st = v == null && e.status !== "conflict" ? "blank" : e.status;
+    const tip = [e.why, e.calc && e.calc !== "none" ? e.calc + " of " + (e.inputs || []).join(" and ") : ""].filter(Boolean).join("; ");
+    const more = [...chips(e.quotes), e.why && e.status !== "you" ? h("span", {class: "s" + (v == null ? " bad" : "")}, e.why) : null].filter(Boolean);
+    box.append(h("div", {class: "num" + (v == null ? " blank" : "")},
+      h("label", {htmlFor: "n-" + f}, label),
+      h("div", {class: "unit"}, input, h("span", {}, rate ? "%" : "$M")),
+      h("span", {class: "status " + st, title: tip}, STATUS[st] || st),
+      more.length ? h("div", {class: "more"}, more) : null));
+  }
+}
+async function saveNumber(f, input) {
+  const raw = input.value.trim();
+  if (!raw) { renderNumbers(); return; }
+  const x = Number(raw.replace(/[$,%M]/gi, ""));
+  if (!ok(x)) { showError(`${FIELD_LABEL[f]}: "${raw}" is not a number`); return; }
+  const r = await api(`/api/deals/${S.id}/numbers`, {[f]: RATES.has(f) ? x / 100 : x});
+  if (!r.ok) { showError(r.data.error); renderNumbers(); return; }
+  S.detail.numbers = r.data;
+  S.lastFlip = {};
+  const next = document.activeElement?.id;  // keep the field the analyst tabbed into
+  renderNumbers(); buildWorries(); scheduleBoard(0);
+  if (next) document.getElementById(next)?.focus();
+}
+
+// ---------- steps and documents ----------
+function renderSteps() {
+  const cost = {read: S.detail.numbers?.cost, price: S.detail.worries?.cost, second: S.detail.second_worries?.cost};
+  const busy = !!S.step || !!S.chain, here = S.stepDeal === S.id;
+  const row = (name, desc, last, running, steps, all) => {  // all: the run-everything row, a big button and no heading
+    const act = h("div", {class: "act"});
+    const idle = () => act.replaceChildren(h("button", {type: "button", class: all ? "primary" : null, disabled: busy,
+      onclick: () => ask(steps, act, idle)}, name + "\u2026"));
+    if (running && here) act.replaceChildren(h("span", {class: "busy stepClock"}, "Running"));
+    else idle();
+    return h("div", {class: "step" + (all ? " all" : "")}, h("div", {}, all ? null : h("b", {}, name), h("div", {class: "s"}, desc),
+      ok(last) && last > 0 ? h("div", {class: "s"}, "Last run cost " + dollars(last)) : null), act);
+  };
+  $("#runAll").replaceChildren(row("Run all", "Runs Read, then Price, then Second look, one after another. Stops at the first step that fails.",
+    null, !!S.chain, STEPS.map(s => s[0]), true));
+  $("#steps").replaceChildren(...STEPS.map(([step, name, desc]) => row(name, desc, cost[step], S.step === step && !S.chain, [step])));
+}
+async function ask(steps, act, idle) {
+  // one estimate for the whole run: the steps' list prices added up
+  act.replaceChildren(h("span", {class: "s"}, "Estimating\u2026"));
+  const rs = await Promise.all(steps.map(step => api(`/api/deals/${S.id}/estimate/${step}`)));
+  const bad = rs.find(r => !r.ok);
+  if (bad) { showError(bad.data.error); idle(); return; }
+  const id = S.id;
+  act.replaceChildren(h("span", {class: "s est"}, "Estimated cost: about " + dollars(rs.reduce((a, r) => a + r.data.dollars, 0))),
+    h("div", {class: "confirm"}, h("button", {type: "button", class: "primary", onclick: () => runAll(steps, id)}, "Confirm"),
+      h("button", {type: "button", onclick: idle}, "Cancel")));
+}
+async function runAll(steps, id) {
+  // the chain stays on the deal it started on, even if the analyst opens another meanwhile
+  S.chain = steps.length > 1 ? id : null;
+  for (const [i, step] of steps.entries())
+    if (!await run(step, id, S.chain ? `Step ${i + 1} of ${steps.length}: ` : "")) break;
+  S.chain = null;
+  if (S.id === id) renderSteps();
+}
+async function run(step, id, label) {
+  const started = Date.now();
+  S.step = step; S.stepDeal = id; renderSteps();
+  const name = STEPS.find(s => s[0] === step)[1];
+  const tick = () => { const s = Math.round((Date.now() - started) / 1000), clock = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    setBusy(`${label}${name} running \u00b7 ${clock} \u00b7 can take a few minutes`);
+    for (const el of document.querySelectorAll(".stepClock")) el.textContent = `${label}${name} ${clock}`; };
+  tick();
+  const clock = setInterval(tick, 1000);
+  const r = await api(`/api/deals/${id}/run/${step}`, {});
+  clearInterval(clock); setBusy("");
+  S.step = null;
+  if (!r.ok) showError(name + ": " + r.data.error);
+  if (S.id === id) await loadDeal(id, true); else renderSteps();
+  return r.ok;
+}
+function renderDocs() {
+  $("#docs").replaceChildren(...S.detail.docs.map(d => h("button", {type: "button", onclick: () => openDoc(d, 0)}, d.title,
+      h("span", {class: "s"}, `  \u00b7  ${d.pages.length} page${d.pages.length === 1 ? "" : "s"}`),
+      d.unreadable?.length ? h("span", {class: "s warn"}, `  \u00b7  no text on page ${d.unreadable.join(", ")}`) : null)));
+}
+
+// ---------- the document panel ----------
+const P = {doc: null, page: 0, re: null};
+function quoteRe(text) {
+  const words = text.toLowerCase().replace(/[\u2013\u2014]/g, "-").replace(/\u2019/g, "'").replace(/[|*#`>]/g, " ").split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  const esc = w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[-\u2013\u2014]").replace(/'/g, "['\u2019]");
+  return new RegExp(words.map(esc).join("[\\s|*#`>]+"), "i");  // the same leniency as the server's quote check
+}
+function openQuote(q) {
+  const doc = S.detail.docs.find(d => d.id === q.doc_id);
+  if (!doc) return showError(`the quote's document "${q.doc_id}" isn't in this deal`);
+  const re = quoteRe(q.text), page = re ? doc.pages.findIndex(p => re.test(p)) : -1;
+  openDoc(doc, Math.max(page, 0), re, page < 0);
+}
+function openDoc(doc, page, re = null, lost = false) {
+  Object.assign(P, {doc, page, re});
+  $("#pNote").hidden = !lost;
+  $("#pNote").textContent = lost ? "Couldn't place this quote exactly in the page text; showing the first page." : "";
+  $("#panel").hidden = false;
+  drawPage();
+  $("#pClose").focus();
+}
+function drawPage() {
+  const {doc, page, re} = P, text = doc.pages[page] || "", pre = $("#pText");
+  $("#pTitle").textContent = doc.title;
+  $("#pPage").textContent = `page ${page + 1} of ${doc.pages.length}`;
+  $("#pPrev").disabled = page <= 0; $("#pNext").disabled = page >= doc.pages.length - 1;
+  const m = re && text.match(re);
+  if (m) {
+    const mk = h("mark", {}, m[0]);
+    pre.replaceChildren(text.slice(0, m.index), mk, text.slice(m.index + m[0].length));
+    mk.scrollIntoView({block: "center"});
+  } else { pre.replaceChildren(text || "(no text on this page)"); pre.scrollTop = 0; }
+}
+$("#pPrev").onclick = () => { P.page--; drawPage(); };
+$("#pNext").onclick = () => { P.page++; drawPage(); };
+$("#pClose").onclick = () => { $("#panel").hidden = true; };
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#panel").hidden = true; });
+
+// ---------- the section menu: click or press 1 to 7 (the URL hash stays the deal id) ----------
+const MENU = [...document.querySelectorAll(".menu a")];
+const jump = a => {  // lands the section just under the sticky header
+  const el = document.querySelector(a.getAttribute("href"));
+  if (el) scrollTo({top: el.getBoundingClientRect().top + scrollY - $(".bar").offsetHeight - 8});
+};
+for (const a of MENU) a.onclick = e => { e.preventDefault(); jump(a); };
+document.addEventListener("keydown", e => {
+  const i = Number(e.key) - 1;
+  if (e.ctrlKey || e.metaKey || e.altKey || !MENU[i] || $("#newDeal").open ||
+      document.activeElement?.matches("input, select, textarea")) return;
+  jump(MENU[i]);
+});
+
+// ---------- the board request: one in flight, only the latest pending ----------
+function scheduleBoard(delay) {
+  clearTimeout(S.boardTimer);
+  S.boardTimer = setTimeout(() => { S.boardWanted = true; flushBoard(); }, delay);
+}
+async function flushBoard() {
+  if (S.boardBusy || !S.boardWanted || !S.id || (S.step && S.stepDeal === S.id)) return;  // a running step holds the deal; flushed after it
+  S.boardBusy = true; S.boardWanted = false;
+  const id = S.id, slow = setTimeout(() => setBusy("Recalculating\u2026"), 250);
+  const r = await api(`/api/deals/${id}/board`, {overrides: S.overrides});  // the complete map, every time
+  clearTimeout(slow); setBusy("");
+  S.boardBusy = false;
+  if (id !== S.id) return flushBoard();
+  if (r.status === 409) {  // another request holds the deal: send the latest state again shortly
+    S.boardWanted = true; setBusy("Waiting for the running step\u2026");
+    setTimeout(flushBoard, 1000);
+    return;
+  }
+  if (!S.boardWanted) drawResult(r);  // a newer state is pending: skip drawing a stale one
+  flushBoard();
+}
+function drawResult(r) {
+  const fill = !r.ok && r.status === 400 && /^fill in first/.test(r.data.error || "");
+  $("#grid").classList.toggle("greyed", fill);
+  $("#fill").hidden = !fill;
+  if (fill) {
+    const names = r.data.error.replace(/^fill in first:\s*/, "").split(/,\s*/).map(n => {
+      const [g, k] = n.split(".");
+      const setting = SETTINGS[g]?.find(s => s[0] === k)?.[1];
+      return FIELD_LABEL[n] || (setting ? setting + " (settings)" : n);
+    });
+    $("#fill").replaceChildren(h("b", {}, "Fill in the red fields first. "), "The board needs: " + names.join(", ") + ".");
+    S.result = null; clearBoard();
+    if (/(^|[\s:,])(financing|policy)\./.test(r.data.error)) {
+      $("#settingsBox").open = true;
+      // only when the analyst isn't typing somewhere else
+      if (!document.activeElement?.matches("input, select, textarea")) $("#settingsForm .missing input")?.focus();
+    }
+    return;
+  }
+  if (!r.ok) {  // never leave an old call showing over numbers it wasn't computed from
+    $("#grid").classList.add("greyed"); $("#fill").hidden = false;
+    $("#fill").replaceChildren(h("b", {}, "The board can't be computed. "), r.data.error);
+    S.result = null; clearBoard(); for (const t of TRAPS) syncRow(t);
+    return;
+  }
+  S.result = r.data;
+  drawCall(); drawFork(); for (const t of TRAPS) { growMax(t, true); syncRow(t); } drawPairs(); drawAsk(); drawSecond();
+}
+function clearBoard() {
+  $("#verdict").className = "verdict"; $("#verdict").textContent = "\u2014";
+  for (const k of ["#walk", "#clears"]) $(k).textContent = "\u2014";
+  $("#range").textContent = ""; $("#clearsBar").style.width = "0"; $("#clearsBar").parentElement.className = "meter";
+  $("#fork").replaceChildren(); $("#pairs").replaceChildren(); $("#ask").replaceChildren(); $("#second").replaceChildren();
+}
+
+// ---------- the call and the fork chart ----------
+function drawCall() {
+  const r = S.result, v = $("#verdict");
+  v.className = "verdict " + (r.go ? "go" : "nogo");
+  v.replaceChildren(r.go ? "GO" : "NO-GO", h("small", {}, "at " + money(r.price) +
+    (S.detail.worries ? "" : " \u00b7 at face value \u2014 nothing priced yet")));
+  $("#walk").textContent = money(r.walk_away);
+  $("#range").replaceChildren("p10\u2013p90: ", h("span", {class: r.p10 < r.price ? "lo" : "hi"}, money(r.p10)), " \u2013 ",
+    h("span", {class: r.p90 < r.price ? "lo" : "hi"}, money(r.p90)));
+  $("#clears").textContent = pct(r.clears);
+  $("#clearsBar").style.width = (r.clears * 100).toFixed(1) + "%"; $("#clearsBar").parentElement.className = "meter on";
+  $("#clears").parentElement.title = `The deal clears the price in ${pct(r.clears)} of simulated outcomes`;
+}
+function niceTicks(a, b, n) {
+  const raw = (b - a) / n, p = 10 ** Math.floor(Math.log10(raw)), step = [1, 2, 5, 10].map(m => m * p).find(s => s >= raw);
+  const out = [];
+  for (let t = Math.ceil(a / step) * step; t <= b; t += step) out.push(t);
+  return out;
+}
+function drawFork() {
+  const r = S.result, {edges, counts} = r.hist, n = counts.length, svg = $("#fork");
+  const W = 640, H = 210, L = 6, R = 6, T = 34, B = 24;
+  let x0 = Math.min(edges[0], r.price, r.p10), x1 = Math.max(edges[n], r.price, r.p90);
+  const pad = (x1 - x0) * 0.03 || 1; x0 -= pad; x1 += pad;
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), top = Math.max(...counts, 1), Y = c => T + (H - T - B) * (1 - c / top);
+  const total = counts.reduce((a, b) => a + b, 0) || 1;
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
+  const kids = [el("rect", {class: "band", x: X(r.p10), y: T - 4, width: Math.max(X(r.p90) - X(r.p10), 1), height: H - T - B + 4})];
+  counts.forEach((c, i) => {
+    const xa = X(edges[i]), xb = X(edges[i + 1]), mid = (edges[i] + edges[i + 1]) / 2;
+    const bar = el("rect", {class: mid >= r.price ? "bar-ok" : "bar-bad", x: xa + 0.5, width: Math.max(xb - xa - 1, 0.5),
+      y: Y(c), height: H - B - Y(c), rx: 1});
+    bar.append(el("title", {}, `${money(edges[i])} to ${money(edges[i + 1])}: ${c} outcomes (${pct(c / total)})`));
+    kids.push(bar);
+  });
+  kids.push(el("line", {class: "axis", x1: L, x2: W - R, y1: H - B, y2: H - B}));
+  for (const t of niceTicks(x0, x1, 6)) kids.push(el("text", {x: X(t), y: H - B + 16, "text-anchor": "middle"}, "$" + Math.round(t) + "M"));
+  const flag = (x, y, cls, text) => {
+    const anchor = x > W - 140 ? "end" : x < 140 ? "start" : "middle";
+    kids.push(el("line", {class: cls, x1: x, x2: x, y1: y + 4, y2: H - B}), el("text", {class: "lbl", x: x + (anchor === "end" ? -4 : anchor === "start" ? 4 : 0),
+      y, "text-anchor": anchor}, text));
+  };
+  flag(X(r.price), 11, "price", "Price " + money(r.price));
+  flag(X(r.walk_away), 26, "walk", "Walk-away " + money(r.walk_away));
+  svg.replaceChildren(...kids);
+}
+
+// ---------- worry rows ----------
+function base(t) { return S.detail.worries?.worries?.[t] || {not_priced: "not priced yet: run Price, or set it yourself"}; }
+function priced(w) { return w && !("not_priced" in w) && ok(w.chance) && ok(w.high); }
+function sized(t) { return S.result?.sizes?.[t]; }  // the size the engine prices: Opus's, floored at the usual range
+function effective(t) {
+  const o = S.overrides[t], b = base(t), z = sized(t);
+  return o ? {chance: o.chance, high: o.high} : priced(b) ? {chance: b.chance, high: ok(z?.size) ? z.size : b.high} : {chance: 0, high: 0};
+}
+function flipOf(t) {
+  // flip_amount holds the other worries at zero and searches up to twice the range: it moves with the numbers and
+  // settings, never with a worry's own chance or size, so the last one found stays right when a smaller range misses it
+  const f = S.result?.flips?.[t];
+  if (ok(f)) S.lastFlip[t] = f;
+  return ok(f) ? f : S.lastFlip[t] ?? null;
+}
+function growMax(t, idle) {
+  // sets both sliders from the state (after a reset, a reload or a result), but never moves a thumb being dragged
+  const r = S.rows[t], e = effective(t);
+  if (!(idle && document.activeElement === r.chance)) r.chance.value = Math.round(e.chance * 100);
+  if (idle && document.activeElement === r.size) return;
+  const f = flipOf(t);
+  const m = Math.max(S.sizeMax[t] || 0, 2 * e.high, 2 * (f || 0), 2 * (sized(t)?.size || 0)) || 0.2 * S.detail.deal.price;
+  S.sizeMax[t] = m;
+  r.size.max = m; r.size.step = "any"; r.size.value = e.high;
+  r.sizeEnd.textContent = money(m);
+}
+function setFill(input) { input.style.setProperty("--fill", (100 * (input.value - input.min) / (input.max - input.min || 1)) + "%"); }
+function place(el, v, max) { el.hidden = !ok(v); if (ok(v)) el.style.setProperty("--at", Math.min(Math.max(v / max, 0), 1)); }
+
+function buildWorries() {
+  const box = $("#worries"), hints = S.detail.numbers?.hints || [];
+  box.replaceChildren(); S.rows = {};
+  for (const t of TRAPS) {
+    const b = base(t), r = {};
+    r.tag = h("span", {class: "tag"}); r.state = h("span", {class: "state", hidden: true});
+    r.reset = h("button", {type: "button", class: "link", onclick: () => { delete S.overrides[t]; growMax(t); syncRow(t); scheduleBoard(0); }}, "reset");
+    r.reason = h("p", {class: "reason"});
+    r.chance = h("input", {type: "range", min: 0, max: 100, step: 1, "aria-label": LABEL[t] + ": chance it's real"});
+    r.size = h("input", {type: "range", min: 0, "aria-label": LABEL[t] + ": size if real"});
+    r.chanceOut = h("output", {class: "out"}); r.sizeOut = h("output", {class: "out"});
+    r.flip = h("i", {class: "flip", hidden: true}); r.c2 = h("i", {class: "m2", hidden: true}); r.s2 = h("i", {class: "m2", hidden: true});
+    r.flipText = h("div", {class: "s fliptext"}); r.floorText = h("div", {class: "s"}); r.sizeEnd = h("span", {});
+    r.chance.oninput = () => moved(t, "chance");
+    r.size.oninput = () => moved(t, "size");
+    r.size.onchange = () => growMax(t);
+    const notes = h("div", {class: "notes"}, chips(b.quotes),
+      b.dropped_quotes > 0 ? h("span", {class: "s warn"}, "a quote didn't check out") : null,
+      hints.filter(x => x.type === t).map(x => [h("div", {class: "hint"}, "Read noted: " + x.note), chips(x.quotes),
+        x.dropped_quotes > 0 ? h("span", {class: "s warn"}, "a quote didn't check out") : null]));
+    box.append(h("div", {class: "worry"},
+      h("div", {class: "w-head"}, h("span", {class: "w-title"}, LABEL[t]), r.state, r.tag, r.reset),
+      h("div", {class: "w-body"},
+        h("div", {class: "w-text"}, r.reason, notes),
+        h("div", {}, h("div", {class: "ctl-head"}, h("span", {}, "Chance it's real"), r.chanceOut),
+          h("div", {class: "track"}, r.chance, r.c2), h("div", {class: "ends"}, h("span", {}, "0%"), h("span", {}, "100%"))),
+        h("div", {}, h("div", {class: "ctl-head"}, h("span", {}, "Size if real"), r.sizeOut),
+          h("div", {class: "track"}, r.size, r.flip, r.s2), h("div", {class: "ends"}, h("span", {}, "$0.0M"), r.sizeEnd), r.floorText, r.flipText))));
+    S.rows[t] = r;
+    growMax(t); syncRow(t);
+  }
+}
+function moved(t, which) {
+  const r = S.rows[t], e = effective(t);
+  // the slider that moved sets its value; the other keeps the exact one, not its step-rounded position
+  S.overrides[t] = {chance: which === "chance" ? r.chance.value / 100 : e.chance, high: which === "size" ? Number(r.size.value) : e.high};
+  syncRow(t);
+  scheduleBoard(150);
+}
+function syncRow(t) {
+  const r = S.rows[t], b = base(t), e = effective(t), mine = t in S.overrides;
+  const [cls, text] = mine ? ["you", "you set"] : !priced(b) ? ["none", "not priced, set it yourself"] :
+    /starting guess/i.test(b.reason || "") ? ["", "starting guess"] : ["opus", "Opus judged"];
+  r.tag.className = "tag " + cls; r.tag.textContent = text;
+  r.reset.hidden = !mine;
+  const why = priced(b) ? b.reason : b.not_priced;
+  r.reason.className = "reason" + (priced(b) && !/starting guess/i.test(b.reason || "") ? "" : " dim");
+  r.reason.textContent = why || "";
+  r.chanceOut.textContent = pct(e.chance); setFill(r.chance);
+  r.sizeOut.textContent = "up to " + money(e.high); setFill(r.size);
+  const floored = !mine && priced(b) && sized(t)?.floored && money(b.high) !== money(e.high);  // a lift too small to show isn't news
+  r.floorText.textContent = floored ? `Opus said up to ${money(b.high)}; priced at the usual range, up to ${money(e.high)} (a starting guess).` : "";
+  const max = Number(r.size.max), f = flipOf(t);
+  place(r.flip, f, max);
+  r.flipText.className = "s fliptext";
+  if (!S.result) r.flipText.textContent = "";
+  else if (!(t in S.result.flips) && !ok(f)) r.flipText.textContent = "Set a chance and size to see where it flips the call.";
+  else if (!ok(f)) r.flipText.textContent = "Doesn't flip the call within twice the range.";
+  else {
+    const hit = e.high >= f && e.chance > 0;
+    r.flipText.className = "s fliptext" + (hit ? " hit" : "");
+    r.flipText.textContent = `At ${money(f)} it alone flips the face-value call` + (hit ? ": your range reaches it" : "");
+  }
+  r.flip.title = ok(f) ? "alone flips the face-value call at " + money(f) : "";
+  // red when its range reaches the flip, yellow within a quarter of it, green otherwise; hidden with no board
+  const [sc, st] = !S.result || e.chance <= 0 ? [] : ok(f) && e.high >= f ? ["flips", "Flips it"] :
+    ok(f) && e.high >= 0.75 * f ? ["near", "Near flip"] : ["clear", "Clear"];
+  r.state.hidden = !sc; r.state.className = "state " + (sc || ""); r.state.textContent = st || "";
+  const w2 = S.result?.second && S.detail.second_worries?.worries?.[t];
+  place(r.c2, priced(w2) ? w2.chance : null, 1); place(r.s2, priced(w2) ? w2.high : null, max);
+  if (priced(w2)) { r.c2.title = "second look: " + pct(w2.chance); r.s2.title = "second look: up to " + money(w2.high); }
+}
+
+// ---------- pairs, the ask list, the second look ----------
+function drawPairs() {
+  const p = S.result.pairs;
+  $("#pairs").replaceChildren(p.length ? h("div", {class: "pairs"}, p.map(([a, b]) => h("span", {class: "pair"}, LABEL[a] + "  +  " + LABEL[b]))) :
+    h("p", {class: "empty-line"}, "No two worries flip the call together at the top of their ranges when neither does alone."));
+  if (p.length) $("#pairs").append(h("p", {class: "s", style: "margin:8px 0 0"}, "Each pair flips the call together at the top of their ranges, though neither does alone."));
+}
+const NO_ASK = "No single answer would change the call at this price.";
+const askMoot = a => a.length && a.every(x => x.value < 0.05);  // every row would print $0.0M
+function askLines() {
+  const a = S.result.ask;
+  return askMoot(a) ? [NO_ASK] : a.map(x => `${LABEL[x.type]} \u2014 ${money(x.value)} \u2014 ${x.docs.join(", ")}`);
+}
+function drawAsk() {
+  const a = S.result.ask;
+  $("#ask").replaceChildren(...(askMoot(a) ? [h("p", {class: "empty-line"}, NO_ASK)] : a.length ? a.map(x => h("li", {}, h("span", {}, LABEL[x.type]), h("span", {class: "val" + (x.value < 0.05 ? " zero" : "")}, money(x.value)),
+    h("span", {class: "docs"}, x.docs.join("  \u00b7  ")))) : [h("p", {class: "empty-line"}, "Nothing open to ask about: no worry has a chance above zero.")]));
+  $("#copyAsk").disabled = !a.length;
+}
+$("#copyAsk").onclick = async () => {
+  const text = askLines().join("\n"), btn = $("#copyAsk");
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {  // older browsers, or no clipboard permission
+    const ta = h("textarea", {value: text, style: "position:fixed;opacity:0"}); document.body.append(ta); ta.select();
+    const done = document.execCommand("copy"); ta.remove();
+    if (!done) return showError("couldn't reach the clipboard; here is the list:\n" + text);
+  }
+  btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy as text"; }, 1500);
+};
+function drawSecond() {
+  const s = S.result.second, box = $("#second"), d = S.detail;
+  if (!s) {
+    box.replaceChildren(h("p", {class: "empty-line"}, d.second_numbers || d.second_worries ?
+      "The second look is incomplete or older than its read. Run it again to compare." :
+      "Not run yet. Second look has Opus read and price this deal on its own; its call shows here beside the board's."));
+    return;
+  }
+  const v = h("div", {class: "verdict " + (s.go ? "go" : "nogo")}, s.go ? "GO" : "NO-GO");
+  const agree = s.go === S.result.go;
+  const theirs = d.second_worries?.worries || {}, mine = S.result.worries || {};
+  const differs = (a, b, tol) => !(ok(a) && ok(b)) ? ok(a) !== ok(b) : Math.abs(a - b) > tol;
+  const rows = TRAPS.map(t => {
+    const a = mine[t], b = theirs[t];
+    const cell = (x, other, fmt, tol, side) => h("td", {class: side && differs(x, other, tol) ? "diff" : ""}, priced(side ? b : a) ? fmt(x) : "\u2014");
+    return h("tr", {}, h("td", {}, LABEL[t]), cell(a?.chance, b?.chance, pct, 0.005, false), cell(b?.chance, a?.chance, pct, 0.005, true),
+      cell(a?.high, b?.high, money, 0.05, false), cell(b?.high, a?.high, money, 0.05, true));
+  });
+  const nd = Object.entries(s.differences || {});
+  box.replaceChildren(
+    h("div", {class: "mini"}, v, h("div", {}, h("div", {class: agree ? "s" : "s warn"}, agree ? "Agrees with the board" : "Disagrees with the board"),
+      h("div", {}, h("b", {}, money(s.walk_away)), h("span", {class: "s"}, ` walk-away \u00b7 p10\u2013p90 ${money(s.p10)} \u2013 ${money(s.p90)}`)),
+      h("div", {class: "s"}, `clears in ${pct(s.clears)} of outcomes`))),
+    h("table", {class: "cmp"}, h("thead", {}, h("tr", {}, h("th", {}, "Worry"), h("th", {}, "Chance"), h("th", {}, "2nd"), h("th", {}, "Size"), h("th", {}, "2nd"))),
+      h("tbody", {}, rows)),
+    nd.length ? h("table", {class: "cmp", style: "margin-top:12px"}, h("thead", {}, h("tr", {}, h("th", {}, "Number"), h("th", {}, "Board"), h("th", {}, "2nd"))),
+      h("tbody", {}, nd.map(([f, x]) => h("tr", {}, h("td", {}, FIELD_LABEL[f] || f), h("td", {}, field(f, x.board)),
+        h("td", {class: "diff"}, x.second == null ? "blank" : field(f, x.second)))))) :
+      h("p", {class: "s", style: "margin:10px 0 0"}, "It read the same company numbers as the board."),
+    h("p", {class: "s", style: "margin:10px 0 0"}, "Diamonds on the worry sliders mark the second look's chance and size."));
+}
+
+loadSettings().then(() => loadDeals());
+</script>
+</body>
+</html>

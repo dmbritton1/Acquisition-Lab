@@ -3,7 +3,11 @@ name = "acqlab"
 version = "0.1.0"
 description = "Acquisition Lab: decision-directed diligence for leveraged buyouts"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.7", "numpy>=2.0"]
+dependencies = [
+    "pydantic>=2.7",
+    "numpy>=2.0",
+    "pypdf>=6.21.1",
+]
 
 [dependency-groups]
 dev = ["pytest>=8", "hypothesis>=6.100"]
