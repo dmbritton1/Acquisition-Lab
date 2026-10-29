@@ -15,27 +15,59 @@ everything, so the job is to **choose what to read**, then decide whether to buy
 
 ## How it works
 
-```
- deal generator ──► data room (CIM, QoE, credit agreement, contracts, board minutes …)
-       │                    │  list / search / open, each costs budget
-       ▼                    ▼
- hidden truth        AI system  ──►  beliefs about each issue  ──►  LBO engine (code, no AI)
-       │                                                                │
-       └────────────── scored against ──── walk-away price + GO / NO-GO ┘
+```mermaid
+flowchart LR
+    G["Deal generator"] --> D["Data room<br/>Teaser + documents"]
+    G --> T["Hidden truth<br/>Unavailable to agents"]
+    D --> A["Diligence system<br/>The Team or a single agent"]
+    A --> O["Final answer<br/>Walk-away price + GO / NO-GO"]
+    O --> S["Score the answer<br/>Decision regret + pricing error"]
+    T -.-> S
+
+    classDef ai fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef code fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef hidden fill:#f3f4f6,stroke:#6b7280,color:#374151
+    class A ai
+    class G,S code
+    class T hidden
 ```
 
-- **LBO engine** (`acqlab/engine`): sizes the debt and finds the **walk-away price**, the highest price that still
-  clears a 20% IRR hurdle. It is the only source of financial numbers, so the AI never does scored arithmetic.
+Listing the data room is free; every search and document read costs budget.
+
 - **Deal generator** (`acqlab/generator`): plants 2–5 hidden facts per deal (decision flips, decoys, interacting
   issues, unresolvable questions) and checks that each one can be recovered from the documents.
-- **The Team** (`acqlab/agents`):
-  - A **Deal Lead** proposes issues and their likely size.
-  - **Investigators** read the documents.
-  - A **Challenger** argues against the current view.
-  - A code **Router** prices each next read by how much it could change the decision.
-  - A code **Committer** accepts a finding only if it is quoted from a document, computed from quotes, or recorded as
-    a conflict between documents.
+- **LBO engine** (`acqlab/engine`): sizes the debt and finds the **walk-away price**, the highest price that still
+  clears a 20% IRR hurdle. It is the only source of financial numbers, so the AI never does scored arithmetic.
 - **The opponent:** one Claude agent with the same tools, the same budget and the engine as a tool.
+
+### Inside the Team
+
+Blue is AI, green is code.
+
+```mermaid
+flowchart TD
+    L["Deal Lead · AI<br/>Proposes issues"] <--> B["Shared deal record<br/>Beliefs + accepted evidence"]
+    B --> R["Router · code<br/>Chooses the next document"]
+    R --> I["Investigator · AI<br/>Reads and reports findings"]
+    D["Data room<br/>Fixed reading budget"] --> I
+    I --> C["Committer · code<br/>Checks supporting evidence"]
+    C --> B
+
+    B --> H["Challenger · AI<br/>Raises objections"]
+    H --> B
+
+    B --> E["LBO engine · code<br/>Values possible outcomes"]
+    E -. "Guides document selection" .-> R
+    E --> F["Final decision · code<br/>Walk-away price + GO / NO-GO"]
+
+    classDef ai fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef code fill:#dcfce7,stroke:#16a34a,color:#14532d
+    class L,I,H ai
+    class R,C,E,F code
+```
+
+The Committer accepts a finding only if it is quoted from a document, computed from quotes, or recorded as a conflict
+between documents.
 
 ## Results
 
